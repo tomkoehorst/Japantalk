@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Japantalk – Japans leren praten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF8F4; --card:#FFFFFF; --text:#3D3A44; --muted:#8A8594; --line:#ECE6DF;
+  --sage:#B8D8C8; --lav:#CFC6EA; --peach:#F6D2BE; --blue:#C4DCEF; --butter:#F4E6B0;
+  --good:#A9D8B8; --good-ink:#3F7A57; --bad:#E9A9A0; --bad-ink:#9A4A40;
+  --shadow:0 4px 18px rgba(61,58,68,.08); --r:16px;
+}
+@media (prefers-color-scheme: dark){ :root:not(.light){
+  --bg:#24222A; --card:#2F2C36; --text:#ECE8F2; --muted:#A39DAF; --line:#3B3843;
+  --sage:#8FB3A2; --lav:#A59CC4; --peach:#CDA894; --blue:#9CB6CB; --butter:#C9BC8C;
+  --good:#7FAE8E; --good-ink:#D6F0DE; --bad:#C28880; --bad-ink:#FBE0DB;
+  --shadow:0 4px 18px rgba(0,0,0,.3);
+}}
+:root.dark{
+  --bg:#24222A; --card:#2F2C36; --text:#ECE8F2; --muted:#A39DAF; --line:#3B3843;
+  --sage:#8FB3A2; --lav:#A59CC4; --peach:#CDA894; --blue:#9CB6CB; --butter:#C9BC8C;
+  --good:#7FAE8E; --good-ink:#D6F0DE; --bad:#C28880; --bad-ink:#FBE0DB;
+  --shadow:0 4px 18px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Nunito,system-ui,sans-serif;}
+body{min-height:100vh;min-height:100dvh}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+.jp{font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif}
+#app{max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:12px;padding:14px 18px 10px}
+.brand{font-weight:800;font-size:1.3rem;flex:1;display:flex;align-items:center;gap:8px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--card);box-shadow:var(--shadow);padding:6px 12px;border-radius:999px;font-weight:700;font-size:.95rem}
+.iconbtn{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:var(--card);box-shadow:var(--shadow);font-size:1.1rem}
+
+/* home */
+.goalcard{margin:6px 18px 8px;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;display:flex;gap:14px;align-items:center}
+.goalcard .info{flex:1}
+.goalcard h3{margin:0 0 4px;font-size:1.05rem}
+.goalcard p{margin:0;color:var(--muted);font-size:.9rem}
+.bar{height:12px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;background:var(--sage);border-radius:999px;transition:width .4s}
+.practice-btn{margin:4px 18px 4px;display:flex;align-items:center;gap:12px;background:var(--lav);border-radius:var(--r);padding:12px 16px;font-weight:700;box-shadow:var(--shadow);text-align:left}
+.practice-btn small{display:block;font-weight:600;opacity:.75}
+.practice-btn[disabled]{opacity:.5;cursor:default}
+.unit{margin:22px 18px 6px}
+.unit-head{border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow);color:#3D3A44}
+.unit-head h2{margin:0;font-size:1.1rem}
+.unit-head p{margin:2px 0 0;font-size:.9rem;opacity:.8}
+.path{display:flex;flex-direction:column;align-items:center;padding:44px 0 4px;gap:14px}
+.node-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+.node{width:74px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:1.6rem;font-weight:800;color:#3D3A44;
+  box-shadow:0 6px 0 rgba(61,58,68,.15);transition:transform .1s}
+.node:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(61,58,68,.15)}
+.node.locked{background:var(--line)!important;color:var(--muted);box-shadow:0 6px 0 rgba(61,58,68,.08)}
+.node-label{font-size:.8rem;color:var(--muted);margin-top:8px;font-weight:700;text-align:center;max-width:140px}
+.start-bubble{position:absolute;top:-40px;background:var(--card);border-radius:12px;padding:5px 12px;font-weight:800;font-size:.85rem;box-shadow:var(--shadow);white-space:nowrap;animation:bob 1.6s ease-in-out infinite}
+.start-bubble:after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-top-color:var(--card);border-bottom:0}
+@keyframes bob{50%{transform:translateY(-4px)}}
+.side-cat{position:absolute;top:0}
+.footer-note{color:var(--muted);text-align:center;font-size:.85rem;padding:24px 24px 40px}
+
+/* lesson */
+.lesson{flex:1;display:flex;flex-direction:column}
+.lesson-top{display:flex;align-items:center;gap:14px;padding:16px 18px}
+.lesson-top .bar{flex:1;margin:0;height:14px}
+.closebtn{font-size:1.5rem;color:var(--muted);width:36px;height:36px}
+.ex{flex:1;padding:6px 20px 20px;display:flex;flex-direction:column}
+.ex-title{font-size:1.35rem;font-weight:800;margin:6px 0 16px}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:18px}
+.speaker-row{display:flex;gap:16px;align-items:flex-start}
+.bubble{position:relative;flex:1;background:var(--card);border:2px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.bubble:before{content:"";position:absolute;left:-10px;top:24px;border:8px solid transparent;border-right-color:var(--line);border-left:0}
+.big-jp{font-size:1.7rem;font-weight:700;line-height:1.35}
+.romaji{color:var(--muted);font-size:1.05rem;margin-top:2px}
+.nl{margin-top:8px;font-weight:700}
+.play-row{display:flex;gap:10px;margin-top:12px}
+.play{display:inline-flex;align-items:center;gap:6px;background:var(--blue);border-radius:12px;padding:8px 14px;font-weight:700;color:#3D3A44}
+.play.slow{background:var(--butter)}
+.big-play{width:110px;height:110px;border-radius:28px;background:var(--blue);display:grid;place-items:center;margin:10px auto 6px;font-size:2.6rem;box-shadow:0 6px 0 rgba(61,58,68,.12)}
+.big-play:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(61,58,68,.12)}
+.options{display:grid;gap:10px;margin-top:16px}
+.opt{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px 16px;text-align:left;font-weight:700;font-size:1.05rem;box-shadow:0 3px 0 var(--line);display:flex;align-items:center;gap:12px}
+.opt.sel{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 30%,var(--card));box-shadow:0 3px 0 var(--blue)}
+.opt .num{width:28px;height:28px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-size:.85rem;color:var(--muted);flex:none}
+.opt .sp{font-size:1.2rem}
+.prompt-nl{font-size:1.5rem;font-weight:800;margin:4px 0}
+.hint{margin-top:10px;color:var(--muted);font-weight:700;text-decoration:underline dotted;text-underline-offset:4px}
+.hint-text{margin-top:10px}
+.mic-area{margin-top:auto;padding-top:24px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.mic{width:100%;max-width:420px;padding:18px;border-radius:18px;background:var(--sage);font-weight:800;font-size:1.1rem;color:#3D3A44;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 5px 0 rgba(61,58,68,.15)}
+.mic:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(61,58,68,.15)}
+.mic.listening{background:var(--peach);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 5px 0 rgba(61,58,68,.15),0 0 0 10px color-mix(in srgb,var(--peach) 35%,transparent)}}
+.linkbtn{color:var(--muted);font-weight:700;font-size:.9rem;padding:6px}
+.heard{color:var(--muted);font-size:.95rem;text-align:center;min-height:1.3em}
+.chat{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.msg{max-width:85%;border-radius:16px;padding:10px 14px;box-shadow:var(--shadow)}
+.msg.cat{background:var(--card);align-self:flex-start;border-top-left-radius:4px}
+.msg.me{background:color-mix(in srgb,var(--sage) 55%,var(--card));align-self:flex-end;border-top-right-radius:4px}
+.msg .jp{font-weight:700;font-size:1.15rem}
+.msg .r{color:var(--muted);font-size:.85rem}
+.msg .t{font-size:.85rem;margin-top:2px}
+.msg button{font-size:.85rem;margin-top:4px;color:var(--muted);font-weight:700}
+.chat-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+
+.actionbar{position:sticky;bottom:0;padding:16px 20px calc(18px + env(safe-area-inset-bottom));background:var(--bg);border-top:2px solid var(--line)}
+.actionbar.good{background:color-mix(in srgb,var(--good) 35%,var(--bg));border-color:transparent}
+.actionbar.bad{background:color-mix(in srgb,var(--bad) 35%,var(--bg));border-color:transparent}
+.fb{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.fb h4{margin:0;font-size:1.2rem}
+.good .fb h4{color:var(--good-ink)}
+.bad .fb h4{color:var(--bad-ink)}
+.fb p{margin:2px 0 0;font-size:.95rem}
+.btnrow{display:flex;gap:10px}
+.btn{flex:1;padding:15px;border-radius:16px;font-weight:800;font-size:1.05rem;background:var(--sage);color:#3D3A44;box-shadow:0 4px 0 rgba(61,58,68,.15)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(61,58,68,.15)}
+.btn.secondary{background:var(--card);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+.btn.coral{background:var(--bad)}
+.btn[disabled]{background:var(--line);color:var(--muted);box-shadow:none;cursor:default;transform:none}
+
+/* result */
+.result{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;text-align:center;gap:10px}
+.result h1{margin:8px 0 0;font-size:1.8rem}
+.stats{display:flex;gap:12px;margin:14px 0 24px}
+.stat{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 18px;min-width:96px}
+.stat b{display:block;font-size:1.4rem}
+.stat span{font-size:.8rem;color:var(--muted);font-weight:700}
+
+/* settings */
+.page{padding:6px 18px 40px}
+.setting{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.setting h3{margin:0 0 4px;font-size:1rem}
+.setting p{margin:0 0 10px;color:var(--muted);font-size:.9rem}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{padding:8px 14px;border-radius:12px;border:2px solid var(--line);font-weight:700}
+.seg button.on{border-color:var(--sage);background:color-mix(in srgb,var(--sage) 40%,var(--card))}
+.warn{background:color-mix(in srgb,var(--butter) 50%,var(--card));border-radius:var(--r);padding:12px 14px;margin:8px 18px;font-size:.9rem;display:flex;gap:10px;align-items:center}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;z-index:50;font-size:.9rem;max-width:90vw}
+.pop{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* =========================================================
+   CONTENT
+   Each phrase: ja (natural, as speech recognisers usually return it),
+   kana, romaji, nl, alt (extra accepted recognition forms)
+   ========================================================= */
+const UNITS = [
+ { title:"Begroeten", desc:"Hallo, goedemorgen en tot ziens", color:"var(--sage)",
+   phrases:[
+    {ja:"こんにちは",kana:"こんにちは",romaji:"konnichiwa",nl:"Hallo / goedemiddag",alt:["今日は"]},
+    {ja:"おはようございます",kana:"おはようございます",romaji:"ohayō gozaimasu",nl:"Goedemorgen",alt:["お早うございます","おはようございます"]},
+    {ja:"こんばんは",kana:"こんばんは",romaji:"konbanwa",nl:"Goedenavond",alt:["今晩は"]},
+    {ja:"ありがとうございます",kana:"ありがとうございます",romaji:"arigatō gozaimasu",nl:"Dank u wel",alt:["有難うございます"]},
+    {ja:"さようなら",kana:"さようなら",romaji:"sayōnara",nl:"Vaarwel / tot ziens",alt:["さよなら"]},
+    {ja:"またね",kana:"またね",romaji:"mata ne",nl:"Tot later!",alt:["またねー","まったね"]},
+    {ja:"おやすみなさい",kana:"おやすみなさい",romaji:"oyasuminasai",nl:"Welterusten",alt:["お休みなさい"]},
+   ],
+   dialog:[
+    {who:"cat",ja:"おはようございます！",romaji:"Ohayō gozaimasu!",nl:"Goedemorgen!"},
+    {who:"me",ref:"おはようございます"},
+    {who:"cat",ja:"これ、どうぞ。",romaji:"Kore, dōzo.",nl:"Alsjeblieft, dit is voor jou."},
+    {who:"me",ref:"ありがとうございます"},
+    {who:"cat",ja:"じゃあ、またね！",romaji:"Jā, mata ne!",nl:"Nou, tot later!"},
+    {who:"me",ref:"またね"},
+   ]},
+ { title:"Beleefdheid", desc:"Sorry, alstublieft en ja/nee", color:"var(--lav)",
+   phrases:[
+    {ja:"すみません",kana:"すみません",romaji:"sumimasen",nl:"Pardon / sorry",alt:["すいません","済みません"]},
+    {ja:"ごめんなさい",kana:"ごめんなさい",romaji:"gomen nasai",nl:"Het spijt me",alt:["御免なさい"]},
+    {ja:"はい",kana:"はい",romaji:"hai",nl:"Ja",alt:["はーい","はいはい"]},
+    {ja:"いいえ",kana:"いいえ",romaji:"iie",nl:"Nee",alt:["いえ","いいえー"]},
+    {ja:"お願いします",kana:"おねがいします",romaji:"onegai shimasu",nl:"Alstublieft (bij een verzoek)",alt:[]},
+    {ja:"どういたしまして",kana:"どういたしまして",romaji:"dō itashimashite",nl:"Graag gedaan",alt:[]},
+    {ja:"大丈夫です",kana:"だいじょうぶです",romaji:"daijōbu desu",nl:"Het is oké / geen probleem",alt:["大丈夫"]},
+    {ja:"わかりません",kana:"わかりません",romaji:"wakarimasen",nl:"Ik begrijp het niet",alt:["分かりません","解りません"]},
+   ],
+   dialog:[
+    {who:"me",ref:"すみません"},
+    {who:"cat",ja:"はい、何ですか？",romaji:"Hai, nan desu ka?",nl:"Ja, wat is er?"},
+    {who:"me",ref:"わかりません"},
+    {who:"cat",ja:"大丈夫ですよ。",romaji:"Daijōbu desu yo.",nl:"Geeft niks hoor."},
+    {who:"me",ref:"ありがとうございます"},
+    {who:"cat",ja:"どういたしまして。",romaji:"Dō itashimashite.",nl:"Graag gedaan."},
+   ]},
+ { title:"Jezelf voorstellen", desc:"Wie ben je en waar kom je vandaan", color:"var(--peach)",
+   phrases:[
+    {ja:"はじめまして",kana:"はじめまして",romaji:"hajimemashite",nl:"Aangenaam (bij een eerste ontmoeting)",alt:["初めまして"]},
+    {ja:"私はトムです",kana:"わたしはトムです",romaji:"watashi wa Tomu desu",nl:"Ik ben Tom",alt:["わたしはとむです","トムです"]},
+    {ja:"よろしくお願いします",kana:"よろしくおねがいします",romaji:"yoroshiku onegai shimasu",nl:"Prettig kennis te maken",alt:["宜しくお願いします"]},
+    {ja:"オランダ人です",kana:"オランダじんです",romaji:"Oranda-jin desu",nl:"Ik ben Nederlander",alt:["オランダじんです"]},
+    {ja:"お名前は何ですか",kana:"おなまえはなんですか",romaji:"o-namae wa nan desu ka",nl:"Hoe heet je?",alt:["お名前はなんですか","名前は何ですか"]},
+    {ja:"出身はどこですか",kana:"しゅっしんはどこですか",romaji:"shusshin wa doko desu ka",nl:"Waar kom je vandaan?",alt:["ご出身はどこですか"]},
+    {ja:"オランダから来ました",kana:"オランダからきました",romaji:"Oranda kara kimashita",nl:"Ik kom uit Nederland",alt:["オランダからきました"]},
+    {ja:"日本語を勉強しています",kana:"にほんごをべんきょうしています",romaji:"nihongo o benkyō shite imasu",nl:"Ik leer Japans",alt:["日本語を勉強してます"]},
+   ],
+   dialog:[
+    {who:"cat",ja:"はじめまして。ネコです。",romaji:"Hajimemashite. Neko desu.",nl:"Aangenaam. Ik ben Neko."},
+    {who:"me",ref:"はじめまして"},
+    {who:"cat",ja:"お名前は何ですか？",romaji:"O-namae wa nan desu ka?",nl:"Hoe heet je?"},
+    {who:"me",ref:"私はトムです"},
+    {who:"cat",ja:"出身はどこですか？",romaji:"Shusshin wa doko desu ka?",nl:"Waar kom je vandaan?"},
+    {who:"me",ref:"オランダから来ました"},
+    {who:"cat",ja:"そうですか！日本語、上手ですね。",romaji:"Sō desu ka! Nihongo, jōzu desu ne.",nl:"O, echt! Je Japans is goed, hè."},
+    {who:"me",ref:"日本語を勉強しています"},
+    {who:"cat",ja:"よろしくお願いします！",romaji:"Yoroshiku onegai shimasu!",nl:"Prettig kennis te maken!"},
+    {who:"me",ref:"よろしくお願いします"},
+   ]},
+ { title:"Getallen", desc:"Tellen van 1 tot 10", color:"var(--butter)",
+   phrases:[
+    {ja:"いち",kana:"いち",romaji:"ichi",nl:"1 (één)",alt:["1","一","市","位置"]},
+    {ja:"に",kana:"に",romaji:"ni",nl:"2 (twee)",alt:["2","二","似","煮","にー"]},
+    {ja:"さん",kana:"さん",romaji:"san",nl:"3 (drie)",alt:["3","三","山","さーん"]},
+    {ja:"よん",kana:"よん",romaji:"yon",nl:"4 (vier)",alt:["4","四","読ん"]},
+    {ja:"ご",kana:"ご",romaji:"go",nl:"5 (vijf)",alt:["5","五","後","碁","ごー"]},
+    {ja:"ろく",kana:"ろく",romaji:"roku",nl:"6 (zes)",alt:["6","六","録"]},
+    {ja:"なな",kana:"なな",romaji:"nana",nl:"7 (zeven)",alt:["7","七","奈々","菜々","ナナ"]},
+    {ja:"はち",kana:"はち",romaji:"hachi",nl:"8 (acht)",alt:["8","八","蜂","鉢"]},
+    {ja:"きゅう",kana:"きゅう",romaji:"kyū",nl:"9 (negen)",alt:["9","九","急","球","旧","級","Q"]},
+    {ja:"じゅう",kana:"じゅう",romaji:"jū",nl:"10 (tien)",alt:["10","十","自由","銃","重","住"]},
+   ],
+   dialog:[
+    {who:"cat",ja:"いっしょに数えましょう！いち！",romaji:"Issho ni kazoemashō! Ichi!",nl:"Laten we samen tellen! Eén!"},
+    {who:"me",ref:"に"},
+    {who:"cat",ja:"さん！",romaji:"San!",nl:"Drie!"},
+    {who:"me",ref:"よん"},
+    {who:"cat",ja:"ご！",romaji:"Go!",nl:"Vijf!"},
+    {who:"me",ref:"ろく"},
+    {who:"cat",ja:"なな！",romaji:"Nana!",nl:"Zeven!"},
+    {who:"me",ref:"はち"},
+    {who:"cat",ja:"きゅう！",romaji:"Kyū!",nl:"Negen!"},
+    {who:"me",ref:"じゅう"},
+   ]},
+ { title:"Eten & drinken", desc:"Bestellen in een restaurant", color:"var(--blue)",
+   phrases:[
+    {ja:"メニューをお願いします",kana:"メニューをおねがいします",romaji:"menyū o onegai shimasu",nl:"Het menu, alstublieft",alt:["メニューお願いします"]},
+    {ja:"これをください",kana:"これをください",romaji:"kore o kudasai",nl:"Deze graag",alt:["これください","これを下さい"]},
+    {ja:"水をください",kana:"みずをください",romaji:"mizu o kudasai",nl:"Water, alstublieft",alt:["お水をください","水ください","お水ください","水を下さい"]},
+    {ja:"ビールを一つください",kana:"ビールをひとつください",romaji:"biiru o hitotsu kudasai",nl:"Eén biertje, alstublieft",alt:["ビールを1つください","ビール一つください","ビール1つください"]},
+    {ja:"いただきます",kana:"いただきます",romaji:"itadakimasu",nl:"Eet smakelijk (vóór het eten)",alt:["頂きます"]},
+    {ja:"おいしいです",kana:"おいしいです",romaji:"oishii desu",nl:"Het is lekker",alt:["美味しいです","おいしい","美味しい"]},
+    {ja:"お会計お願いします",kana:"おかいけいおねがいします",romaji:"o-kaikei onegai shimasu",nl:"De rekening, alstublieft",alt:["お会計をお願いします"]},
+    {ja:"ごちそうさまでした",kana:"ごちそうさまでした",romaji:"gochisōsama deshita",nl:"Dank voor de maaltijd",alt:["ご馳走様でした","ごちそうさま"]},
+   ],
+   dialog:[
+    {who:"cat",ja:"いらっしゃいませ！",romaji:"Irasshaimase!",nl:"Welkom!"},
+    {who:"me",ref:"メニューをお願いします"},
+    {who:"cat",ja:"はい、どうぞ。",romaji:"Hai, dōzo.",nl:"Alstublieft."},
+    {who:"me",ref:"これをください"},
+    {who:"cat",ja:"お飲み物は？",romaji:"O-nomimono wa?",nl:"En wat wilt u drinken?"},
+    {who:"me",ref:"水をください"},
+    {who:"cat",ja:"お待たせしました。どうぞ。",romaji:"O-matase shimashita. Dōzo.",nl:"Sorry voor het wachten. Alstublieft."},
+    {who:"me",ref:"いただきます"},
+    {who:"cat",ja:"いかがですか？",romaji:"Ikaga desu ka?",nl:"Hoe smaakt het?"},
+    {who:"me",ref:"おいしいです"},
+    {who:"cat",ja:"ありがとうございます！",romaji:"Arigatō gozaimasu!",nl:"Dank u wel!"},
+    {who:"me",ref:"お会計お願いします"},
+   ]},
+ { title:"De weg vragen", desc:"Station, toilet, links en rechts", color:"var(--sage)",
+   phrases:[
+    {ja:"駅はどこですか",kana:"えきはどこですか",romaji:"eki wa doko desu ka",nl:"Waar is het station?",alt:["駅どこですか"]},
+    {ja:"トイレはどこですか",kana:"トイレはどこですか",romaji:"toire wa doko desu ka",nl:"Waar is het toilet?",alt:["トイレどこですか"]},
+    {ja:"まっすぐです",kana:"まっすぐです",romaji:"massugu desu",nl:"Het is rechtdoor",alt:["真っ直ぐです","まっすぐ"]},
+    {ja:"右です",kana:"みぎです",romaji:"migi desu",nl:"Het is rechts",alt:["みぎです"]},
+    {ja:"左です",kana:"ひだりです",romaji:"hidari desu",nl:"Het is links",alt:["ひだりです"]},
+    {ja:"近いですか",kana:"ちかいですか",romaji:"chikai desu ka",nl:"Is het dichtbij?",alt:["ちかいですか"]},
+    {ja:"遠いですか",kana:"とおいですか",romaji:"tōi desu ka",nl:"Is het ver?",alt:["とおいですか"]},
+    {ja:"東京駅までお願いします",kana:"とうきょうえきまでおねがいします",romaji:"Tōkyō-eki made onegai shimasu",nl:"Naar station Tokyo, alstublieft (taxi)",alt:["東京駅まで"]},
+   ],
+   dialog:[
+    {who:"me",ja:"すみません、駅はどこですか？",kana:"すみません、えきはどこですか",romaji:"Sumimasen, eki wa doko desu ka?",nl:"Pardon, waar is het station?",alt:["すいません駅はどこですか","駅はどこですか"]},
+    {who:"cat",ja:"駅ですか？まっすぐです。それから、右です。",romaji:"Eki desu ka? Massugu desu. Sorekara, migi desu.",nl:"Het station? Rechtdoor. Daarna rechts."},
+    {who:"me",ref:"近いですか"},
+    {who:"cat",ja:"はい、近いですよ。五分です。",romaji:"Hai, chikai desu yo. Go-fun desu.",nl:"Ja, het is dichtbij. Vijf minuten."},
+    {who:"me",ref:"ありがとうございます"},
+    {who:"cat",ja:"いいえ、気をつけて！",romaji:"Iie, ki o tsukete!",nl:"Graag gedaan, pas goed op jezelf!"},
+   ]},
+ { title:"Winkelen", desc:"Prijzen, betalen en tasjes", color:"var(--lav)",
+   phrases:[
+    {ja:"これは何ですか",kana:"これはなんですか",romaji:"kore wa nan desu ka",nl:"Wat is dit?",alt:["これはなんですか","これ何ですか","これなんですか"]},
+    {ja:"いくらですか",kana:"いくらですか",romaji:"ikura desu ka",nl:"Hoeveel kost het?",alt:["幾らですか"]},
+    {ja:"高いですね",kana:"たかいですね",romaji:"takai desu ne",nl:"Dat is duur, hè",alt:["たかいですね"]},
+    {ja:"安いですね",kana:"やすいですね",romaji:"yasui desu ne",nl:"Dat is goedkoop, hè",alt:["やすいですね"]},
+    {ja:"見ているだけです",kana:"みているだけです",romaji:"mite iru dake desu",nl:"Ik kijk alleen even",alt:["見てるだけです","みてるだけです"]},
+    {ja:"カードで払えますか",kana:"カードではらえますか",romaji:"kādo de haraemasu ka",nl:"Kan ik met kaart betalen?",alt:["カードで払えますか？","カード使えますか"]},
+    {ja:"袋はいりません",kana:"ふくろはいりません",romaji:"fukuro wa irimasen",nl:"Ik hoef geen tasje",alt:["袋は要りません","袋いりません"]},
+    {ja:"千円です",kana:"せんえんです",romaji:"sen en desu",nl:"Het is duizend yen",alt:["1000円です","1,000円です","せんえんです"]},
+   ],
+   dialog:[
+    {who:"cat",ja:"いらっしゃいませ。",romaji:"Irasshaimase.",nl:"Welkom."},
+    {who:"me",ref:"これは何ですか"},
+    {who:"cat",ja:"日本のお茶です。",romaji:"Nihon no o-cha desu.",nl:"Het is Japanse thee."},
+    {who:"me",ref:"いくらですか"},
+    {who:"cat",ja:"千円です。",romaji:"Sen en desu.",nl:"Duizend yen."},
+    {who:"me",ref:"カードで払えますか"},
+    {who:"cat",ja:"はい、大丈夫です。袋はいりますか？",romaji:"Hai, daijōbu desu. Fukuro wa irimasu ka?",nl:"Ja, dat kan. Wilt u een tasje?"},
+    {who:"me",ref:"袋はいりません"},
+    {who:"cat",ja:"ありがとうございました！",romaji:"Arigatō gozaimashita!",nl:"Bedankt!"},
+   ]},
+ { title:"Smalltalk", desc:"Het weer, hobby's en 'nog een keer?'", color:"var(--peach)",
+   phrases:[
+    {ja:"お元気ですか",kana:"おげんきですか",romaji:"o-genki desu ka",nl:"Hoe gaat het?",alt:["おげんきですか","元気ですか"]},
+    {ja:"元気です",kana:"げんきです",romaji:"genki desu",nl:"Het gaat goed",alt:["げんきです","元気"]},
+    {ja:"いい天気ですね",kana:"いいてんきですね",romaji:"ii tenki desu ne",nl:"Mooi weer, hè",alt:["良い天気ですね","いいてんきですね"]},
+    {ja:"暑いですね",kana:"あついですね",romaji:"atsui desu ne",nl:"Warm, hè",alt:["熱いですね","厚いですね","あついですね"]},
+    {ja:"寒いですね",kana:"さむいですね",romaji:"samui desu ne",nl:"Koud, hè",alt:["さむいですね"]},
+    {ja:"趣味は何ですか",kana:"しゅみはなんですか",romaji:"shumi wa nan desu ka",nl:"Wat zijn je hobby's?",alt:["趣味はなんですか"]},
+    {ja:"料理が好きです",kana:"りょうりがすきです",romaji:"ryōri ga suki desu",nl:"Ik kook graag",alt:["料理がすきです"]},
+    {ja:"もう一度お願いします",kana:"もういちどおねがいします",romaji:"mō ichido onegai shimasu",nl:"Nog een keer, alstublieft",alt:["もう1度お願いします","もういちどお願いします"]},
+    {ja:"ゆっくり話してください",kana:"ゆっくりはなしてください",romaji:"yukkuri hanashite kudasai",nl:"Wilt u langzaam praten?",alt:["ゆっくりはなしてください","ゆっくりお願いします"]},
+   ],
+   dialog:[
+    {who:"cat",ja:"こんにちは！お元気ですか？",romaji:"Konnichiwa! O-genki desu ka?",nl:"Hallo! Hoe gaat het?"},
+    {who:"me",ref:"元気です"},
+    {who:"cat",ja:"今日は暑いですね。",romaji:"Kyō wa atsui desu ne.",nl:"Het is warm vandaag, hè."},
+    {who:"me",ref:"暑いですね"},
+    {who:"cat",ja:"趣味は何ですか？",romaji:"Shumi wa nan desu ka?",nl:"Wat zijn je hobby's?"},
+    {who:"me",ref:"料理が好きです"},
+    {who:"cat",ja:"私も料理が大好きで、毎日いろいろ作っています！",romaji:"Watashi mo ryōri ga daisuki de, mainichi iroiro tsukutte imasu!",nl:"Ik kook ook heel graag, ik maak elke dag van alles!",fast:true},
+    {who:"me",ref:"ゆっくり話してください"},
+    {who:"cat",ja:"あ、ごめんなさい。私も、料理が、好きです。",romaji:"A, gomen nasai. Watashi mo, ryōri ga, suki desu.",nl:"O, sorry. Ik kook ook graag.",slow:true},
+    {who:"me",ref:"またね"},
+   ]},
+];
+
+// global phrase lookup & keys
+const PHRASES = {};
+UNITS.forEach((u,ui)=>u.phrases.forEach((p,pi)=>{ p.key=`${ui}.${pi}`; p.unit=ui; PHRASES[p.ja]=p; }));
+
+function lessonsOf(ui){
+  const n = UNITS[ui].phrases.length, h = Math.ceil(n/2);
+  return [
+    {ui, li:0, name:"Les 1", phrases:UNITS[ui].phrases.slice(0,h)},
+    {ui, li:1, name:"Les 2", phrases:UNITS[ui].phrases.slice(h)},
+    {ui, li:2, name:"Gesprek", phrases:UNITS[ui].phrases, dialog:true},
+  ];
+}
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const STORE = "japantalk-v1";
+const today = () => new Date().toISOString().slice(0,10);
+const defaults = () => ({ xp:0, daily:{date:today(),xp:0}, streak:{count:0,last:null}, goal:20,
+  done:{}, ph:{}, settings:{rate:0.9, romaji:true, kana:true, mode:"auto", theme:"auto"} });
+let S = load();
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(STORE)); if(s){ const d=defaults(); return {...d,...s,settings:{...d.settings,...s.settings}}; } }catch(e){}
+  return defaults();
+}
+function save(){ localStorage.setItem(STORE, JSON.stringify(S)); }
+function rollDay(){
+  if(S.daily.date!==today()) S.daily={date:today(),xp:0};
+  // streak broken?
+  if(S.streak.last){
+    const diff = Math.round((new Date(today()) - new Date(S.streak.last))/864e5);
+    if(diff>1) S.streak.count=0;
+  }
+}
+function addXP(n){
+  rollDay();
+  S.xp+=n; S.daily.xp+=n;
+  if(S.streak.last!==today()){ S.streak.count+=1; S.streak.last=today(); }
+  save();
+}
+function mark(p, ok){
+  if(!p.key) return;
+  const r = S.ph[p.key] || {s:0,n:0};
+  r.n++; r.s = Math.max(0, Math.min(5, r.s + (ok?1:-2))); r.t=Date.now();
+  S.ph[p.key]=r;
+}
+function applyTheme(){
+  const t=S.settings.theme, el=document.documentElement;
+  el.classList.toggle("dark", t==="dark"); el.classList.toggle("light", t==="light");
+}
+
+/* =========================================================
+   SPEECH
+   ========================================================= */
+let jaVoice=null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang));
+  jaVoice = vs.find(v=>/google/i.test(v.name)) || vs.find(v=>/kyoko|o-ren|haruka|nanami/i.test(v.name)) || vs[0] || null;
+}
+if("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = ()=>{ pickVoice(); if(view==="home") render(); }; }
+function speak(text, mult=1){
+  return new Promise(res=>{
+    if(!("speechSynthesis" in window)) return res();
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/[～〜]/g,""));
+    u.lang="ja-JP"; if(jaVoice) u.voice=jaVoice;
+    u.rate = Math.max(0.4, Math.min(1.6, S.settings.rate*mult));
+    u.onend=res; u.onerror=res;
+    speechSynthesis.speak(u);
+  });
+}
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const canRecognize = () => !!SR && S.settings.mode==="auto";
+let rec=null;
+function listen(){
+  return new Promise((resolve,reject)=>{
+    speechSynthesis && speechSynthesis.cancel();
+    rec = new SR(); rec.lang="ja-JP"; rec.interimResults=false; rec.maxAlternatives=5; rec.continuous=false;
+    let got=null;
+    rec.onresult = e => { got = Array.from(e.results[0]).map(a=>a.transcript); };
+    rec.onerror = e => { if(e.error==="no-speech"||e.error==="aborted") return; reject(e.error); };
+    rec.onend = () => { rec=null; resolve(got||[]); };
+    try{ rec.start(); }catch(e){ reject("start"); }
+  });
+}
+function stopListening(){ if(rec) try{rec.stop()}catch(e){} }
+
+// --- matching ---
+function toHira(s){ return s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60)); }
+function norm(s){
+  return toHira(s.normalize("NFKC").toLowerCase())
+    .replace(/[\s、。，,．.！!？?・「」『』"'~〜～…]/g,"");
+}
+function lev(a,b){
+  const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){ const cur=[i];
+    for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    prev=cur; }
+  return prev[n];
+}
+function score(heard, p){
+  const targets=[p.ja,p.kana,...(p.alt||[])].map(norm);
+  let best=0;
+  for(const h of heard){ const hn=norm(h); if(!hn) continue;
+    for(const t of targets){
+      let sc = 1 - lev(hn,t)/Math.max(hn.length,t.length);
+      if(t.length>=4 && hn.includes(t)) sc=Math.max(sc,0.95);   // said extra words around it
+      best=Math.max(best,sc);
+    }}
+  return best;
+}
+
+// --- soft sounds ---
+let actx=null;
+function chime(good){
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    const notes = good? [660,880] : [330,262];
+    notes.forEach((f,i)=>{
+      const o=actx.createOscillator(), g=actx.createGain();
+      o.type="sine"; o.frequency.value=f;
+      const t=actx.currentTime+i*0.11;
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.12,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t+0.4);
+    });
+  }catch(e){}
+}
+
+/* =========================================================
+   CAT MASCOT (inline SVG)
+   ========================================================= */
+function cat(mood="happy", size=72, fur="#F6D2BE"){
+  const ink="#3D3A44", pink="#EFB1A8";
+  let eyes="", mouth="", extra="";
+  const W=`stroke="${ink}" stroke-width="3" stroke-linecap="round" fill="none"`;
+  switch(mood){
+    case "happy": case "proud":
+      eyes=`<path d="M33 52 q5 -6 10 0" ${W}/><path d="M57 52 q5 -6 10 0" ${W}/>`;
+      mouth=`<path d="M44 62 q3 4 6 0 q3 4 6 0" ${W}/>`;
+      if(mood==="proud") extra=`<path d="M84 18 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#F4E6B0" stroke="${ink}" stroke-width="1.5"/><path d="M14 26 l2 4 4 2 -4 2 -2 4 -2 -4 -4 -2 4 -2z" fill="#CFC6EA"/>`;
+      break;
+    case "worried":
+      eyes=`<circle cx="38" cy="53" r="3.5" fill="${ink}"/><circle cx="62" cy="53" r="3.5" fill="${ink}"/><path d="M32 44 l10 3" ${W}/><path d="M68 44 l-10 3" ${W}/>`;
+      mouth=`<path d="M43 66 q3.5 -3 7 0 q3.5 3 7 0" ${W}/>`;
+      extra=`<path d="M76 40 q3 6 0 8 q-3 -2 0 -8z" fill="#C4DCEF"/>`;
+      break;
+    case "sleepy":
+      eyes=`<path d="M33 54 h10" ${W}/><path d="M57 54 h10" ${W}/>`;
+      mouth=`<path d="M46 63 q4 3 8 0" ${W}/>`;
+      extra=`<text x="78" y="28" font-family="Nunito" font-weight="800" font-size="14" fill="${ink}">z</text><text x="87" y="18" font-family="Nunito" font-weight="800" font-size="10" fill="${ink}">z</text>`;
+      break;
+    case "talking":
+      eyes=`<circle cx="38" cy="52" r="4" fill="${ink}"/><circle cx="62" cy="52" r="4" fill="${ink}"/><circle cx="39.5" cy="50.5" r="1.3" fill="#fff"/><circle cx="63.5" cy="50.5" r="1.3" fill="#fff"/>`;
+      mouth=`<path d="M45 61 q5 9 10 0 z" fill="${pink}" stroke="${ink}" stroke-width="2.5" stroke-linejoin="round"/>`;
+      break;
+    default: // curious
+      eyes=`<circle cx="38" cy="52" r="5.5" fill="${ink}"/><circle cx="62" cy="52" r="5.5" fill="${ink}"/><circle cx="40" cy="50" r="1.8" fill="#fff"/><circle cx="64" cy="50" r="1.8" fill="#fff"/>`;
+      mouth=`<circle cx="50" cy="64" r="2.6" ${W} stroke-width="2.5"/>`;
+      extra=`<text x="80" y="26" font-family="Nunito" font-weight="800" font-size="16" fill="${ink}">?</text>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">
+    <circle cx="50" cy="56" r="44" fill="${fur}" opacity=".35"/>
+    <path d="M22 44 L26 14 L44 30 Z" fill="${fur}" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M78 44 L74 14 L56 30 Z" fill="${fur}" stroke="${ink}" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M28 34 L29 22 L37 29 Z" fill="${pink}"/><path d="M72 34 L71 22 L63 29 Z" fill="${pink}"/>
+    <ellipse cx="50" cy="56" rx="32" ry="28" fill="${fur}" stroke="${ink}" stroke-width="3"/>
+    <circle cx="31" cy="62" r="5" fill="${pink}" opacity=".7"/><circle cx="69" cy="62" r="5" fill="${pink}" opacity=".7"/>
+    <path d="M48 58 h4 l-2 2.5z" fill="${ink}" stroke="${ink}" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M14 56 h10 M15 63 l9 -2 M86 56 h-10 M85 63 l-9 -2" stroke="${ink}" stroke-width="2" stroke-linecap="round"/>
+    ${eyes}${mouth}${extra}
+  </svg>`;
+}
+
+/* =========================================================
+   LESSON BUILDING
+   ========================================================= */
+const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+const pick = (a,n) => shuffle(a).slice(0,n);
+function learnedPhrases(){ return Object.keys(S.ph).map(k=>{const [u,p]=k.split(".");return UNITS[u]?.phrases[p];}).filter(Boolean); }
+function distractors(p, n){
+  let pool = UNITS[p.unit].phrases.filter(x=>x!==p && x.nl!==p.nl);
+  if(pool.length<n) pool = pool.concat(Object.values(PHRASES).filter(x=>x.unit!==p.unit));
+  return pick(pool, n);
+}
+function buildLesson(L){
+  const ex=[];
+  if(L.dialog){
+    pick(L.phrases,4).forEach((p,i)=>ex.push({type: i%2? "listen":"speak", p}));
+    const lines = UNITS[L.ui].dialog.map(l => l.ref ? {...PHRASES[l.ref], who:"me"} : l);
+    lines.forEach((l,i)=>{ if(l.who==="me") ex.push({type:"dialog", lines, idx:i, p:l}); });
+    return ex;
+  }
+  const ps=L.phrases;
+  ps.forEach((p,i)=>{
+    ex.push({type:"intro",p});
+    if(i>0) ex.push({type: Math.random()<.5?"listen":"choose", p:ps[i-1]});
+  });
+  ex.push({type:"listen", p:ps[ps.length-1]});
+  const tail = shuffle(ps).map(p=>({type:"speak",p}));
+  pick(ps,2).forEach(p=>tail.push({type:"choose",p}));
+  return ex.concat(shuffle(tail));
+}
+function buildPractice(){
+  const all = learnedPhrases();
+  const sorted = [...all].sort((a,b)=>(S.ph[a.key].s - S.ph[b.key].s) || (S.ph[a.key].t - S.ph[b.key].t));
+  const sel = shuffle(sorted.slice(0, Math.min(8, sorted.length)));
+  const ex=[];
+  sel.forEach((p,i)=>ex.push({type:["speak","listen","speak","choose"][i%4], p}));
+  return ex.concat(shuffle(sel).slice(0,4).map(p=>({type:"speak",p})));
+}
+
+/* =========================================================
+   VIEWS
+   ========================================================= */
+const $app = document.getElementById("app");
+let view="home", lesson=null;
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function toast(msg){ const t=document.createElement("div"); t.className="toast pop"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+function jpBlock(p, big=true){
+  const s=S.settings;
+  return `${s.kana?`<div class="jp ${big?"big-jp":""}">${esc(p.ja)}</div>`:""}
+          ${s.romaji?`<div class="romaji">${esc(p.romaji)}</div>`:""}
+          ${!s.kana&&!s.romaji?`<div class="romaji">(tekst verborgen – luister goed)</div>`:""}`;
+}
+
+function render(){
+  applyTheme(); rollDay();
+  if(view==="home") renderHome();
+  else if(view==="lesson") renderEx();
+  else if(view==="result") renderResult();
+  else if(view==="settings") renderSettings();
+  window.scrollTo?.(0, view==="home" ? (window._homeScroll||0) : 0);
+}
+
+function isUnlocked(ui,li){
+  if(ui===0&&li===0) return true;
+  const prev = li>0 ? `${ui}.${li-1}` : `${ui-1}.2`;
+  return !!S.done[prev];
+}
+function renderHome(){
+  const pct = Math.min(100, S.daily.xp/S.goal*100);
+  const goalMet = S.daily.xp>=S.goal;
+  const nLearned = learnedPhrases().length;
+  let current=null;
+  outer: for(let u=0;u<UNITS.length;u++) for(let l=0;l<3;l++) if(!S.done[`${u}.${l}`] && isUnlocked(u,l)){ current=`${u}.${l}`; break outer; }
+  const icons=["🗣️","🎧","💬"];
+  let html = `
+  <div class="topbar">
+    <div class="brand">${cat("happy",34)} Japantalk</div>
+    <div class="chip" title="Dagen op rij">🔥 ${S.streak.count}</div>
+    <button class="iconbtn" onclick="go('settings')" aria-label="Instellingen">⚙️</button>
+  </div>
+  ${!jaVoice && "speechSynthesis" in window ? `<div class="warn">🔈 Je browser heeft (nog) geen Japanse stem gevonden. Probeer Chrome, Edge of Safari, of installeer een Japanse stem in je systeeminstellingen.</div>`:""}
+  ${!SR ? `<div class="warn">🎙️ Deze browser heeft geen spraakherkenning. Je beoordeelt jezelf; met Chrome, Edge of Safari luistert de app mee.</div>`:""}
+  <div class="goalcard">
+    ${cat(goalMet?"proud":(S.daily.xp===0?"sleepy":"happy"),64)}
+    <div class="info">
+      <h3>${goalMet?"Dagdoel gehaald! すごい！":"Dagdoel"}</h3>
+      <p>${S.daily.xp} / ${S.goal} XP vandaag · ${S.xp} XP totaal</p>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+    </div>
+  </div>
+  <button class="practice-btn" ${nLearned<4?"disabled":""} onclick="startPractice()">
+    <span style="font-size:1.6rem">🔁</span>
+    <span>Oefenen<small>${nLearned<4?"Leer eerst een paar zinnen":`Herhaal je lastigste zinnen · ${nLearned} zinnen geleerd`}</small></span>
+  </button>`;
+  UNITS.forEach((u,ui)=>{
+    html += `<section class="unit"><div class="unit-head" style="background:${u.color}">
+      <h2>Unit ${ui+1} · ${esc(u.title)}</h2><p>${esc(u.desc)}</p></div><div class="path">`;
+    lessonsOf(ui).forEach((L,li)=>{
+      const id=`${ui}.${li}`, done=!!S.done[id], open=isUnlocked(ui,li), isCur=id===current;
+      const x = [0,-60,40][li] + (ui%2? 20:-20);
+      html += `<div class="node-wrap" style="transform:translateX(${x}px)">
+        ${isCur?`<div class="start-bubble">START</div>`:""}
+        <button class="node ${open?"":"locked"}" style="background:${u.color}" ${open?`onclick="startLesson(${ui},${li})"`:`onclick="toast('Rond eerst de vorige les af 🐾')"`} aria-label="${esc(L.name)}">
+          ${done?"★":open?icons[li]:"🔒"}
+        </button>
+        ${isCur?`<div class="side-cat" style="left:${x>0?-90:90}px">${cat("curious",64)}</div>`:""}
+        <div class="node-label">${esc(L.name)}${done?` · ${"★".repeat(Math.min(3,S.done[id]))}`:""}</div>
+      </div>`;
+    });
+    html += `</div></section>`;
+  });
+  html += `<div class="footer-note">Geen kistjes, geen edelstenen, geen winkel.<br>Gewoon praten. がんばって！</div>`;
+  $app.innerHTML = html;
+}
+
+function go(v){ if(view==="home") window._homeScroll=window.scrollY; view=v; render(); }
+
+/* ---------- lesson flow ---------- */
+function startLesson(ui,li){
+  const L = lessonsOf(ui)[li];
+  window._homeScroll=window.scrollY;
+  lesson = { L, id:`${ui}.${li}`, queue:buildLesson(L), i:0, total:0, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
+  lesson.total = lesson.queue.length;
+  view="lesson"; render();
+}
+function startPractice(){
+  window._homeScroll=window.scrollY;
+  lesson = { L:{name:"Oefenen"}, id:null, queue:buildPractice(), i:0, total:0, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
+  lesson.total = lesson.queue.length;
+  view="lesson"; render();
+}
+function quitLesson(){
+  if(lesson && lesson.i>0 && !confirm("Les stoppen? Je voortgang in deze les gaat verloren.")) return;
+  stopListening(); speechSynthesis?.cancel(); lesson=null; view="home"; render();
+}
+function curEx(){ return lesson.queue[lesson.i]; }
+function effType(ex){
+  if((ex.type==="speak"||ex.type==="intro") && lesson.noMic) return ex.type==="intro" ? "intro" : "choose";
+  return ex.type;
+}
+
+function renderEx(){
+  const ex=curEx(), t=effType(ex), p=ex.p;
+  const prog = Math.round(lesson.i/lesson.total*100);
+  let body="";
+  if(t==="intro"){
+    body = `<div class="ex-title">Nieuwe zin ✨</div>
+      <div class="speaker-row">${cat("talking",76)}
+        <div class="bubble">${jpBlock(p)}<div class="nl">${esc(p.nl)}</div>
+          <div class="play-row"><button class="play" onclick="say()">🔊 Luister</button><button class="play slow" onclick="say(.6)">🐢 Langzaam</button></div>
+        </div></div>
+      ${lesson.noMic?"":micArea("Zeg het na")}`;
+  }
+  else if(t==="speak"){
+    body = `<div class="ex-title">Zeg dit in het Japans</div>
+      <div class="speaker-row">${cat("curious",76)}
+        <div class="bubble"><div class="prompt-nl">“${esc(p.nl)}”</div>
+          ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}<div class="play-row"><button class="play" onclick="say()">🔊</button><button class="play slow" onclick="say(.6)">🐢</button></div></div>`
+                       :`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
+        </div></div>
+      ${micArea("Tik en spreek")}`;
+  }
+  else if(t==="listen"){
+    if(!ex.opts) ex.opts = shuffle([p, ...distractors(p,3)]);
+    body = `<div class="ex-title">Wat betekent dit?</div>
+      <div style="display:flex;gap:12px;justify-content:center;align-items:center">
+        <button class="big-play" onclick="say()" aria-label="Luister">🔊</button>
+        <button class="play slow" onclick="say(.6)">🐢</button>
+      </div>
+      <div class="options">${ex.opts.map((o,i)=>`<button class="opt ${lesson.sel===i?"sel":""}" onclick="choose(${i})"><span class="num">${i+1}</span>${esc(o.nl)}</button>`).join("")}</div>`;
+  }
+  else if(t==="choose"){
+    if(!ex.opts) ex.opts = shuffle([p, ...distractors(p,2)]);
+    body = `<div class="ex-title">Hoe zeg je…</div>
+      <div class="card"><div class="prompt-nl">“${esc(p.nl)}”</div></div>
+      <p style="color:var(--muted);margin:14px 0 0;font-weight:600">Tik om te luisteren en te kiezen:</p>
+      <div class="options">${ex.opts.map((o,i)=>`<button class="opt ${lesson.sel===i?"sel":""}" onclick="choose(${i},true)"><span class="sp">🔊</span>
+        <span>${S.settings.romaji? esc(o.romaji) : `Optie ${i+1}`}</span></button>`).join("")}</div>`;
+  }
+  else if(t==="dialog"){
+    const shown = ex.lines.slice(0, ex.idx);
+    body = `<div class="chat-head">${cat("talking",48)}<div><b>Gesprek met Neko</b><div style="color:var(--muted);font-size:.85rem">Jij bent aan de beurt</div></div></div>
+      <div class="chat">${shown.map((l,i)=>`<div class="msg ${l.who}">
+          <div class="jp">${esc(l.ja)}</div>${S.settings.romaji?`<div class="r">${esc(l.romaji)}</div>`:""}<div class="t">${esc(l.nl)}</div>
+          ${l.who==="cat"?`<button onclick="sayLine(${i})">🔊 nog eens</button>`:""}</div>`).join("")}
+        <div class="msg me" style="opacity:.9;border:2px dashed var(--sage);background:var(--card)">
+          <div style="font-weight:700">Zeg: “${esc(p.nl)}”</div>
+          ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}</div><button onclick="say()">🔊 voorbeeld</button>`:`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
+        </div></div>
+      ${lesson.noMic? `<div class="mic-area"><button class="mic" onclick="selfJudgeReveal()">🙊 Ik heb het in gedachten gezegd</button></div>` : micArea("Antwoord Neko")}`;
+  }
+
+  $app.innerHTML = `<div class="lesson">
+    <div class="lesson-top"><button class="closebtn" onclick="quitLesson()" aria-label="Stoppen">✕</button>
+      <div class="bar"><i style="width:${prog}%"></i></div></div>
+    <div class="ex pop">${body}</div>
+    ${actionBar(t)}
+  </div>`;
+  // auto audio
+  if(lesson.state==="ask" && !lesson.autoplayed){
+    lesson.autoplayed=true;
+    if(t==="intro"||t==="listen") setTimeout(()=>say(),250);
+    if(t==="dialog"){ const prev=ex.lines[ex.idx-1]; if(prev&&prev.who==="cat") setTimeout(()=>sayLine(ex.idx-1),250); }
+  }
+}
+function micArea(label){
+  const st=lesson.state;
+  if(!canRecognize()){
+    return `<div class="mic-area">
+      ${st==="ask"?`<button class="mic" onclick="selfJudgeReveal()">🗣️ Ik heb het hardop gezegd</button>`:""}
+      <button class="linkbtn" onclick="noMic()">Kan nu niet praten</button></div>`;
+  }
+  return `<div class="mic-area">
+    <div class="heard">${lesson.heard?`Ik hoorde: <span class="jp">“${esc(lesson.heard)}”</span>`:""}</div>
+    ${st==="ask"||st==="listening"?`<button class="mic ${st==="listening"?"listening":""}" onclick="toggleMic()">🎙️ ${st==="listening"?"Ik luister… (tik om te stoppen)":label}</button>`:""}
+    ${st==="ask"?`<button class="linkbtn" onclick="noMic()">Kan nu niet praten</button>`:""}
+  </div>`;
+}
+function actionBar(t){
+  const st=lesson.state, ex=curEx();
+  if(st==="good"||st==="bad"){
+    const good=st==="good";
+    const titles = good? ["Heel goed!","Perfect!","すごい！","Top!","Lekker bezig!"] : ["Nog niet helemaal","Bijna!","Oeps!"];
+    const title = lesson.fbTitle || (lesson.fbTitle = titles[Math.random()*titles.length|0]);
+    const speakish = ["intro","speak","dialog"].includes(t) && canRecognize() && !lesson.selfJudged;
+    return `<div class="actionbar ${st} pop">
+      <div class="fb">${cat(good?"happy":"worried",56)}<div><h4>${title}</h4>
+        ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") :
+          `<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
+        <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
+      <div class="btnrow">
+        ${!good&&speakish?`<button class="btn secondary" onclick="retry()">Opnieuw</button>`:""}
+        <button class="btn ${good?"":"coral"}" onclick="next()">Doorgaan</button>
+      </div></div>`;
+  }
+  if(st==="self"){
+    return `<div class="actionbar pop">
+      <div class="fb">${cat("curious",56)}<div><h4>Klonk het zo?</h4><p class="jp" style="font-weight:700">${esc(ex.p.ja)}</p><p>${esc(ex.p.romaji)}</p>
+      <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
+      <div class="btnrow"><button class="btn coral" onclick="judge(false)">Nog niet</button><button class="btn" onclick="judge(true)">Ja, goed!</button></div></div>`;
+  }
+  if(t==="listen"||t==="choose"){
+    return `<div class="actionbar"><div class="btnrow"><button class="btn" ${lesson.sel==null?"disabled":""} onclick="check()">Controleer</button></div></div>`;
+  }
+  if(t==="intro" && lesson.noMic){
+    return `<div class="actionbar"><div class="btnrow"><button class="btn" onclick="resolve(true)">Doorgaan</button></div></div>`;
+  }
+  return `<div class="actionbar"><div class="btnrow"><button class="btn secondary" onclick="skip()">Overslaan</button></div></div>`;
+}
+
+function say(mult=1){ if(!lesson||view!=="lesson") return; const ex=curEx(); return speak(ex.p.ja, mult); }
+function sayLine(i){ if(!lesson||view!=="lesson") return; const l=curEx().lines[i]; speak(l.ja, l.fast?1.35:l.slow?0.65:1); }
+function choose(i, play){
+  lesson.sel=i; const ex=curEx();
+  if(play) speak(ex.opts[i].ja);
+  renderEx();
+}
+function check(){
+  const ex=curEx(); const ok = ex.opts[lesson.sel]===ex.p;
+  resolve(ok);
+}
+async function toggleMic(){
+  if(lesson.state==="listening"){ stopListening(); return; }
+  lesson.state="listening"; lesson.heard=""; renderEx();
+  try{
+    const heard = await listen();
+    if(view!=="lesson"||!lesson) return;
+    if(!heard.length){ lesson.state="ask"; lesson.heard="(niets gehoord – probeer het nog eens)"; renderEx(); return; }
+    lesson.heard = heard[0];
+    const sc = score(heard, curEx().p);
+    lesson.fbNote = sc>=.95 ? "Uitspraak klinkt perfect." : sc>=.75 ? "Goed verstaanbaar!" : "";
+    resolve(sc>=.75);
+  }catch(err){
+    lesson.state="ask"; renderEx();
+    if(err==="not-allowed"||err==="service-not-allowed"){
+      toast("Geen toegang tot de microfoon. Je kunt jezelf beoordelen (zie Instellingen).");
+      S.settings.mode="self"; save(); renderEx();
+    } else toast("Spraakherkenning lukte niet ("+err+"). Probeer opnieuw.");
+  }
+}
+function selfJudgeReveal(){ lesson.state="self"; lesson.selfJudged=true; renderEx(); say(); }
+function judge(ok){ resolve(ok); }
+function noMic(){ lesson.noMic=true; stopListening(); lesson.state="ask"; lesson.autoplayed=false; renderEx(); toast("Oké! De rest van deze les zonder praten 🤫"); }
+function skip(){ stopListening(); resolve(false, true); }
+function retry(){ lesson.state="ask"; lesson.heard=""; lesson.fbTitle=null; renderEx(); }
+
+function resolve(ok, skipped=false){
+  const ex=curEx();
+  lesson.state = ok ? "good" : "bad";
+  lesson.fbTitle=null;
+  if(ex.type!=="intro" || !lesson.noMic) chime(ok);
+  if(!ex.counted){
+    ex.counted=true;
+    if(ok) lesson.correct++; else lesson.mistakes++;
+    if(ex.p.key) mark(ex.p, ok);
+  }
+  // wrong answers come back later (once), like Duolingo
+  if(!ok && ex.type!=="dialog" && !ex.requeued){
+    ex.requeued=true;
+    lesson.queue.push({type: ex.type==="intro"?"speak":ex.type, p:ex.p, requeued:true});
+    lesson.total++;
+  }
+  renderEx();
+}
+function next(){
+  speechSynthesis?.cancel();
+  lesson.i++;
+  Object.assign(lesson,{state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
+  if(lesson.i>=lesson.queue.length) return finish();
+  renderEx();
+}
+function finish(){
+  const perfect = lesson.mistakes===0;
+  const xp = 10 + (perfect?5:0) + (lesson.L.dialog?5:0);
+  const wasGoal = S.daily.xp>=S.goal;
+  addXP(xp);
+  if(lesson.id){
+    const stars = perfect?3: lesson.mistakes<=2?2:1;
+    S.done[lesson.id] = Math.max(S.done[lesson.id]||0, stars);
+  }
+  save();
+  lesson.result = {xp, perfect, goalNow: !wasGoal && S.daily.xp>=S.goal};
+  view="result"; render();
+}
+function renderResult(){
+  const r=lesson.result;
+  const acc = Math.round(lesson.correct/Math.max(1,lesson.correct+lesson.mistakes)*100);
+  $app.innerHTML = `<div class="result pop">
+    ${cat("proud",150)}
+    <h1>${r.perfect?"Foutloos! 完璧！":"Les voltooid!"}</h1>
+    <p style="color:var(--muted);margin:0">${r.goalNow?"🎉 Je hebt je dagdoel gehaald!":`${esc(lesson.L.name)} · ${S.streak.count} ${S.streak.count===1?"dag":"dagen"} op rij 🔥`}</p>
+    <div class="stats">
+      <div class="stat"><b>+${r.xp}</b><span>XP</span></div>
+      <div class="stat"><b>${acc}%</b><span>Goed</span></div>
+      <div class="stat"><b>${S.daily.xp}/${S.goal}</b><span>Dagdoel</span></div>
+    </div>
+    <button class="btn" style="flex:none;width:100%;max-width:360px" onclick="lesson=null;go('home')">Doorgaan</button>
+  </div>`;
+}
+
+/* ---------- settings ---------- */
+function setS(k,v){ if(k==="goal") S.goal=v; else S.settings[k]=v; save(); render(); }
+function seg(k,opts,cur){ return `<div class="seg">${opts.map(([v,l])=>`<button class="${cur===v?"on":""}" onclick='setS("${k}",${JSON.stringify(v)})'>${l}</button>`).join("")}</div>`; }
+function renderSettings(){
+  const s=S.settings;
+  $app.innerHTML = `<div class="topbar"><button class="iconbtn" onclick="go('home')" aria-label="Terug">←</button><div class="brand">Instellingen</div></div>
+  <div class="page">
+    <div class="setting"><h3>Dagdoel</h3><p>Een les levert 10–20 XP op.</p>${seg("goal",[[10,"Rustig · 10"],[20,"Normaal · 20"],[30,"Serieus · 30"],[50,"Intens · 50"]],S.goal)}</div>
+    <div class="setting"><h3>Spreeksnelheid</h3><p>Hoe snel de Japanse stem praat.</p>${seg("rate",[[0.7,"Langzaam"],[0.9,"Normaal"],[1.05,"Natuurlijk"]],s.rate)}
+      <div style="margin-top:10px"><button class="play" onclick="speak('こんにちは、よろしくおねがいします')">🔊 Test de stem</button>
+      <span style="color:var(--muted);font-size:.85rem;margin-left:6px">${jaVoice?esc(jaVoice.name):"geen Japanse stem gevonden"}</span></div></div>
+    <div class="setting"><h3>Tekst tonen</h3><p>Wil je meer op je gehoor leren? Zet de tekst uit.</p>
+      ${seg("romaji",[[true,"Romaji aan"],[false,"Romaji uit"]],s.romaji)}<div style="height:8px"></div>
+      ${seg("kana",[[true,"Japans schrift aan"],[false,"Japans schrift uit"]],s.kana)}</div>
+    <div class="setting"><h3>Beoordeling van je uitspraak</h3><p>${SR?"Laat de app meeluisteren, of beoordeel jezelf.":"Deze browser heeft geen spraakherkenning, dus je beoordeelt jezelf."}</p>
+      ${SR?seg("mode",[["auto","🎙️ App luistert mee"],["self","🙋 Zelf beoordelen"]],s.mode):""}</div>
+    <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
+    <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
+      <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
+    <div style="display:flex;justify-content:center;margin-top:20px">${cat("sleepy",80)}</div>
+  </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
