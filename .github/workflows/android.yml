@@ -63,6 +63,8 @@ jobs:
           # allow the app to install its own updates
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />#' android/app/src/main/AndroidManifest.xml
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml
+          # microphone recording inside the app (pronunciation check)
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />#' android/app/src/main/AndroidManifest.xml
 
       - name: App icon (cat)
         continue-on-error: true
