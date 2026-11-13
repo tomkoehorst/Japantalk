@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Japantalk – Japans leren praten</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
 <style>
+@font-face{font-family:Nunito;font-weight:400;src:url(fonts/nunito-400.woff2) format("woff2")}
+@font-face{font-family:Nunito;font-weight:600;src:url(fonts/nunito-600.woff2) format("woff2")}
+@font-face{font-family:Nunito;font-weight:700;src:url(fonts/nunito-700.woff2) format("woff2")}
+@font-face{font-family:Nunito;font-weight:800;src:url(fonts/nunito-800.woff2) format("woff2")}
 :root{
   --bg:#FBF8F4; --card:#FFFFFF; --text:#3D3A44; --muted:#8A8594; --line:#ECE6DF;
   --sage:#B8D8C8; --lav:#CFC6EA; --peach:#F6D2BE; --blue:#C4DCEF; --butter:#F4E6B0;
@@ -29,7 +31,7 @@
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Nunito,system-ui,sans-serif;}
 body{min-height:100vh;min-height:100dvh}
 button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
-.jp{font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif}
+.jp{font-family:"Noto Sans CJK JP","Noto Sans JP",sans-serif}
 #app{max-width:560px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
 
 /* top bar */
@@ -140,7 +142,6 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .seg{display:flex;flex-wrap:wrap;gap:8px}
 .seg button{padding:8px 14px;border-radius:12px;border:2px solid var(--line);font-weight:700}
 .seg button.on{border-color:var(--sage);background:color-mix(in srgb,var(--sage) 40%,var(--card))}
-.warn{background:color-mix(in srgb,var(--butter) 50%,var(--card));border-radius:var(--r);padding:12px 14px;margin:8px 18px;font-size:.9rem;display:flex;gap:10px;align-items:center}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;z-index:50;font-size:.9rem;max-width:90vw}
 .pop{animation:pop .35s ease}
 @keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
@@ -386,39 +387,20 @@ function applyTheme(){
 /* =========================================================
    SPEECH
    ========================================================= */
-// In the Android app (Capacitor) we use the phone's native speech engines
-const NATIVE = typeof window.Capacitor?.nativePromise === "function";
-const nat = (plugin, method, opts={}) => window.Capacitor.nativePromise(plugin, method, opts);
-let jaVoice=null;
-function pickVoice(){
-  const vs = speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang));
-  jaVoice = vs.find(v=>/google/i.test(v.name)) || vs.find(v=>/kyoko|o-ren|haruka|nanami/i.test(v.name)) || vs[0] || null;
-}
-if("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = ()=>{ pickVoice(); if(view==="home") render(); }; }
+// Native Android speech engines via Capacitor plugins
+const nat = (plugin, method, opts={}) =>
+  window.Capacitor?.nativePromise ? window.Capacitor.nativePromise(plugin, method, opts) : Promise.reject("geen app");
 function speak(text, mult=1){
-  if(NATIVE){
-    const rate = Math.max(0.4, Math.min(1.6, S.settings.rate*mult));
-    return nat("TextToSpeech","stop").catch(()=>{})
-      .then(()=>nat("TextToSpeech","speak",{text:text.replace(/[～〜]/g,""), lang:"ja-JP", rate, pitch:1, volume:1, queueStrategy:0}))
-      .catch(e=>{ toast("Spraak lukte niet. Staat er een Japanse stem in je Android-spraakinstellingen?"); });
-  }
-  return new Promise(res=>{
-    if(!("speechSynthesis" in window)) return res();
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/[～〜]/g,""));
-    u.lang="ja-JP"; if(jaVoice) u.voice=jaVoice;
-    u.rate = Math.max(0.4, Math.min(1.6, S.settings.rate*mult));
-    u.onend=res; u.onerror=res;
-    speechSynthesis.speak(u);
-  });
+  const rate = Math.max(0.4, Math.min(1.6, S.settings.rate*mult));
+  return nat("TextToSpeech","stop").catch(()=>{})
+    .then(()=>nat("TextToSpeech","speak",{text:text.replace(/[～〜]/g,""), lang:"ja-JP", rate, pitch:1, volume:1, queueStrategy:0}))
+    .catch(()=>{ toast("Spraak lukte niet. Staat de Japanse stem aan bij Tekst-naar-spraak?"); });
 }
-function stopAudio(){ if(NATIVE) nat("TextToSpeech","stop").catch(()=>{}); else if("speechSynthesis" in window) speechSynthesis.cancel(); }
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const HAS_SR = NATIVE || !!SR;
-const canRecognize = () => HAS_SR && S.settings.mode==="auto";
-let rec=null;
-async function listenNative(){
-  nat("TextToSpeech","stop").catch(()=>{});
+function stopAudio(){ nat("TextToSpeech","stop").catch(()=>{}); }
+const canRecognize = () => S.settings.mode==="auto";
+let listening=false;
+async function listen(){
+  stopAudio();
   let perm = await nat("SpeechRecognition","checkPermissions").catch(()=>({}));
   if(perm.speechRecognition!=="granted"){
     perm = await nat("SpeechRecognition","requestPermissions").catch(()=>({}));
@@ -426,30 +408,14 @@ async function listenNative(){
   }
   const av = await nat("SpeechRecognition","available").catch(()=>({available:false}));
   if(!av.available) throw "geen spraakherkenning op dit toestel";
-  rec = {native:true};
+  listening=true;
   try{
     const r = await nat("SpeechRecognition","start",{language:"ja-JP", maxResults:5, partialResults:false, popup:false});
     return (r && r.matches) || [];
   }catch(e){ return []; }   // "No match" etc. → treated as nothing heard
-  finally{ rec=null; }
+  finally{ listening=false; }
 }
-function listen(){
-  if(NATIVE) return listenNative();
-  return new Promise((resolve,reject)=>{
-    speechSynthesis && speechSynthesis.cancel();
-    rec = new SR(); rec.lang="ja-JP"; rec.interimResults=false; rec.maxAlternatives=5; rec.continuous=false;
-    let got=null;
-    rec.onresult = e => { got = Array.from(e.results[0]).map(a=>a.transcript); };
-    rec.onerror = e => { if(e.error==="no-speech"||e.error==="aborted") return; reject(e.error); };
-    rec.onend = () => { rec=null; resolve(got||[]); };
-    try{ rec.start(); }catch(e){ reject("start"); }
-  });
-}
-function stopListening(){
-  if(!rec) return;
-  if(rec.native){ nat("SpeechRecognition","stop").catch(()=>{}); return; }
-  try{rec.stop()}catch(e){}
-}
+function stopListening(){ if(listening) nat("SpeechRecognition","stop").catch(()=>{}); }
 
 // --- matching ---
 function toHira(s){ return s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60)); }
@@ -617,8 +583,6 @@ function renderHome(){
     <div class="chip" title="Dagen op rij">🔥 ${S.streak.count}</div>
     <button class="iconbtn" onclick="go('settings')" aria-label="Instellingen">⚙️</button>
   </div>
-  ${!NATIVE && !jaVoice && "speechSynthesis" in window ? `<div class="warn">🔈 Je browser heeft (nog) geen Japanse stem gevonden. Probeer Chrome, Edge of Safari, of installeer een Japanse stem in je systeeminstellingen.</div>`:""}
-  ${!HAS_SR ? `<div class="warn">🎙️ Deze browser heeft geen spraakherkenning. Je beoordeelt jezelf; met Chrome, Edge of Safari luistert de app mee.</div>`:""}
   <div class="goalcard">
     ${cat(goalMet?"proud":(S.daily.xp===0?"sleepy":"happy"),64)}
     <div class="info">
@@ -887,12 +851,12 @@ function renderSettings(){
     <div class="setting"><h3>Dagdoel</h3><p>Een les levert 10–20 XP op.</p>${seg("goal",[[10,"Rustig · 10"],[20,"Normaal · 20"],[30,"Serieus · 30"],[50,"Intens · 50"]],S.goal)}</div>
     <div class="setting"><h3>Spreeksnelheid</h3><p>Hoe snel de Japanse stem praat.</p>${seg("rate",[[0.7,"Langzaam"],[0.9,"Normaal"],[1.05,"Natuurlijk"]],s.rate)}
       <div style="margin-top:10px"><button class="play" onclick="speak('こんにちは、よろしくおねがいします')">🔊 Test de stem</button>
-      <span style="color:var(--muted);font-size:.85rem;margin-left:6px">${NATIVE?"Android-spraak":jaVoice?esc(jaVoice.name):"geen Japanse stem gevonden"}</span></div></div>
+</div></div>
     <div class="setting"><h3>Tekst tonen</h3><p>Wil je meer op je gehoor leren? Zet de tekst uit.</p>
       ${seg("romaji",[[true,"Romaji aan"],[false,"Romaji uit"]],s.romaji)}<div style="height:8px"></div>
       ${seg("kana",[[true,"Japans schrift aan"],[false,"Japans schrift uit"]],s.kana)}</div>
-    <div class="setting"><h3>Beoordeling van je uitspraak</h3><p>${HAS_SR?"Laat de app meeluisteren, of beoordeel jezelf.":"Deze browser heeft geen spraakherkenning, dus je beoordeelt jezelf."}</p>
-      ${HAS_SR?seg("mode",[["auto","🎙️ App luistert mee"],["self","🙋 Zelf beoordelen"]],s.mode):""}</div>
+    <div class="setting"><h3>Beoordeling van je uitspraak</h3><p>Laat de app meeluisteren, of beoordeel jezelf (handig als de herkenning je niet goed verstaat).</p>
+      ${seg("mode",[["auto","🎙️ App luistert mee"],["self","🙋 Zelf beoordelen"]],s.mode)}</div>
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
@@ -900,7 +864,7 @@ function renderSettings(){
   </div>`;
 }
 
-if(NATIVE){
+if(window.Capacitor?.addListener){
   window.Capacitor.addListener("App","backButton",()=>{
     if(view==="lesson") quitLesson();
     else if(view!=="home"){ lesson=null; go("home"); }
