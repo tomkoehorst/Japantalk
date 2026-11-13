@@ -75,6 +75,8 @@
 .swim{animation:swim 5s ease-in-out infinite alternate}@keyframes swim{to{transform:translateX(12px)}}
 .bob{animation:bob2 2.6s ease-in-out infinite}@keyframes bob2{50%{transform:translateY(-1.5px)}}
 .sway{animation:sway 4s ease-in-out infinite;transform-box:fill-box;transform-origin:top center}@keyframes sway{50%{transform:rotate(5deg)}}
+.buddypick{background:var(--card);border:3px solid var(--line);border-radius:18px;padding:8px 14px 10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.buddypick.on{border-color:var(--sage);box-shadow:0 4px 0 var(--sage)}
 .obp{color:var(--muted);font-weight:600;max-width:380px;line-height:1.5;margin:6px 0}
 .obinput{width:100%;max-width:380px;font:inherit;font-size:1.2rem;font-weight:700;padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--text);margin-top:10px}
 .result h2{margin:10px 0 0}
@@ -225,6 +227,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
    ========================================================= */
 // your own name (chosen in the onboarding); read early because the lessons use it
 const ME = (()=>{ try{ const st=JSON.parse(localStorage.getItem("japantalk-v1")||"{}"); if(st.me && st.me.kata) return st.me; }catch(e){} return {kata:"トム", romaji:"Tomu", nl:"Tom"}; })();
+const BUDDIES = { neko:{id:"neko", name:"Neko", ja:"ネコ", romaji:"Neko"}, panda:{id:"panda", name:"Panda", ja:"パンダ", romaji:"Panda"} };
+const BUDDY = (()=>{ try{ const st=JSON.parse(localStorage.getItem("japantalk-v1")||"{}"); if(BUDDIES[st.buddy]) return BUDDIES[st.buddy]; }catch(e){} return BUDDIES.neko; })();
 const UNITS = [
  /* ===== BLOK A: FUNDAMENT ===== */
  { id:"groet", block:"A", title:"Begroeten & beleefd zijn", desc:"Groeten, bedanken en sorry zeggen", color:"var(--sage)",
@@ -295,7 +299,7 @@ const UNITS = [
     {ja:"日本は初めてですか？",kana:"にほんははじめてですか",romaji:"Nihon wa hajimete desu ka?",nl:"Is het uw eerste keer in Japan?",reply:"はい"},
    ],
    dialog:[
-    {who:"cat",ja:"はじめまして。ネコです。",romaji:"Hajimemashite. Neko desu.",nl:"Aangenaam. Ik ben Neko."},
+    {who:"cat",ja:`はじめまして。${BUDDY.ja}です。`,romaji:`Hajimemashite. ${BUDDY.romaji} desu.`,nl:`Aangenaam. Ik ben ${BUDDY.name}.`},
     {who:"me",ref:"はじめまして"},
     {who:"cat",ja:"お名前は？",romaji:"O-namae wa?",nl:"Hoe heet u?"},
     {who:"me",ref:`私は${ME.kata}です`},
@@ -993,7 +997,7 @@ function updateCard(){
   if(!upd) return "";
   const busy = upd.state==="downloading";
   return `<div class="goalcard pop" style="background:color-mix(in srgb,var(--blue) 45%,var(--card))">
-    ${cat(busy?"curious":"proud",56)}
+    ${buddy(busy?"curious":"proud",56)}
     <div class="info"><h3>Nieuwe versie: 1.${upd.build}</h3>
       <p id="updtxt">${busy?`Downloaden… ${upd.pct?upd.pct+"%":""}`: upd.state==="installing"?"Tik op Installeren in het Android-scherm.":
           upd.state==="error"?"Er ging iets mis. Probeer het nog eens.":"Bijwerken duurt maar even; je voortgang blijft bewaard."}</p>
@@ -1093,6 +1097,40 @@ function cat(mood="happy", size=72, fur="#F6D2BE"){
     ${eyes}${mouth}${extra}
   </svg>`;
 }
+
+function panda(mood="happy", size=72){
+  const ink="#3D3A44", pink="#EFB1A8", W=`stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none"`, K=`stroke="${ink}" stroke-width="3" stroke-linecap="round" fill="none"`;
+  let eyes="", mouth="", extra="";
+  switch(mood){
+    case "happy": case "proud":
+      eyes=`<path d="M33 54 q5 -5 10 0" ${W}/><path d="M57 54 q5 -5 10 0" ${W}/>`; mouth=`<path d="M44 66 q3 4 6 0 q3 4 6 0" ${K}/>`;
+      if(mood==="proud") extra=`<path d="M84 18 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#F4E6B0" stroke="${ink}" stroke-width="1.5"/><path d="M14 26 l2 4 4 2 -4 2 -2 4 -2 -4 -4 -2 4 -2z" fill="#CFC6EA"/>`;
+      break;
+    case "worried":
+      eyes=`<circle cx="38" cy="54" r="3" fill="#fff"/><circle cx="62" cy="54" r="3" fill="#fff"/><path d="M31 41 l10 3" ${K}/><path d="M69 41 l-10 3" ${K}/>`;
+      mouth=`<path d="M43 69 q3.5 -3 7 0 q3.5 3 7 0" ${K}/>`; extra=`<path d="M78 40 q3 6 0 8 q-3 -2 0 -8z" fill="#C4DCEF"/>`; break;
+    case "sleepy":
+      eyes=`<path d="M33 55 h10" ${W}/><path d="M57 55 h10" ${W}/>`; mouth=`<path d="M46 67 q4 3 8 0" ${K}/>`;
+      extra=`<text x="78" y="28" font-family="Nunito" font-weight="800" font-size="14" fill="${ink}">z</text><text x="87" y="18" font-family="Nunito" font-weight="800" font-size="10" fill="${ink}">z</text>`; break;
+    case "talking":
+      eyes=`<circle cx="38" cy="54" r="4" fill="#fff"/><circle cx="62" cy="54" r="4" fill="#fff"/><circle cx="38.5" cy="54.5" r="2" fill="${ink}"/><circle cx="62.5" cy="54.5" r="2" fill="${ink}"/>`;
+      mouth=`<path d="M45 64 q5 9 10 0 z" fill="${pink}" stroke="${ink}" stroke-width="2.5" stroke-linejoin="round"/>`; break;
+    default:
+      eyes=`<circle cx="38" cy="54" r="5" fill="#fff"/><circle cx="62" cy="54" r="5" fill="#fff"/><circle cx="39" cy="54" r="2.6" fill="${ink}"/><circle cx="63" cy="54" r="2.6" fill="${ink}"/>`;
+      mouth=`<circle cx="50" cy="67" r="2.6" ${K} stroke-width="2.5"/>`; extra=`<text x="80" y="26" font-family="Nunito" font-weight="800" font-size="16" fill="${ink}">?</text>`;
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" aria-hidden="true">
+    <circle cx="50" cy="56" r="44" fill="#B8D8C8" opacity=".35"/>
+    <circle cx="24" cy="30" r="11" fill="${ink}"/><circle cx="76" cy="30" r="11" fill="${ink}"/>
+    <circle cx="24" cy="31" r="5" fill="#6E6878"/><circle cx="76" cy="31" r="5" fill="#6E6878"/>
+    <ellipse cx="50" cy="57" rx="33" ry="29" fill="#fff" stroke="${ink}" stroke-width="3"/>
+    <ellipse cx="37" cy="54" rx="8.5" ry="10.5" fill="${ink}" transform="rotate(25 37 54)"/><ellipse cx="63" cy="54" rx="8.5" ry="10.5" fill="${ink}" transform="rotate(-25 63 54)"/>
+    <circle cx="28" cy="67" r="5" fill="${pink}" opacity=".7"/><circle cx="72" cy="67" r="5" fill="${pink}" opacity=".7"/>
+    <ellipse cx="50" cy="62" rx="4" ry="2.8" fill="${ink}"/>
+    ${eyes}${mouth}${extra}
+  </svg>`;
+}
+const buddy = (mood, size) => BUDDY.id==="panda" ? panda(mood, size) : cat(mood, size);
 
 /* =========================================================
    LESSON BUILDING
@@ -1268,7 +1306,7 @@ function animalSVG(id, x, y, s, flip=false){
       <ellipse cx="1" cy="-4" rx="5.5" ry="4" fill="#F4E6B0"/><circle cx="-4" cy="-11" r="3" fill="#fff" stroke="${INK}" stroke-width="1"/>${eye(-4,-11)}
       <path d="M-9 -10 l-4 1.5 4 1.5z" fill="${INK}"/><path d="M-2 1 v3 M2 1 v3" ${k}/></g>`;
     case "neko": return `<g ${T}><path d="M10 -6 q12 -4 8 -16" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M10 -6 q12 -4 8 -16" fill="none" stroke="#F6D2BE" stroke-width="3" stroke-linecap="round"/>
-      <ellipse cx="0" cy="-9" rx="11" ry="10" fill="#F6D2BE" ${k}/><svg x="-14" y="-40" width="28" height="28" viewBox="0 0 100 100">${cat("happy",100).replace(/^<svg[^>]*>|<\/svg>\s*$/g,"")}</svg></g>`;
+      <ellipse cx="0" cy="-9" rx="11" ry="10" fill="#F6D2BE" ${k}/><svg x="-14" y="-40" width="28" height="28" viewBox="0 0 100 100">${buddy("happy",100).replace(/^<svg[^>]*>|<\/svg>\s*$/g,"")}</svg></g>`;
     case "kame": return `<g ${T}><ellipse cx="-14" cy="-3" rx="4.5" ry="4" fill="#CFE3B5" ${k}/>${eye(-15,-4)}
       <path d="M-8 0 v3 M8 0 v3" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M-12 0 a12 11 0 0 1 24 0 z" fill="#A8CFA0" ${k}/>
       <path d="M-6 -6 l6 -3 6 3 M0 -9 v9" stroke="#7FA77A" stroke-width="1.4" fill="none"/></g>`;
@@ -1505,7 +1543,7 @@ function renderHome(){
   const due = dueKeys().length, tomorrow = dueTomorrow();
   const mood = g>=1 ? "Volle bloei! 🌸" : goalMet ? "Water gekregen vandaag 💧" : S.daily.xp>0 ? "Nog even water geven…" : "Je boom heeft dorst";
   $app.innerHTML = `<div class="tabpage">
-  ${topbar(`${cat(goalMet?"happy":"sleepy",34)} Japantalk`)}
+  ${topbar(`${buddy(goalMet?"happy":"sleepy",34)} Japantalk`)}
   ${updateCard()}
   <div class="scene">
     ${sceneSVG(g, S.tree)}
@@ -1596,23 +1634,25 @@ function renderOnboard(){
   const dots=[0,1,2,3].map(i=>`<span class="dot ${i<=ob.step?"s3":""}"></span>`).join("");
   let body="", next="";
   if(ob.step===0){
-    body=`${cat("happy",140)}<h1>こんにちは！</h1><p class="obp">Ik ben <b>Neko</b>. Samen leren we Japans <b>praten</b> voor je reis: luisteren, nazeggen en kleine gesprekken. Typen hoeft nergens.</p>
+    body=`<h2 style="margin-top:6px">Kies je begeleider</h2>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:8px">${Object.values(BUDDIES).map(b=>`<button class="buddypick ${(S.buddy||"neko")===b.id?"on":""}" onclick="pickBuddy('${b.id}')">${b.id==="panda"?panda("happy",96):cat("happy",96)}<b>${b.name}</b></button>`).join("")}</div>
+      <h1 style="margin-top:14px">こんにちは！</h1><p class="obp">Ik ben <b>${BUDDIES[S.buddy||"neko"].name}</b>. Samen leren we Japans <b>praten</b> voor je reis: luisteren, nazeggen en kleine gesprekken. Typen hoeft nergens.</p>
       <p class="obp">Elke dag een beetje oefenen laat je <b>sakura-boom</b> groeien. 🌸</p>`;
     next=`<button class="btn" onclick="ob.step=1;render()">Verder</button>`;
   } else if(ob.step===1){
     const kata = ob.kata || (ob.name ? nameToKata(ob.name) : "");
-    body=`${cat("curious",100)}<h2>Hoe heet je?</h2>
+    body=`${buddy("curious",100)}<h2>Hoe heet je?</h2>
       <input id="obname" class="obinput" value="${esc(ob.name)}" placeholder="Je voornaam" autocomplete="given-name" oninput="ob.name=this.value;ob.kata='';document.getElementById('obkata').innerHTML=obKataHtml();document.getElementById('obnext').disabled=!this.value.trim()">
       <div id="obkata">${obKataHtml()}</div>
       <button class="mic" style="margin-top:12px" onclick="obListenName()">🎙️ Zeg je naam, dan hoor ik hoe hij in het Japans klinkt</button>`;
     next=`<button class="btn" id="obnext" ${ob.name.trim()?"":"disabled"} onclick="obSaveName()">Verder</button>`;
   } else if(ob.step===2){
-    body=`${cat("happy",100)}<h2>Hoeveel wil je per dag oefenen?</h2><p class="obp">Een les of herhaalronde duurt een paar minuten. Elke dag dat je je doel haalt, krijgt je boom water. In ongeveer een maand staat hij in bloei.</p>
+    body=`${buddy("happy",100)}<h2>Hoeveel wil je per dag oefenen?</h2><p class="obp">Een les of herhaalronde duurt een paar minuten. Elke dag dat je je doel haalt, krijgt je boom water. In ongeveer een maand staat hij in bloei.</p>
       ${seg("goal",[[10,"Rustig · ±5 min"],[20,"Normaal · ±10 min"],[30,"Serieus · ±15 min"],[50,"Intens · ±25 min"]],S.goal)}`;
     next=`<button class="btn" onclick="ob.step=3;render()">Verder</button>`;
   } else {
     const t=ob.test;
-    body=`${cat(t==="ok"?"proud":t==="bad"?"worried":"talking",110)}<h2>Test je microfoon</h2>
+    body=`${buddy(t==="ok"?"proud":t==="bad"?"worried":"talking",110)}<h2>Test je microfoon</h2>
       <p class="obp">Zeg na: <b class="jp" style="font-size:1.4rem">こんにちは</b> (konnichiwa)</p>
       <button class="play" onclick="speak('こんにちは')">🔊 Luister eerst</button>
       <button class="mic" style="margin-top:14px" onclick="obTestMic()">🎙️ ${t==="listening"?"Ik luister…":"Tik en zeg こんにちは"}</button>
@@ -1652,9 +1692,10 @@ async function obTestMic(){
   catch(e){ ob.test="err"; }
   render();
 }
+function pickBuddy(id){ S.buddy=id; save(); render(); }
 function obFinish(){
   S.onboarded=true; save();
-  if(ob._reload || ME.kata!==(S.me&&S.me.kata)) location.reload();   // rebuild lessons with your name
+  if(ob._reload || ME.kata!==(S.me&&S.me.kata) || BUDDY.id!==(S.buddy||"neko")) location.reload();   // rebuild lessons with your name
   else { view="home"; render(); }
 }
 
@@ -1685,7 +1726,7 @@ function renderPhrases(){
   $app.innerHTML=`<div class="tabpage">${topbar("Mijn zinnen")}
     <p style="margin:0 22px;color:var(--muted);font-weight:600">${total} zinnen geleerd · ${solid} zitten er goed in. Tik op een zin om hem te horen.</p>
     <div class="seg" style="margin:10px 18px 0">${chip("all","Alles")}${chip("fav","⭐ Favorieten")}${chip("hard","Lastig")}</div>
-    ${body || `<div style="text-align:center;padding:30px 20px">${cat("sleepy",100)}<p style="color:var(--muted);font-weight:600">${total?"Niets in deze lijst.":"Nog geen zinnen. Na je eerste les staan ze hier, als spiekboekje voor op reis."}</p></div>`}
+    ${body || `<div style="text-align:center;padding:30px 20px">${buddy("sleepy",100)}<p style="color:var(--muted);font-weight:600">${total?"Niets in deze lijst.":"Nog geen zinnen. Na je eerste les staan ze hier, als spiekboekje voor op reis."}</p></div>`}
   </div>${tabbar()}`;
 }
 let gardenEdit=false, dragging=null;
@@ -1775,7 +1816,7 @@ function renderEx(){
   let body="";
   if(t==="intro"){
     body = `<div class="ex-title">Nieuwe zin ✨</div>
-      <div class="speaker-row">${cat("talking",76)}
+      <div class="speaker-row">${buddy("talking",76)}
         <div class="bubble">${jpBlock(p)}<div class="nl">${esc(p.nl)}</div>
           <div class="play-row"><button class="play" onclick="say()">🔊 Luister</button><button class="play slow" onclick="say(.6)">🐢 Langzaam</button></div>
         </div></div>
@@ -1783,7 +1824,7 @@ function renderEx(){
   }
   else if(t==="speak"){
     body = `<div class="ex-title">Zeg dit in het Japans</div>
-      <div class="speaker-row">${cat("curious",76)}
+      <div class="speaker-row">${buddy("curious",76)}
         <div class="bubble"><div class="prompt-nl">“${esc(p.nl)}”</div>
           ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}<div class="play-row"><button class="play" onclick="say()">🔊</button><button class="play slow" onclick="say(.6)">🐢</button></div></div>`
                        :`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
@@ -1809,7 +1850,7 @@ function renderEx(){
   }
   else if(t==="tip"){
     body = `<div class="ex-title">Patroon 🧩</div>
-      <div class="speaker-row">${cat("curious",76)}<div class="bubble"><div style="font-weight:700;line-height:1.5">${esc(ex.text)}</div></div></div>`;
+      <div class="speaker-row">${buddy("curious",76)}<div class="bubble"><div style="font-weight:700;line-height:1.5">${esc(ex.text)}</div></div></div>`;
   }
   else if(t==="swap"){
     const m=ex.model, sl=p.slot;
@@ -1837,7 +1878,7 @@ function renderEx(){
   else if(t==="respond"){
     const q=ex.q;
     body = `<div class="ex-title">Wat zeg je terug?</div>
-      <div class="speaker-row">${cat("talking",76)}<div class="bubble">
+      <div class="speaker-row">${buddy("talking",76)}<div class="bubble">
         <div class="play-row" style="margin-top:0"><button class="play" onclick="sayQ()">🔊 Luister</button><button class="play slow" onclick="sayQ(.6)">🐢</button></div>
         ${lesson.hint?`<div class="hint-text">${jpBlock(q,false)}<div class="nl">${esc(q.nl)}</div><div style="margin-top:8px;font-weight:700">Antwoord: “${esc(p.nl)}”</div></div>`
                      :`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
@@ -1846,7 +1887,7 @@ function renderEx(){
   }
   else if(t==="dialog"){
     const shown = ex.lines.slice(0, ex.idx);
-    body = `<div class="chat-head">${cat("talking",48)}<div><b>Gesprek met Neko</b><div style="color:var(--muted);font-size:.85rem">Jij bent aan de beurt</div></div></div>
+    body = `<div class="chat-head">${buddy("talking",48)}<div><b>Gesprek met ${BUDDY.name}</b><div style="color:var(--muted);font-size:.85rem">Jij bent aan de beurt</div></div></div>
       <div class="chat">${shown.map((l,i)=>`<div class="msg ${l.who}">
           <div class="jp">${esc(l.ja)}</div>${S.settings.romaji?`<div class="r">${esc(l.romaji)}</div>`:""}<div class="t">${esc(l.nl)}</div>
           ${l.who==="cat"?`<button onclick="sayLine(${i})">🔊 nog eens</button>`:""}</div>`).join("")}
@@ -1854,7 +1895,7 @@ function renderEx(){
           <div style="font-weight:700">Zeg: “${esc(p.nl)}”</div>
           ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}</div><button onclick="say()">🔊 voorbeeld</button>`:`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
         </div></div>
-      ${lesson.noMic? `<div class="mic-area"><button class="mic" onclick="selfJudgeReveal()">🙊 Ik heb het in gedachten gezegd</button></div>` : micArea("Antwoord Neko")}`;
+      ${lesson.noMic? `<div class="mic-area"><button class="mic" onclick="selfJudgeReveal()">🙊 Ik heb het in gedachten gezegd</button></div>` : micArea("Antwoord "+BUDDY.name)}`;
   }
 
   $app.innerHTML = `<div class="lesson">
@@ -1893,7 +1934,7 @@ function actionBar(t){
     const title = lesson.fbTitle || (lesson.fbTitle = titles[Math.random()*titles.length|0]);
     const speakish = ["intro","speak","dialog","swap","respond"].includes(t) && canRecognize() && !lesson.selfJudged;
     return `<div class="actionbar ${st} pop">
-      <div class="fb">${cat(good?"happy":"worried",56)}<div><h4>${title}</h4>
+      <div class="fb">${buddy(good?"happy":"worried",56)}<div><h4>${title}</h4>
         ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") :
           `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
         <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
@@ -1904,7 +1945,7 @@ function actionBar(t){
   }
   if(st==="self"){
     return `<div class="actionbar pop">
-      <div class="fb">${cat("curious",56)}<div><h4>Klonk het zo?</h4><p class="jp" style="font-weight:700">${esc(ex.p.ja)}</p><p>${esc(ex.p.romaji)}</p>
+      <div class="fb">${buddy("curious",56)}<div><h4>Klonk het zo?</h4><p class="jp" style="font-weight:700">${esc(ex.p.ja)}</p><p>${esc(ex.p.romaji)}</p>
       <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
       <div class="btnrow"><button class="btn coral" onclick="judge(false)">Nog niet</button><button class="btn" onclick="judge(true)">Ja, goed!</button></div></div>`;
   }
@@ -2036,6 +2077,8 @@ function renderSettings(){
   const s=S.settings;
   $app.innerHTML = `<div class="topbar"><button class="iconbtn" onclick="go('home')" aria-label="Terug">←</button><div class="brand">Instellingen</div></div>
   <div class="page">
+    <div class="setting"><h3>Begeleider</h3><p>Wie oefent er met je mee?</p>
+      <div class="seg">${Object.values(BUDDIES).map(b=>`<button class="${BUDDY.id===b.id?"on":""}" onclick="S.buddy='${b.id}';save();location.reload()">${b.id==="panda"?"🐼":"🐱"} ${b.name}</button>`).join("")}</div></div>
     <div class="setting"><h3>Je naam</h3><p>In de lessen zeg je: <span class="jp">私は${esc(ME.kata)}です</span> (${esc(ME.romaji)})</p>
       <button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="startOnboarding(1)">Naam aanpassen</button></div>
     <div class="setting"><h3>Dagdoel</h3><p>Een les levert 10–20 XP op.</p>${seg("goal",[[10,"Rustig · 10"],[20,"Normaal · 20"],[30,"Serieus · 30"],[50,"Intens · 50"]],S.goal)}</div>
@@ -2059,7 +2102,7 @@ function renderSettings(){
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
-    <div style="display:flex;justify-content:center;margin-top:20px">${cat("sleepy",80)}</div>
+    <div style="display:flex;justify-content:center;margin-top:20px">${buddy("sleepy",80)}</div>
   </div>`;
 }
 

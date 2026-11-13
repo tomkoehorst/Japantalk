@@ -11,10 +11,13 @@ const VOICES={ F:["ja-JP-Neural2-B","ja-JP-Wavenet-B"], M:["ja-JP-Neural2-C","ja
 
 const src=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 const block=src.slice(src.indexOf('const UNITS = ['), src.indexOf('// global phrase lookup'));
-const ctx={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}}; vm.runInNewContext(block.replace('const UNITS','UNITS'),ctx);
+// evaluate the lessons once per companion (Neko / Panda say their own name)
+const ctxs=[{id:'neko',name:'Neko',ja:'ネコ',romaji:'Neko'},{id:'panda',name:'Panda',ja:'パンダ',romaji:'Panda'}].map(B=>{
+  const c={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}, BUDDY:B}; vm.runInNewContext(block.replace('const UNITS','UNITS'),c); return c; });
+const ctx=ctxs[0];
 
 const jobs=[]; const add=(key,text,voice,rate,kind)=>jobs.push({key,text:(text||key).replace(/[～〜]/g,''),voice,rate,kind});
-for(const u of ctx.UNITS){
+for(const u of ctxs.flatMap(c=>c.UNITS)){
   const phrases=[...u.phrases, ...ctx.expandPattern(u.pattern)];
   for(const p of phrases){ add(p.ja,p.tts,'F',1.0,'n'); add(p.ja,p.tts,'F',0.7,'s'); }
   if(u.pattern) for(const sl of u.pattern.slots) add(sl.ja,u.pattern.say==='kana'?sl.kana:sl.ja,'F',0.95,'n');
