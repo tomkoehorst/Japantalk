@@ -68,6 +68,10 @@
 .garden-wrap{margin:6px 18px;border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
 .garden-svg{display:block;width:100%;height:auto}
 .petal{animation:fall linear infinite}
+#treeLayer.sil{filter:brightness(0) invert(1) drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px #F7C1CC)}
+#flash.flashing{animation:flash .55s ease-out}@keyframes flash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.spark{animation:spark 1.4s ease-out both;transform-box:fill-box;transform-origin:center}
+@keyframes spark{0%{opacity:0;transform:scale(.2) rotate(0)}30%{opacity:1;transform:scale(1.3) rotate(45deg)}100%{opacity:0;transform:scale(.6) rotate(90deg)}}
 .drift{animation:drift 40s ease-in-out infinite alternate}@keyframes drift{to{transform:translateX(40px)}}
 .twinkle{animation:tw 3s ease-in-out infinite}@keyframes tw{50%{opacity:.2}}
 .firefly{animation:ff 3s ease-in-out infinite}@keyframes ff{0%,100%{opacity:.1;transform:translate(0,0)}50%{opacity:1;transform:translate(6px,-6px)}}
@@ -1224,21 +1228,22 @@ function treeShape(seed){
   const r=rng(seed), br=[];
   (function add(x,y,a,len,w,depth,t0,span){
     a = Math.max(-Math.PI+0.3, Math.min(-0.3, a));
-    const b={x,y,a,len,w,depth,t0,span,ex:x+Math.cos(a)*len,ey:y+Math.sin(a)*len,bend:(r()-.5)*len*.25,bloom:.62+r()*.33,rot:r()*6};
+    const b={x,y,a,len,w,depth,t0,span,ex:x+Math.cos(a)*len,ey:y+Math.sin(a)*len,bend:(r()-.5)*len*.25,bloom:.55+r()*.42,rot:r()*6};
     br.push(b);
     if(depth<5){
       const n = depth===0 ? 2 : (r()<.3?3:2);
       for(let i=0;i<n;i++){
         const spread=(depth===0?30:22)+r()*14;
         const da = n===2 ? (i?spread:-spread) : (i-1)*spread*1.1;
-        add(b.ex,b.ey,a+da*Math.PI/180+(r()-.5)*.2,len*(.68+r()*.12),w*.64,depth+1,t0+span*.75,span*.82);
+        // each twig starts at its own moment, so growth shows up a little every day instead of in big jumps
+        add(b.ex,b.ey,a+da*Math.PI/180+(r()-.5)*.2,len*(.68+r()*.12),w*.64,depth+1,t0+span*(.45+r()*.9),span*.82);
       }
     }
   })(150,224,-Math.PI/2+(r()-.5)*.12,56,15,0,.04,.15);   // branches early (a real little tree in week 1), blossom at the end
   return _treeCache[seed]=br;
 }
 // returns svg markup of the tree at growth g (0..1); also fills `out.perch` with a branch point for the bird
-function treeSVG(g, seed, out={}){
+function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
   if(g < .05){
     const s = g/.05;
     const h = 4 + s*16;
@@ -1282,7 +1287,26 @@ function treeSVG(g, seed, out={}){
     }
   }
   const halo = `<ellipse cx="150" cy="${(224-g*120).toFixed(0)}" rx="${(40+g*90).toFixed(0)}" ry="${(30+g*80).toFixed(0)}" fill="url(#halo)"/>`;
-  return halo+woodOut+wood+leaves+blossoms;
+  return (withHalo?halo:"")+woodOut+wood+leaves+blossoms;
+}
+// what grew between two moments: new branches, longer branches, new leaves and blossoms (with positions for sparkles)
+function treeDiff(g0, g1, seed){
+  const d={branches:0, longer:0, leaves:0, blossoms:0, spots:[]};
+  if(g1<.05){ if(g1>g0) d.sprout=true; return d; }
+  for(const b of treeShape(seed)){
+    const p0=clamp01((g0-b.t0)/b.span), p1=clamp01((g1-b.t0)/b.span);
+    const ex=b.x+(b.ex-b.x)*p1, ey=b.y+(b.ey-b.y)*p1;
+    if(p0<=0 && p1>0){ d.branches++; d.spots.push([ex,ey,"b"]); }
+    else if(p1>p0) d.longer++;
+    const lpAt = g => b.depth<3 ? clamp01((g-b.t0-b.span*.5)/.08) : clamp01((g-b.t0-b.span*.5)/.1);
+    if(lpAt(g0)<.5 && lpAt(g1)>=.5){ d.leaves++; d.spots.push([ex,ey,"l"]); }
+    if(b.depth>=3){ const bpAt=g=>clamp01((g-b.bloom)/.07); if(bpAt(g0)<.5 && bpAt(g1)>=.5){ d.blossoms++; d.spots.push([ex,ey,"f"]); } }
+  }
+  return d;
+}
+function sparkSVG(spots){
+  return spots.slice(0,10).map(([x,y,k],i)=>`<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><g class="spark" style="animation-delay:${(i*.08).toFixed(2)}s">
+    <path d="M0 -7 L1.8 -1.8 L7 0 L1.8 1.8 L0 7 L-1.8 1.8 L-7 0 L-1.8 -1.8z" fill="${k==="f"?"#F9CFD7":k==="l"?"#DFF2D8":"#FFF3B0"}" stroke="#fff" stroke-width=".8"/></g></g>`).join("");
 }
 function petalsSVG(n=8, seed=7){
   const r=rng(seed); let s="";
@@ -1443,7 +1467,7 @@ function placedDeco(id, tod, highlight, edit){
   return `<g class="deco ${highlight===id?"hatch":""}" data-id="${id}" transform="${decoTransform(id)}">${decoSVG(id,tod)}
     ${edit?`<ellipse cx="${ax}" cy="${ay}" rx="14" ry="5" fill="rgba(255,255,255,.35)" stroke="#E9A9A0" stroke-width="1.5" stroke-dasharray="3 2"/>`:""}</g>`;
 }
-function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, edit=false}={}){
+function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, edit=false, evolve=false}={}){
   const tod=timeOfDay(), set=ANIMAL_SETS[tree.set||0], out={};
   const treeMarkup=treeSVG(g, tree.seed, out);
   const have = decos ? earnedIds() : new Set();
@@ -1462,11 +1486,12 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
     ${sky ? skySVG(tod) + D("lamps") + fenceSVG() : `<defs><radialGradient id="glow"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></radialGradient></defs>`}
     ${groundSVG()}${pondSVG()}
     ${back}
-    ${treeMarkup}
+    <g id="${evolve?"treeLayer":""}">${treeMarkup}</g>
     ${front}
     ${animals}
     ${sky ? lifeSVG(tod) : ""}
     ${petals && g>=.8 ? petalsSVG(Math.round((g-.75)*30), tree.seed) : ""}
+    ${evolve?`<g id="sparkLayer"></g><rect id="flash" width="300" height="260" fill="#fff" opacity="0"/>`:""}
   </svg>`;
 }
 function gardenSVG(){
@@ -2052,6 +2077,7 @@ function renderResult(){
   $app.innerHTML = `<div class="result pop" style="justify-content:flex-start">
     <div class="scene" style="margin:0;width:100%;max-width:420px" id="growscene">${sceneSVG(r.g0,S.tree,{petals:false})}</div>
     <h1>${head}</h1>
+    <p id="growcap" style="margin:0;font-weight:800;min-height:1.4em;text-align:center"></p>
     <p style="color:var(--muted);margin:0;font-weight:700">Je boom groeide +${grew}% ${r.goalNow?"· dagdoel gehaald 💧":""}</p>
     <div class="stats">
       <div class="stat"><b>+${r.xp}</b><span>XP</span></div>
@@ -2060,14 +2086,45 @@ function renderResult(){
     </div>
     <button class="btn" style="flex:none;width:100%;max-width:360px" onclick="lesson=null;go('home')">Doorgaan</button>
   </div>`;
-  // animate growth
-  const el=document.getElementById("growscene"), t0=performance.now(), dur=1600;
-  (function step(now){
-    if(view!=="result"||!el.isConnected) return;
-    const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3);
-    el.innerHTML = sceneSVG(r.g0+(r.g1-r.g0)*e, S.tree, {petals:k>=1, highlight: k>=1 ? (r.newDeco?r.newDeco.id : r.hatched?r.hatched.id:null) : null});
-    if(k<1) requestAnimationFrame(step);
-  })(t0+16);
+  runEvolution(r);
+}
+// Pokémon-style evolution: the tree flickers between old and new as a glowing silhouette, a flash, then the new tree with sparkles
+function runEvolution(r){
+  const wrap=document.getElementById("growscene"), cap=document.getElementById("growcap");
+  const seed=S.tree.seed, diff=treeDiff(r.g0, r.g1, seed);
+  const parts=[];
+  if(diff.sprout) parts.push("een kiemplantje");
+  if(diff.branches) parts.push(`${diff.branches} ${diff.branches===1?"nieuwe tak":"nieuwe takken"}`);
+  if(diff.leaves) parts.push(`${diff.leaves} ${diff.leaves===1?"blaadje":"blaadjes"}`);
+  if(diff.blossoms) parts.push(`${diff.blossoms} ${diff.blossoms===1?"bloesem":"bloesems"} 🌸`);
+  if(r.hatched) parts.push(`een ${r.hatched.name.split(" ")[0].toLowerCase()} ${r.hatched.emoji}`);
+  const what = parts.length ? "Er groeide: "+parts.join(" · ")+"!" : diff.longer ? "Je takken werden langer en dikker." : "";
+  if(r.g1<=r.g0+.0005){ wrap.innerHTML=sceneSVG(r.g1,S.tree,{petals:true, highlight:r.newDeco?r.newDeco.id:null}); cap.textContent="Je boom heeft vandaag al genoeg water gehad 💧"; return; }
+  wrap.innerHTML=sceneSVG(r.g0,S.tree,{petals:false, evolve:true});
+  const layer=()=>document.getElementById("treeLayer");
+  const setTree=g=>{ const l=layer(); if(l) l.innerHTML=treeSVG(g, seed, {}, {halo:false}); };
+  cap.textContent="Je boom groeit…";
+  let showNew=false, delay=420, alive=true;
+  const stop=()=>{ alive=false; };
+  wrap.onclick=()=>{ if(alive){ stop(); finishEvo(); } };     // tap to skip
+  const tick=()=>{
+    if(!alive || view!=="result" || !layer()) return;
+    showNew=!showNew; setTree(showNew?r.g1:r.g0);
+    delay=Math.max(55, delay*.8);
+    if(delay>56) setTimeout(tick, delay); else setTimeout(()=>{ if(alive){ stop(); finishEvo(); } }, 120);
+  };
+  setTimeout(()=>{ if(!alive||!layer()) return; layer().classList.add("sil"); tick(); }, 500);
+  function finishEvo(){
+    if(view!=="result") return;
+    const f=document.getElementById("flash"); if(f){ f.classList.add("flashing"); }
+    setTimeout(()=>{
+      if(view!=="result") return;
+      wrap.innerHTML=sceneSVG(r.g1,S.tree,{petals:true, evolve:true, highlight: r.newDeco?r.newDeco.id : r.hatched?r.hatched.id:null});
+      const sp=document.getElementById("sparkLayer"); if(sp) sp.innerHTML=sparkSVG(diff.spots);
+      cap.textContent = what || "Je boom groeide een beetje.";
+      chime(true);
+    }, 260);
+  }
 }
 
 /* ---------- settings ---------- */
