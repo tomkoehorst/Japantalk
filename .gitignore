@@ -1,3 +1,5 @@
 node_modules/
 www/
 android/
+SLEUTEL-GEHEIM.txt
+*.p12

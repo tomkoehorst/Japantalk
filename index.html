@@ -447,6 +447,14 @@ async function installUpdate(){
         const txt=document.getElementById("updtxt"); if(txt) txt.textContent=`Downloaden… ${upd.pct}%`; }
     });
     const res = await nat("Filesystem","downloadFile",{url:upd.url, path:`japantalk-${upd.build}.apk`, directory:"CACHE", progress:true});
+    // only hand the file to Android if it is Japantalk, signed with our own key, and newer
+    const v = await nat("ApkVerifier","verify",{path:res.path});
+    if(!v || !v.valid){
+      nat("Filesystem","deleteFile",{path:`japantalk-${upd.build}.apk`, directory:"CACHE"}).catch(()=>{});
+      throw (v && !v.sameKey) ? "deze update is niet met de Japantalk-sleutel ondertekend en is daarom niet geïnstalleerd"
+          : (v && !v.samePackage) ? "het gedownloade bestand is niet Japantalk"
+          : "deze versie is niet nieuwer dan wat je al hebt";
+    }
     upd.state="installing"; render();
     await nat("FileOpener","openFile",{path:res.path, mimeType:"application/vnd.android.package-archive"});
   }catch(e){

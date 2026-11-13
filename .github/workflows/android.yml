@@ -24,6 +24,16 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Check signing secrets
+        env:
+          KS: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+          PW: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          if [ -z "$KS" ] || [ -z "$PW" ]; then
+            echo "::error::Secrets SIGNING_KEYSTORE_B64 en SIGNING_PASSWORD ontbreken (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
@@ -33,6 +43,8 @@ jobs:
           # app knows its own build number (used by the in-app updater)
           sed -i 's/__BUILD__/${{ github.run_number }}/' www/index.html
           npx cap add android
+          # own native code: MainActivity + ApkVerifier plugin (checks update signatures)
+          cp native/app/japantalk/*.java android/app/src/main/java/app/japantalk/
           # allow the app to install its own updates
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />#' android/app/src/main/AndroidManifest.xml
           grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml
@@ -47,19 +59,31 @@ jobs:
       - name: Sync web app and plugins
         run: npx cap sync android
 
-      - name: Version number and fixed signing key
+      - name: Version number
         run: |
           sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.${{ github.run_number }}\"/" android/app/build.gradle
-          # Same debug key on every build, so a new APK installs over the old one (progress is kept)
-          mkdir -p ~/.android && cp keystore/debug.keystore ~/.android/debug.keystore
+          grep -q "versionCode ${{ github.run_number }}" android/app/build.gradle
 
       - name: Build APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../Japantalk.apk
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Sign APK with your own key
+        env:
+          KS: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/release.p12"
+          "$BT/zipalign" -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/aligned.apk"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.p12" --ks-pass env:SIGNING_PASSWORD --ks-key-alias japantalk \
+            --out Japantalk.apk "$RUNNER_TEMP/aligned.apk"
+          rm -f "$RUNNER_TEMP/release.p12"
+          "$BT/apksigner" verify --print-certs Japantalk.apk | tee certs.txt
+          echo "CERT_SHA256=$(grep -m1 'SHA-256' certs.txt | awk '{print $NF}')" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -77,3 +101,5 @@ jobs:
           body: |
             Download **Japantalk.apk** op je Android-telefoon en open het bestand om te installeren.
             Heb je de app al? Dan meldt hij deze update vanzelf.
+
+            Sleutel (SHA-256): `${{ env.CERT_SHA256 }}`
