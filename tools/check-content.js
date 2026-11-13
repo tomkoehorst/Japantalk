@@ -33,6 +33,13 @@ kuromoji.builder({dicPath:require.resolve('kuromoji').replace(/src.*$/,'dict')})
     if(p.reply && !known.has(p.reply)) issues.push(`[${tag}] antwoord ontbreekt: ${p.reply}`);
   }
   UNITS.forEach((u,ui)=>{
+    if(u.branch){ const N=u.branch.nodes;
+      if(!N[u.branch.start]) issues.push(`[U${ui+1} keuzegesprek] startpunt ontbreekt`);
+      for(const [id,n] of Object.entries(N)){
+        for(const o of n.options){ if(!known.has(o.ref)) issues.push(`[U${ui+1} keuzegesprek ${id}] zin ontbreekt: ${o.ref}`); if(!N[o.next]) issues.push(`[U${ui+1} keuzegesprek ${id}] volgende stap ontbreekt: ${o.next}`); }
+        const l=n.cat, said=l.tts||l.ja, pr=rnorm(toRomaji(pron(said)).replace(/(.)-/g,'$1$1')), ro=rnorm(l.romaji);
+        if(pr!==ro) issues.push(`[U${ui+1} keuzegesprek ${id}] ${l.ja}: uitspraak ≈ "${toRomaji(pron(said))}", app zegt "${l.romaji}"`);
+      } }
     u.dialog.forEach(l=>{
       if(l.ref){ if(!known.has(l.ref)) issues.push(`[U${ui+1} gesprek] verwijzing ontbreekt: ${l.ref}`); return; }
       if(!l.romaji) return;

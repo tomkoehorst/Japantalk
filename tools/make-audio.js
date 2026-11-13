@@ -22,6 +22,7 @@ for(const u of ctxs.flatMap(c=>c.UNITS)){
   for(const p of phrases){ add(p.ja,p.tts,'F',1.0,'n'); add(p.ja,p.tts,'F',0.7,'s'); }
   if(u.pattern) for(const sl of u.pattern.slots) add(sl.ja,u.pattern.say==='kana'?sl.kana:sl.ja,'F',0.95,'n');
   for(const p of (u.theysay||[])){ add(p.ja,p.tts,'M',1.05,'n'); add(p.ja,p.tts,'M',0.7,'s'); }
+  if(u.branch) for(const n of Object.values(u.branch.nodes)) add(n.cat.ja,n.cat.tts,'F',1.0,'n');
   for(const l of u.dialog) if(!l.ref && l.who==='cat') add(l.ja,l.tts,'F',l.fast?1.25:l.slow?0.75:1.0,'n');
   for(const l of u.dialog) if(!l.ref && l.who==='me') { add(l.ja,l.kana,'F',1.0,'n'); add(l.ja,l.kana,'F',0.7,'s'); }
 }

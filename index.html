@@ -425,6 +425,16 @@ const UNITS = [
     {ja:"ポイントカードはお持ちですか？",kana:"ポイントカードはおもちですか",romaji:"pointo kādo wa o-mochi desu ka?",nl:"Heeft u een klantenkaart?",reply:"ポイントカードはないです"},
     {ja:"お箸はおつけしますか？",kana:"おはしはおつけしますか",romaji:"o-hashi wa o-tsuke shimasu ka?",nl:"Wilt u er eetstokjes bij?",reply:"お願いします"},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"いらっしゃいませ。温めますか？",romaji:"Irasshaimase. Atatamemasu ka?",nl:"Welkom. Zal ik het opwarmen?"}, options:[{ref:"お願いします",next:"n2"},{ref:"そのままで大丈夫です",next:"n2"}]},
+    n2:{cat:{ja:"袋はご利用ですか？",romaji:"Fukuro wa go-riyō desu ka?",nl:"Wilt u een tasje?"}, options:[{ref:"袋をお願いします",next:"n3a"},{ref:"袋は大丈夫です",next:"n3"}]},
+    n3a:{cat:{ja:"袋は三円です。",romaji:"Fukuro wa san-en desu.",nl:"Een tasje kost 3 yen.",tts:"ふくろはさんえんです。"}, options:[{ref:"はい",next:"n3"},{ref:"袋は大丈夫です",next:"n3"}]},
+    n3:{cat:{ja:"ポイントカードはお持ちですか？",romaji:"Pointo kādo wa o-mochi desu ka?",nl:"Heeft u een klantenkaart?"}, options:[{ref:"ポイントカードはないです",next:"n4"},{ref:"いいえ",next:"n4"}]},
+    n4:{cat:{ja:"五百円です。",romaji:"Gohyaku en desu.",nl:"Dat is 500 yen.",tts:"ごひゃくえんです。"}, options:[{ref:"はい",next:"n5"},{ref:"もう一度お願いします",next:"n4b"}]},
+    n4b:{cat:{ja:"ご・ひゃく・えん・です。",romaji:"Go-hyaku en desu.",nl:"Vijf-hon-derd yen.",tts:"ごひゃく、えん、です。"}, options:[{ref:"はい",next:"n5"}]},
+    n5:{cat:{ja:"ありがとうございました！",romaji:"Arigatō gozaimashita!",nl:"Hartelijk bedankt!"}, options:[{ref:"どうも",next:"n6"},{ref:"ありがとうございます",next:"n6"}]},
+    n6:{cat:{ja:"またどうぞ！",romaji:"Mata dōzo!",nl:"Tot de volgende keer!"}, options:[]},
+   }},
    dialog:[
     {who:"cat",ja:"いらっしゃいませ。温めますか？",romaji:"Irasshaimase. Atatamemasu ka?",nl:"Welkom. Zal ik het opwarmen?"},
     {who:"me",ref:"お願いします"},
@@ -466,6 +476,18 @@ const UNITS = [
     {ja:"ご注文はお決まりですか？",kana:"ごちゅうもんはおきまりですか",romaji:"go-chūmon wa o-kimari desu ka?",nl:"Weet u al wat u wilt?",reply:"これにします"},
     {ja:"お飲み物はいかがですか？",kana:"おのみものはいかがですか",romaji:"o-nomimono wa ikaga desu ka?",nl:"Wilt u iets drinken?",reply:"ビールを一つください"},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"いらっしゃいませ！何名様ですか？",romaji:"Irasshaimase! Nanmei-sama desu ka?",nl:"Welkom! Met hoeveel personen bent u?",tts:"いらっしゃいませ！なんめいさまですか？"}, options:[{ref:"一人です",next:"n2a"},{ref:"二人です",next:"n2b"}]},
+    n2a:{cat:{ja:"お一人様ですね。カウンターでもいいですか？",romaji:"O-hitori-sama desu ne. Kauntā demo ii desu ka?",nl:"Alleen? Is een plek aan de bar ook goed?",tts:"おひとりさまですね。カウンターでもいいですか？"}, options:[{ref:"はい",next:"n3"},{ref:"大丈夫です",next:"n3"}]},
+    n2b:{cat:{ja:"二名様ですね。こちらへどうぞ。",romaji:"Nimei-sama desu ne. Kochira e dōzo.",nl:"Twee personen. Deze kant op, alstublieft.",tts:"にめいさまですね。こちらへどうぞ。"}, options:[{ref:"メニューをお願いします",next:"n3m"},{ref:"ありがとうございます",next:"n3"}]},
+    n3:{cat:{ja:"お飲み物はいかがですか？",romaji:"O-nomimono wa ikaga desu ka?",nl:"Wilt u iets drinken?"}, options:[{ref:"ビールを一つください",next:"n4b"},{ref:"お水、お願いします",next:"n4w"}]},
+    n3m:{cat:{ja:"はい、メニューです。お飲み物はいかがですか？",romaji:"Hai, menyū desu. O-nomimono wa ikaga desu ka?",nl:"Hier is het menu. Wilt u iets drinken?"}, options:[{ref:"ビールを一つください",next:"n4b"},{ref:"お水、お願いします",next:"n4w"}]},
+    n4b:{cat:{ja:"ビールですね。ご注文はお決まりですか？",romaji:"Biiru desu ne. Go-chūmon wa o-kimari desu ka?",nl:"Een biertje. Weet u al wat u wilt eten?"}, options:[{ref:"おすすめはなんですか",next:"n5"},{ref:"これにします",next:"n6"}]},
+    n4w:{cat:{ja:"お水ですね。ご注文はお決まりですか？",romaji:"O-mizu desu ne. Go-chūmon wa o-kimari desu ka?",nl:"Water. Weet u al wat u wilt eten?"}, options:[{ref:"おすすめはなんですか",next:"n5"},{ref:"これにします",next:"n6"}]},
+    n5:{cat:{ja:"このラーメンがおすすめです。",romaji:"Kono rāmen ga o-susume desu.",nl:"Ik raad deze ramen aan."}, options:[{ref:"これにします",next:"n6"},{ref:"もう一度お願いします",next:"n5b"}]},
+    n5b:{cat:{ja:"こ・の・ラーメン・です。",romaji:"Ko-no rāmen desu.",nl:"De-ze ra-men.",tts:"この、ラーメン、です。"}, options:[{ref:"これにします",next:"n6"},{ref:"これを二つください",next:"n6"}]},
+    n6:{cat:{ja:"かしこまりました。少々お待ちください。",romaji:"Kashikomarimashita. Shōshō o-machi kudasai.",nl:"Komt eraan. Een ogenblikje, alstublieft."}, options:[]},
+   }},
    dialog:[
     {who:"cat",ja:"いらっしゃいませ！何名様ですか？",tts:"いらっしゃいませ！なんめいさまですか？",romaji:"Irasshaimase! Nanmei-sama desu ka?",nl:"Welkom! Met hoeveel personen bent u?"},
     {who:"me",ref:"二人です"},
@@ -590,6 +612,16 @@ const UNITS = [
     {ja:"歩いて五分ぐらいです",kana:"あるいてごふんぐらいです",tts:"あるいてごふんぐらいです",romaji:"aruite go-fun gurai desu",nl:"Ongeveer vijf minuten lopen",reply:"ありがとうございます"},
     {ja:"あそこです",kana:"あそこです",romaji:"asoko desu",nl:"Daar is het",note:"あそこ = daar (ver weg), そこ = daar (bij jou), ここ = hier."},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"どうしましたか？",romaji:"Dō shimashita ka?",nl:"Kan ik u helpen?"}, options:[{ref:"道に迷いました",next:"n2"},{ref:"トイレはどこですか",next:"n2t"}]},
+    n2:{cat:{ja:"どこに行きたいですか？",romaji:"Doko ni ikitai desu ka?",nl:"Waar wilt u heen?"}, options:[{ref:"駅はどこですか",next:"n3"},{ref:"ホテルはどこですか",next:"n3h"}]},
+    n2t:{cat:{ja:"トイレはあそこです。",romaji:"Toire wa asoko desu.",nl:"Het toilet is daar."}, options:[{ref:"ありがとうございます",next:"end"}]},
+    n3:{cat:{ja:"駅はまっすぐ行って、右です。",romaji:"Eki wa massugu itte, migi desu.",nl:"Het station: rechtdoor en dan rechts."}, options:[{ref:"遠いですか",next:"n4"},{ref:"地図で教えてください",next:"n4m"}]},
+    n3h:{cat:{ja:"ホテルはこの近くですよ。",romaji:"Hoteru wa kono chikaku desu yo.",nl:"Het hotel is hier vlakbij."}, options:[{ref:"歩いて行けますか",next:"n4"},{ref:"地図で教えてください",next:"n4m"}]},
+    n4:{cat:{ja:"歩いて五分ぐらいです。",romaji:"Aruite go-fun gurai desu.",nl:"Ongeveer vijf minuten lopen.",tts:"あるいてごふんぐらいです。"}, options:[{ref:"ありがとうございます",next:"end"}]},
+    n4m:{cat:{ja:"はい、ここです。",romaji:"Hai, koko desu.",nl:"Ja, hier is het."}, options:[{ref:"ありがとうございます",next:"end"},{ref:"わかりました",next:"end"}]},
+    end:{cat:{ja:"気をつけて！",romaji:"Ki o tsukete!",nl:"Pas goed op jezelf!"}, options:[]},
+   }},
    dialog:[
     {who:"me",ref:"すみません"},
     {who:"cat",ja:"はい？",romaji:"Hai?",nl:"Ja?"},
@@ -1171,6 +1203,8 @@ function buildLesson(L){
     pick(L.phrases,4).forEach((p,i)=>ex.push({type: i%2? "listen":"speak", p}));
     const lines = UNITS[L.ui].dialog.map(l => l.ref ? {...PHRASES[l.ref], who:"me"} : l);
     lines.forEach((l,i)=>{ if(l.who==="me") ex.push({type:"dialog", lines, idx:i, p:l}); });
+    const u=UNITS[L.ui];
+    if(u.branch) ex.push({type:"branch", node:u.branch.start, hist:[], p:PHRASES[u.branch.nodes[u.branch.start].options[0]?.ref]||lines[0]});
     return ex;
   }
   // ladder per phrase: hear+repeat (all text) → repeat (romaji only) → repeat by ear → recognise → say it yourself (with a hint)
@@ -2040,6 +2074,19 @@ function renderEx(){
       </div></div>
       ${micArea("Antwoord")}`;
   }
+  else if(t==="branch"){
+    const u=UNITS[lesson.L.ui], n=u.branch.nodes[ex.node], opts=n.options.map(o=>({...o, p:PHRASES[o.ref]}));
+    body = `<div class="chat-head">${buddy("talking",48)}<div><b>Vrij gesprek met ${BUDDY.name}</b><div style="color:var(--muted);font-size:.85rem">Kies zelf wat je zegt: zeg het hardop</div></div></div>
+      <div class="chat">${[...ex.hist, {who:"cat",...n.cat}].map((l,i,arr)=>`<div class="msg ${l.who}">
+          <div class="jp">${esc(l.ja)}</div>${S.settings.romaji?`<div class="r">${esc(l.romaji)}</div>`:""}<div class="t">${esc(l.nl)}</div>
+          ${l.who==="cat"&&i===arr.length-1?`<button onclick="branchSay()">🔊 nog eens</button>`:""}</div>`).join("")}</div>
+      ${opts.length?`<div style="font-weight:800;margin:6px 0 8px">Wat zeg je?</div>
+        <div class="options" style="margin-top:0">${opts.map((o,i)=>`<button class="opt" onclick="${lesson.noMic||!canRecognize()?`branchPick(${i})`:`speak(PHRASES['${o.ref}'].ja)`}">
+          <span class="sp">${lesson.noMic||!canRecognize()?"👉":"🔊"}</span><span>${esc(o.p.nl)}${lesson.hint?`<br><small class="romaji">${esc(o.p.romaji)}</small>`:""}</span></button>`).join("")}</div>
+        ${lesson.hint?"":`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Toon romaji</button>`}
+        ${lesson.noMic||!canRecognize()?"":micArea("Zeg je antwoord")}`
+      :`<div class="card" style="text-align:center;font-weight:800">🎉 Gesprek gelukt!</div>`}`;
+  }
   else if(t==="dialog"){
     const shown = ex.lines.slice(0, ex.idx);
     body = `<div class="chat-head">${buddy("talking",48)}<div><b>Gesprek met ${BUDDY.name}</b><div style="color:var(--muted);font-size:.85rem">Jij bent aan de beurt</div></div></div>
@@ -2059,12 +2106,14 @@ function renderEx(){
     <div class="ex pop">${body}</div>
     ${actionBar(t)}
   </div>`;
+  if(t==="branch"||t==="dialog") requestAnimationFrame(()=>window.scrollTo(0, document.body.scrollHeight));   // keep the newest line in view
   // auto audio
   if(lesson.state==="ask" && !lesson.autoplayed){
     lesson.autoplayed=true;
     const still = () => view==="lesson" && lesson && curEx()===ex;   // user may already have moved on
     if(t==="intro"||t==="listen"||t==="hearIntro"||t==="echo"||t==="shadow") setTimeout(()=>still()&&say(),250);
     if(t==="respond") setTimeout(()=>still()&&sayQ(),250);
+    if(t==="branch") setTimeout(()=>still()&&branchSay(),250);
     if(t==="dialog"){ const prev=ex.lines[ex.idx-1]; if(prev&&prev.who==="cat") setTimeout(()=>still()&&sayLine(ex.idx-1),250); }
   }
 }
@@ -2119,6 +2168,16 @@ function actionBar(t){
 }
 
 function say(mult=1){ if(!lesson||view!=="lesson"||!curEx()) return; const ex=curEx(); return speak(ex.p.ja, mult*(ex.p.kind==="hear"?1.1:1)); }
+function branchSay(){ const ex=curEx(); if(!ex||ex.type!=="branch") return; const n=UNITS[lesson.L.ui].branch.nodes[ex.node]; speak(n.cat.ja, 1, n.cat.tts); }
+function branchGo(i, heardOk=true){
+  const ex=curEx(), N=UNITS[lesson.L.ui].branch.nodes, n=N[ex.node], o=n.options[i], p=PHRASES[o.ref];
+  ex.hist.push({who:"cat",...n.cat}, {who:"me", ja:p.ja, romaji:p.romaji, nl:p.nl});
+  if(p.key) mark(p, heardOk);
+  ex.node=o.next; lesson.heard=""; lesson.hint=false; lesson.autoplayed=false;
+  if(!N[ex.node].options.length){ branchSay(); lesson.fbNote="Je koos zelf je antwoorden. 会話、上手！"; resolve(!ex.miss); return; }
+  renderEx();
+}
+function branchPick(i){ branchGo(i, true); }
 function sayQ(mult=1){ if(!lesson||view!=="lesson"||!curEx()?.q) return; const ex=curEx(); return speak(ex.q.ja, mult*1.1); }
 function sayLine(i){ if(!lesson||view!=="lesson"||!curEx()?.lines) return; const l=curEx().lines[i]; speak(l.ja, AUDIO[l.ja] ? 1 : l.fast?1.35:l.slow?0.65:1, l.tts); }   // recordings already have the right tempo
 function choose(i, play){
@@ -2137,6 +2196,13 @@ async function toggleMic(){
     const heard = await listen();
     if(view!=="lesson"||!lesson) return;
     if(!heard.length){ lesson.state="ask"; lesson.heard=`(niets gehoord – praat iets luider of houd je telefoon dichterbij${lastListenError?` · ${lastListenError}`:""})`; renderEx(); return; }
+    if(curEx().type==="branch"){
+      const n=UNITS[lesson.L.ui].branch.nodes[curEx().node], pass=strict().pass;
+      const scores=n.options.map(o=>score(heard, PHRASES[o.ref])), best=Math.max(...scores), bi=scores.indexOf(best);
+      if(best>=pass){ chime(true); lesson.state="ask"; branchGo(bi, true); return; }
+      curEx().miss=true; lesson.state="ask"; lesson.heard=`${heard[0]} · ${Math.round(best*100)}%: niet duidelijk genoeg, probeer het nog eens (of tik 💡)`;
+      chime(false); renderEx(); return;
+    }
     const sc = score(heard, curEx().p), pass=strict().pass; lesson.lastScore = sc;
     lesson.heard = `${heard[0]}  ·  ${Math.round(sc*100)}%`;
     lesson.fbNote = sc>=.98 ? `Uitspraak ${Math.round(sc*100)}%: perfect.` : `Uitspraak ${Math.round(sc*100)}%: goed verstaanbaar.`;
