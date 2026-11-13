@@ -15,5 +15,6 @@ Elke APK wordt met dezelfde sleutel (`keystore/debug.keystore`) ondertekend. Daa
 ## Hoe het in elkaar zit
 - `index.html` bevat de hele app (HTML, CSS, JS en de lesinhoud).
 - Capacitor verpakt de app als Android-app. De community-plugins `speech-recognition` en `text-to-speech` leveren de spraak.
+- Updates: de app vraagt bij GitHub Releases naar de nieuwste versie (repo moet openbaar zijn), downloadt de APK en opent het installatiescherm.
 - `npm run www` zet `index.html` en het lettertype Nunito klaar in `www/`. De CI-build doet de rest (`cap add android`, icoon uit `assets/`, `gradlew assembleDebug`).
 - Je voortgang staat in de opslag van de app op je telefoon.

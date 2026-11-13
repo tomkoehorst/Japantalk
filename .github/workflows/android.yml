@@ -30,7 +30,12 @@ jobs:
       - name: Create Android project
         run: |
           npm run www
+          # app knows its own build number (used by the in-app updater)
+          sed -i 's/__BUILD__/${{ github.run_number }}/' www/index.html
           npx cap add android
+          # allow the app to install its own updates
+          sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#&\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />#' android/app/src/main/AndroidManifest.xml
+          grep -q REQUEST_INSTALL_PACKAGES android/app/src/main/AndroidManifest.xml
 
       - name: App icon (cat)
         continue-on-error: true
@@ -70,4 +75,5 @@ jobs:
           make_latest: true
           files: Japantalk.apk
           body: |
-            Download **Japantalk.apk** on your Android phone and open it to install.
+            Download **Japantalk.apk** op je Android-telefoon en open het bestand om te installeren.
+            Heb je de app al? Dan meldt hij deze update vanzelf.

@@ -415,6 +415,58 @@ async function listen(){
   }catch(e){ return []; }   // "No match" etc. → treated as nothing heard
   finally{ listening=false; }
 }
+/* ---------- in-app updates (GitHub Releases) ---------- */
+const APP_BUILD = Number("__BUILD__") || 0;          // filled in by the CI build
+const UPDATE_API = "https://api.github.com/repos/tomkoehorst/Japantalk/releases/latest";
+let upd = null;            // {build, url, notes, state:"ready"|"downloading"|"installing"|"error", pct}
+let lastUpdCheck = 0;
+async function checkUpdate(manual=false){
+  if(!APP_BUILD && !manual) return;
+  lastUpdCheck = Date.now();
+  try{
+    const r = await fetch(UPDATE_API, {headers:{Accept:"application/vnd.github+json"}, cache:"no-store"});
+    if(!r.ok) throw r.status;
+    const rel = await r.json();
+    const build = Number(String(rel.tag_name||"").split(".").pop()) || 0;
+    const asset = (rel.assets||[]).find(a=>a.name.endsWith(".apk"));
+    if(asset && build > APP_BUILD){
+      if(!upd || upd.build!==build) upd = {build, url:asset.browser_download_url, notes:rel.body||"", state:"ready", pct:0};
+      if(view==="home"||view==="settings") render();
+      if(manual) toast(`Versie 1.${build} is beschikbaar`);
+    } else if(manual) toast("Je hebt de nieuwste versie 🐾");
+  }catch(e){ if(manual) toast("Kon niet controleren op updates. Heb je internet?"); }
+}
+async function installUpdate(){
+  if(!upd || upd.state==="downloading") return;
+  upd.state="downloading"; upd.pct=0; render();
+  let sub=null;
+  try{
+    if(window.Capacitor?.addListener) sub = window.Capacitor.addListener("Filesystem","progress",p=>{
+      if(p && p.contentLength>0){ upd.pct=Math.round(p.bytes/p.contentLength*100);
+        const bar=document.getElementById("updbar"); if(bar) bar.style.width=upd.pct+"%";
+        const txt=document.getElementById("updtxt"); if(txt) txt.textContent=`Downloaden… ${upd.pct}%`; }
+    });
+    const res = await nat("Filesystem","downloadFile",{url:upd.url, path:`japantalk-${upd.build}.apk`, directory:"CACHE", progress:true});
+    upd.state="installing"; render();
+    await nat("FileOpener","openFile",{path:res.path, mimeType:"application/vnd.android.package-archive"});
+  }catch(e){
+    upd.state="error"; render();
+    toast("Bijwerken lukte niet: "+(e&&e.message||e));
+  }finally{ sub && sub.remove && sub.remove(); }
+}
+function updateCard(){
+  if(!upd) return "";
+  const busy = upd.state==="downloading";
+  return `<div class="goalcard pop" style="background:color-mix(in srgb,var(--blue) 45%,var(--card))">
+    ${cat(busy?"curious":"proud",56)}
+    <div class="info"><h3>Nieuwe versie: 1.${upd.build}</h3>
+      <p id="updtxt">${busy?`Downloaden… ${upd.pct?upd.pct+"%":""}`: upd.state==="installing"?"Tik op Installeren in het Android-scherm.":
+          upd.state==="error"?"Er ging iets mis. Probeer het nog eens.":"Bijwerken duurt maar even; je voortgang blijft bewaard."}</p>
+      ${busy?`<div class="bar"><i id="updbar" style="width:${upd.pct}%"></i></div>`:
+        `<button class="btn" style="margin-top:10px;padding:10px;font-size:.95rem;width:100%" onclick="installUpdate()">${upd.state==="installing"?"Opnieuw openen":"Bijwerken"}</button>`}
+    </div></div>`;
+}
+
 function stopListening(){ if(listening) nat("SpeechRecognition","stop").catch(()=>{}); }
 
 // --- matching ---
@@ -583,6 +635,7 @@ function renderHome(){
     <div class="chip" title="Dagen op rij">🔥 ${S.streak.count}</div>
     <button class="iconbtn" onclick="go('settings')" aria-label="Instellingen">⚙️</button>
   </div>
+  ${updateCard()}
   <div class="goalcard">
     ${cat(goalMet?"proud":(S.daily.xp===0?"sleepy":"happy"),64)}
     <div class="info">
@@ -857,6 +910,9 @@ function renderSettings(){
       ${seg("kana",[[true,"Japans schrift aan"],[false,"Japans schrift uit"]],s.kana)}</div>
     <div class="setting"><h3>Beoordeling van je uitspraak</h3><p>Laat de app meeluisteren, of beoordeel jezelf (handig als de herkenning je niet goed verstaat).</p>
       ${seg("mode",[["auto","🎙️ App luistert mee"],["self","🙋 Zelf beoordelen"]],s.mode)}</div>
+    <div class="setting"><h3>App-versie</h3><p>Je hebt versie ${APP_BUILD?"1."+APP_BUILD:"(ontwikkelversie)"}.${upd?` Versie 1.${upd.build} staat klaar.`:""}</p>
+      ${upd?`<button class="btn" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="installUpdate()">Bijwerken naar 1.${upd.build}</button>`
+           :`<button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="checkUpdate(true)">Controleer op updates</button>`}</div>
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
@@ -870,8 +926,10 @@ if(window.Capacitor?.addListener){
     else if(view!=="home"){ lesson=null; go("home"); }
     else nat("App","exitApp").catch(()=>{});
   });
+  window.Capacitor.addListener("App","resume",()=>{ if(Date.now()-lastUpdCheck > 30*60e3) checkUpdate(); });
 }
 render();
+checkUpdate();
 </script>
 </body>
 </html>
