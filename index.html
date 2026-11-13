@@ -75,6 +75,10 @@
 .swim{animation:swim 5s ease-in-out infinite alternate}@keyframes swim{to{transform:translateX(12px)}}
 .bob{animation:bob2 2.6s ease-in-out infinite}@keyframes bob2{50%{transform:translateY(-1.5px)}}
 .sway{animation:sway 4s ease-in-out infinite;transform-box:fill-box;transform-origin:top center}@keyframes sway{50%{transform:rotate(5deg)}}
+.prow{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.prow:last-child{border-bottom:none}.pm{flex:1;min-width:0}
+.pa{display:flex;align-items:center;gap:4px}.pa button{font-size:1.1rem;padding:6px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line)}.dot.s1{background:var(--peach)}.dot.s2{background:var(--butter)}.dot.s3{background:var(--good)}
 .collect{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 18px 0}
 .citem{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:10px 6px;text-align:center;font-weight:800;font-size:.75rem}
 .citem span{display:block;font-size:1.6rem;margin-bottom:2px}
@@ -1425,6 +1429,7 @@ function render(){
   if(view==="home") renderHome();
   else if(view==="learn") renderLearn();
   else if(view==="garden") renderGarden();
+  else if(view==="phrases") renderPhrases();
   else if(view==="lesson") renderEx();
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
@@ -1441,7 +1446,7 @@ function currentLesson(){
   return null;
 }
 function tabbar(){
-  const t=[["home","🌸","Boom"],["learn","📖","Lessen"],["garden","⛩️","Tuin"]];
+  const t=[["home","🌸","Boom"],["learn","📖","Lessen"],["phrases","💬","Zinnen"],["garden","⛩️","Tuin"]];
   return `<nav class="tabbar"><div class="in">${t.map(([v,i,l])=>`<button class="${view===v?"on":""}" onclick="go('${v}')"><span>${i}</span>${l}</button>`).join("")}</div></nav>`;
 }
 function topbar(title){
@@ -1504,6 +1509,36 @@ function renderLearn(){
   });
   html+=`<div class="footer-note">Geen kistjes, geen edelstenen, geen winkel.<br>Gewoon praten. がんばって！</div></div>${tabbar()}`;
   $app.innerHTML=html;
+}
+/* ---------- Mijn zinnen: phrasebook of everything you've learned ---------- */
+let phraseFilter="all";
+function strength(k){ const c=(S.srs||{})[k]; if(!c) return 0; return c.iv>=16?3 : c.iv>=3?2 : 1; }
+function toggleFav(k){ S.fav=S.fav||{}; if(S.fav[k]) delete S.fav[k]; else S.fav[k]=1; save(); renderPhrases(); }
+function renderPhrases(){
+  ensureSrs(); S.fav=S.fav||{};
+  const known=k=>S.srs[k]||S.ph[k];
+  const tricky=k=>{ const c=S.srs[k]; return c && (c.lapses>0 || (S.ph[k]&&S.ph[k].s<=1)); };
+  const keep=p=>known(p.ja) && (phraseFilter==="all" || (phraseFilter==="fav"&&S.fav[p.ja]) || (phraseFilter==="hard"&&tricky(p.ja)));
+  const seen=new Set(); let total=0, solid=0, body="";
+  UNITS.forEach((u,ui)=>{
+    const items=[...u.phrases, ...u.patternPhrases, ...u.hear].filter(p=>{ if(seen.has(p.ja)) return false; seen.add(p.ja); if(known(p.ja)){ total++; if(strength(p.ja)===3) solid++; } return keep(p); });
+    if(!items.length) return;
+    body+=`<h3 class="sect">${esc(u.title)}</h3><div class="ucard" style="margin-top:8px">${items.map(p=>{
+      const st=strength(p.ja), js=JSON.stringify(p.ja).replace(/"/g,"&quot;");
+      return `<div class="prow" onclick="speak(${js})">
+        <div class="pm"><div class="jp" style="font-weight:700;font-size:1.1rem">${p.kind==="hear"?"👂 ":""}${esc(p.ja)}</div>
+          ${S.settings.romaji?`<div class="romaji" style="font-size:.9rem">${esc(p.romaji)}</div>`:""}<div style="font-size:.9rem;font-weight:600">${esc(p.nl)}</div></div>
+        <div class="pa"><span class="dot s${st}" title="${["","nieuw","bezig","zit erin"][st]}"></span>
+          <button onclick="event.stopPropagation();speak(${js},.6)" aria-label="Langzaam">🐢</button>
+          <button onclick="event.stopPropagation();toggleFav(${js})" aria-label="Favoriet">${S.fav[p.ja]?"⭐":"☆"}</button></div>
+      </div>`;}).join("")}</div>`;
+  });
+  const chip=(v,l)=>`<button class="${phraseFilter===v?"on":""}" onclick="phraseFilter='${v}';renderPhrases()">${l}</button>`;
+  $app.innerHTML=`<div class="tabpage">${topbar("Mijn zinnen")}
+    <p style="margin:0 22px;color:var(--muted);font-weight:600">${total} zinnen geleerd · ${solid} zitten er goed in. Tik op een zin om hem te horen.</p>
+    <div class="seg" style="margin:10px 18px 0">${chip("all","Alles")}${chip("fav","⭐ Favorieten")}${chip("hard","Lastig")}</div>
+    ${body || `<div style="text-align:center;padding:30px 20px">${cat("sleepy",100)}<p style="color:var(--muted);font-weight:600">${total?"Niets in deze lijst.":"Nog geen zinnen. Na je eerste les staan ze hier, als spiekboekje voor op reis."}</p></div>`}
+  </div>${tabbar()}`;
 }
 function renderGarden(){
   ensureGarden();
