@@ -11,7 +11,7 @@ const VOICES={ F:["ja-JP-Neural2-B","ja-JP-Wavenet-B"], M:["ja-JP-Neural2-C","ja
 
 const src=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 const block=src.slice(src.indexOf('const UNITS = ['), src.indexOf('// global phrase lookup'));
-const ctx={}; vm.runInNewContext(block.replace('const UNITS','UNITS'),ctx);
+const ctx={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}}; vm.runInNewContext(block.replace('const UNITS','UNITS'),ctx);
 
 const jobs=[]; const add=(key,text,voice,rate,kind)=>jobs.push({key,text:(text||key).replace(/[～〜]/g,''),voice,rate,kind});
 for(const u of ctx.UNITS){

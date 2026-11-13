@@ -75,6 +75,9 @@
 .swim{animation:swim 5s ease-in-out infinite alternate}@keyframes swim{to{transform:translateX(12px)}}
 .bob{animation:bob2 2.6s ease-in-out infinite}@keyframes bob2{50%{transform:translateY(-1.5px)}}
 .sway{animation:sway 4s ease-in-out infinite;transform-box:fill-box;transform-origin:top center}@keyframes sway{50%{transform:rotate(5deg)}}
+.obp{color:var(--muted);font-weight:600;max-width:380px;line-height:1.5;margin:6px 0}
+.obinput{width:100%;max-width:380px;font:inherit;font-size:1.2rem;font-weight:700;padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--text);margin-top:10px}
+.result h2{margin:10px 0 0}
 .prow{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 .prow:last-child{border-bottom:none}.pm{flex:1;min-width:0}
 .pa{display:flex;align-items:center;gap:4px}.pa button{font-size:1.1rem;padding:6px}
@@ -217,6 +220,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
    Each phrase: ja (natural, as speech recognisers usually return it),
    kana, romaji, nl, alt (extra accepted recognition forms)
    ========================================================= */
+// your own name (chosen in the onboarding); read early because the lessons use it
+const ME = (()=>{ try{ const st=JSON.parse(localStorage.getItem("japantalk-v1")||"{}"); if(st.me && st.me.kata) return st.me; }catch(e){} return {kata:"トム", romaji:"Tomu", nl:"Tom"}; })();
 const UNITS = [
  /* ===== BLOK A: FUNDAMENT ===== */
  { id:"groet", block:"A", title:"Begroeten & beleefd zijn", desc:"Groeten, bedanken en sorry zeggen", color:"var(--sage)",
@@ -263,7 +268,7 @@ const UNITS = [
    cando:["Ik kan zeggen hoe ik heet en waar ik vandaan kom","Ik kan vertellen dat ik op reis ben en Japans leer","Ik kan reageren op een compliment over mijn Japans"],
    phrases:[
     {l:1,ja:"はじめまして",kana:"はじめまして",romaji:"hajimemashite",nl:"Aangenaam (bij een eerste ontmoeting)",alt:["初めまして"]},
-    {l:1,ja:"私はトムです",kana:"わたしはトムです",romaji:"watashi wa Tomu desu",nl:"Ik ben Tom",alt:["わたしはとむです","トムです"]},
+    {l:1,ja:`私は${ME.kata}です`,kana:`わたしは${ME.kata}です`,romaji:`watashi wa ${ME.romaji} desu`,nl:`Ik ben ${ME.nl}`,alt:[`${ME.kata}です`,`わたしは${ME.kata}です`]},
     {l:1,ja:"オランダから来ました",kana:"オランダからきました",romaji:"Oranda kara kimashita",nl:"Ik kom uit Nederland",alt:["オランダからきました"]},
     {l:1,ja:"よろしくお願いします",kana:"よろしくおねがいします",romaji:"yoroshiku onegai shimasu",nl:"Prettig kennis te maken",alt:["宜しくお願いします"]},
     {l:2,ja:"お名前はなんですか",kana:"おなまえはなんですか",romaji:"o-namae wa nan desu ka",nl:"Hoe heet u?",alt:["お名前は何ですか","名前は何ですか"]},
@@ -281,7 +286,7 @@ const UNITS = [
       {ja:"東京",kana:"とうきょう",romaji:"Tōkyō",nl:"Tokio"},
      ]},
    theysay:[
-    {ja:"お名前は？",kana:"おなまえは",romaji:"o-namae wa?",nl:"Uw naam?",reply:"私はトムです"},
+    {ja:"お名前は？",kana:"おなまえは",romaji:"o-namae wa?",nl:"Uw naam?",reply:`私は${ME.kata}です`},
     {ja:"どちらから来ましたか？",kana:"どちらからきましたか",romaji:"dochira kara kimashita ka?",nl:"Waar bent u vandaan gekomen?",reply:"オランダから来ました"},
     {ja:"日本語、上手ですね！",kana:"にほんご、じょうずですね",romaji:"nihongo, jōzu desu ne!",nl:"Uw Japans is goed!",reply:"いえいえ、まだまだです"},
     {ja:"日本は初めてですか？",kana:"にほんははじめてですか",romaji:"Nihon wa hajimete desu ka?",nl:"Is het uw eerste keer in Japan?",reply:"はい"},
@@ -290,7 +295,7 @@ const UNITS = [
     {who:"cat",ja:"はじめまして。ネコです。",romaji:"Hajimemashite. Neko desu.",nl:"Aangenaam. Ik ben Neko."},
     {who:"me",ref:"はじめまして"},
     {who:"cat",ja:"お名前は？",romaji:"O-namae wa?",nl:"Hoe heet u?"},
-    {who:"me",ref:"私はトムです"},
+    {who:"me",ref:`私は${ME.kata}です`},
     {who:"cat",ja:"どちらから来ましたか？",romaji:"Dochira kara kimashita ka?",nl:"Waar komt u vandaan?"},
     {who:"me",ref:"オランダから来ました"},
     {who:"cat",ja:"へえ、日本は初めてですか？",romaji:"Hē, Nihon wa hajimete desu ka?",nl:"O, is het uw eerste keer in Japan?"},
@@ -1430,6 +1435,7 @@ function render(){
   else if(view==="learn") renderLearn();
   else if(view==="garden") renderGarden();
   else if(view==="phrases") renderPhrases();
+  else if(view==="onboard") renderOnboard();
   else if(view==="lesson") renderEx();
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
@@ -1510,6 +1516,114 @@ function renderLearn(){
   html+=`<div class="footer-note">Geen kistjes, geen edelstenen, geen winkel.<br>Gewoon praten. がんばって！</div></div>${tabbar()}`;
   $app.innerHTML=html;
 }
+/* ---------- onboarding: welcome, your name in Japanese, daily goal, microphone test ---------- */
+const KANA_TABLE = (()=>{ const t={}, V=["a","i","u","e","o"];
+  const rows={"":"アイウエオ",k:"カキクケコ",g:"ガギグゲゴ",s:"サシスセソ",z:"ザジズゼゾ",n:"ナニヌネノ",h:"ハヒフヘホ",b:"バビブベボ",p:"パピプペポ",m:"マミムメモ",r:"ラリルレロ"};
+  for(const c in rows) V.forEach((v,i)=>t[c+v]=rows[c][i]);
+  Object.assign(t,{ta:"タ",ti:"ティ",tu:"トゥ",te:"テ",to:"ト",da:"ダ",di:"ディ",du:"ドゥ",de:"デ",do:"ド",fa:"ファ",fi:"フィ",fu:"フ",fe:"フェ",fo:"フォ",
+    ya:"ヤ",yi:"イ",yu:"ユ",ye:"イェ",yo:"ヨ",wa:"ワ",wi:"ウィ",wu:"ウ",we:"ウェ",wo:"ウォ",va:"ヴァ",vi:"ヴィ",vu:"ヴ",ve:"ヴェ",vo:"ヴォ",
+    sha:"シャ",shi:"シ",shu:"シュ",she:"シェ",sho:"ショ",cha:"チャ",chi:"チ",chu:"チュ",che:"チェ",cho:"チョ",tsu:"ツ",ja:"ジャ",ji:"ジ",ju:"ジュ",je:"ジェ",jo:"ジョ"});
+  return t; })();
+function nameToKata(name){   // rough Dutch spelling → katakana (the microphone option is more accurate)
+  let r=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z]/g,"")
+    .replace(/sch/g,"sk").replace(/ch/g,"h").replace(/ph/g,"f").replace(/th/g,"t").replace(/oe/g,"u").replace(/ie/g,"i-").replace(/ij|ei/g,"ei").replace(/ui/g,"ai").replace(/eu/g,"e-")
+    .replace(/aa/g,"a-").replace(/ee/g,"e-").replace(/oo/g,"o-").replace(/uu/g,"yu").replace(/j/g,"y").replace(/l/g,"r").replace(/c/g,"k").replace(/q/g,"k").replace(/x/g,"ks").replace(/v/g,"f");
+  let out="";
+  for(let i=0;i<r.length;){
+    if(r[i]==="-"){ out+="ー"; i++; continue; }
+    let hit=false;
+    for(const L of [3,2,1]){ const ch=r.slice(i,i+L); if(KANA_TABLE[ch]){ out+=KANA_TABLE[ch]; i+=L; hit=true; break; } }
+    if(hit) continue;
+    const c=r[i], nx=r[i+1];
+    if(c==="n"){ out+="ン"; i++; continue; }
+    if(nx===c){ out+="ッ"; i++; continue; }
+    out += KANA_TABLE[c+((c==="t"||c==="d")?"o":"u")] || ""; i++;
+  }
+  return out || "トム";
+}
+function kataToRomaji(k){
+  const rev={}; for(const [ro,ka] of Object.entries(KANA_TABLE)) if(!rev[ka]||ro.length<rev[ka].length) rev[ka]=ro;
+  let out="";
+  for(let i=0;i<k.length;){
+    const two=k.slice(i,i+2);
+    if(rev[two]){ out+=rev[two]; i+=2; continue; }
+    const c=k[i];
+    if(c==="ン"){ out+="n"; i++; continue; }
+    if(c==="ッ"){ const nx=rev[k[i+1]]||""; out+=nx[0]||""; i++; continue; }
+    if(c==="ー"){ out+=out.slice(-1); i++; continue; }
+    out+=rev[c]||""; i++;
+  }
+  return out.charAt(0).toUpperCase()+out.slice(1);
+}
+const toKata = s => s.replace(/[\u3041-\u3096]/g, c=>String.fromCharCode(c.charCodeAt(0)+0x60));
+let ob = {step:0, name:"", kata:"", test:null};
+function startOnboarding(step=0){ ob={step, name:(S.me&&S.me.nl)||"", kata:(S.me&&S.me.kata)||"", test:null}; view="onboard"; render(); }
+function renderOnboard(){
+  const dots=[0,1,2,3].map(i=>`<span class="dot ${i<=ob.step?"s3":""}"></span>`).join("");
+  let body="", next="";
+  if(ob.step===0){
+    body=`${cat("happy",140)}<h1>こんにちは！</h1><p class="obp">Ik ben <b>Neko</b>. Samen leren we Japans <b>praten</b> voor je reis: luisteren, nazeggen en kleine gesprekken. Typen hoeft nergens.</p>
+      <p class="obp">Elke dag een beetje oefenen laat je <b>sakura-boom</b> groeien. 🌸</p>`;
+    next=`<button class="btn" onclick="ob.step=1;render()">Verder</button>`;
+  } else if(ob.step===1){
+    const kata = ob.kata || (ob.name ? nameToKata(ob.name) : "");
+    body=`${cat("curious",100)}<h2>Hoe heet je?</h2>
+      <input id="obname" class="obinput" value="${esc(ob.name)}" placeholder="Je voornaam" autocomplete="given-name" oninput="ob.name=this.value;ob.kata='';document.getElementById('obkata').innerHTML=obKataHtml();document.getElementById('obnext').disabled=!this.value.trim()">
+      <div id="obkata">${obKataHtml()}</div>
+      <button class="mic" style="margin-top:12px" onclick="obListenName()">🎙️ Zeg je naam, dan hoor ik hoe hij in het Japans klinkt</button>`;
+    next=`<button class="btn" id="obnext" ${ob.name.trim()?"":"disabled"} onclick="obSaveName()">Verder</button>`;
+  } else if(ob.step===2){
+    body=`${cat("happy",100)}<h2>Hoeveel wil je per dag oefenen?</h2><p class="obp">Een les of herhaalronde duurt een paar minuten. Elke dag dat je je doel haalt, krijgt je boom water. In ongeveer een maand staat hij in bloei.</p>
+      ${seg("goal",[[10,"Rustig · ±5 min"],[20,"Normaal · ±10 min"],[30,"Serieus · ±15 min"],[50,"Intens · ±25 min"]],S.goal)}`;
+    next=`<button class="btn" onclick="ob.step=3;render()">Verder</button>`;
+  } else {
+    const t=ob.test;
+    body=`${cat(t==="ok"?"proud":t==="bad"?"worried":"talking",110)}<h2>Test je microfoon</h2>
+      <p class="obp">Zeg na: <b class="jp" style="font-size:1.4rem">こんにちは</b> (konnichiwa)</p>
+      <button class="play" onclick="speak('こんにちは')">🔊 Luister eerst</button>
+      <button class="mic" style="margin-top:14px" onclick="obTestMic()">🎙️ ${t==="listening"?"Ik luister…":"Tik en zeg こんにちは"}</button>
+      <p class="obp" style="min-height:1.5em">${t==="ok"?"Perfect, ik versta je! 🎉":t==="bad"?`Ik hoorde: “${esc(ob.heard||"")}”. Probeer het nog eens, of ga gewoon verder.`:t==="err"?"De microfoon werkt niet. Je kunt jezelf ook beoordelen (Instellingen).":""}</p>`;
+    next=`<button class="btn" onclick="obFinish()">${t==="ok"?"Aan de slag!":"Afronden"}</button>`;
+  }
+  $app.innerHTML=`<div class="result pop" style="justify-content:flex-start;padding-top:calc(30px + var(--safe-top,0px))">
+    <div style="display:flex;gap:6px;justify-content:center">${dots}</div>${body}
+    <div style="width:100%;max-width:380px;margin-top:auto;padding-top:20px;display:flex;gap:10px">${ob.step>0?`<button class="btn secondary" style="flex:0 0 30%" onclick="ob.step--;render()">Terug</button>`:""}${next}</div></div>`;
+}
+function obKataHtml(){
+  const kata = ob.kata || (ob.name.trim() ? nameToKata(ob.name) : "");
+  if(!kata) return "";
+  return `<div class="card" style="margin-top:12px"><div style="color:var(--muted);font-weight:700;font-size:.85rem">Zo zeg je in het Japans "Ik ben ${esc(ob.name||"…")}":</div>
+    <div class="jp big-jp">私は${esc(kata)}です</div><div class="romaji">watashi wa ${esc(kataToRomaji(kata))} desu</div>
+    <button class="play" style="margin-top:8px" onclick="speak('私は${kata}です')">🔊 Luister</button></div>`;
+}
+async function obListenName(){
+  try{
+    const heard = await listen();
+    const k = heard.map(h=>toKata(h).replace(/[^\u30A0-\u30FF]/g,"")).find(x=>x.length>0)
+           || (heard[0] && /[a-z]/i.test(heard[0]) ? nameToKata(heard[0]) : "");
+    if(k){ ob.kata=k.replace(/^ワタシハ|デス$/g,""); if(!ob.name.trim()) ob.name=kataToRomaji(ob.kata); render(); }
+    else toast("Ik hoorde je naam niet goed. Probeer het nog eens.");
+  }catch(e){ toast("De microfoon werkt niet. Je typvoorstel wordt gebruikt."); }
+}
+function obSaveName(){
+  const n=ob.name.trim(); if(!n) return;
+  const kata = ob.kata || nameToKata(n);
+  const changed = !S.me || S.me.kata!==kata;
+  S.me = {kata, romaji:kataToRomaji(kata), nl:n.charAt(0).toUpperCase()+n.slice(1)};
+  save(); ob._reload = changed; ob.step=2; render();
+}
+async function obTestMic(){
+  ob.test="listening"; render();
+  try{ const heard=await listen(); ob.heard=heard[0]||""; ob.test = score(heard, PHRASES["こんにちは"])>=.75 ? "ok" : "bad"; }
+  catch(e){ ob.test="err"; }
+  render();
+}
+function obFinish(){
+  S.onboarded=true; save();
+  if(ob._reload || ME.kata!==(S.me&&S.me.kata)) location.reload();   // rebuild lessons with your name
+  else { view="home"; render(); }
+}
+
 /* ---------- Mijn zinnen: phrasebook of everything you've learned ---------- */
 let phraseFilter="all";
 function strength(k){ const c=(S.srs||{})[k]; if(!c) return 0; return c.iv>=16?3 : c.iv>=3?2 : 1; }
@@ -1865,6 +1979,8 @@ function renderSettings(){
   const s=S.settings;
   $app.innerHTML = `<div class="topbar"><button class="iconbtn" onclick="go('home')" aria-label="Terug">←</button><div class="brand">Instellingen</div></div>
   <div class="page">
+    <div class="setting"><h3>Je naam</h3><p>In de lessen zeg je: <span class="jp">私は${esc(ME.kata)}です</span> (${esc(ME.romaji)})</p>
+      <button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="startOnboarding(1)">Naam aanpassen</button></div>
     <div class="setting"><h3>Dagdoel</h3><p>Een les levert 10–20 XP op.</p>${seg("goal",[[10,"Rustig · 10"],[20,"Normaal · 20"],[30,"Serieus · 30"],[50,"Intens · 50"]],S.goal)}</div>
     <div class="setting"><h3>Spreeksnelheid</h3><p>Hoe snel de Japanse stem praat.</p>${seg("rate",[[0.7,"Langzaam"],[0.9,"Normaal"],[1.05,"Natuurlijk"]],s.rate)}
       <div style="margin-top:10px"><button class="play" onclick="speak('こんにちは、よろしくおねがいします')">🔊 Test de stem</button>
@@ -1900,7 +2016,7 @@ function applyInsets(){
   nat("Screen","insets").then(r=>document.documentElement.style.setProperty("--safe-top",(r&&r.top||0)+"px")).catch(()=>{});
 }
 applyInsets(); setTimeout(applyInsets, 800);
-render();
+if(!S.onboarded) startOnboarding(); else render();
 checkUpdate();
 </script>
 </body>

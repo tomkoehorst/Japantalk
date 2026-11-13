@@ -3,7 +3,7 @@
 const fs=require('fs'), vm=require('vm'), kuromoji=require('kuromoji'), wk=require('wanakana');
 const src=fs.readFileSync(process.argv[2]||require('path').join(__dirname,'..','index.html'),'utf8');
 const block=src.slice(src.indexOf('const UNITS = ['), src.indexOf('// global phrase lookup'));
-const ctx={}; vm.runInNewContext(block.replace('const UNITS','UNITS'),ctx); const UNITS=ctx.UNITS;
+const ctx={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}}; vm.runInNewContext(block.replace('const UNITS','UNITS'),ctx); const UNITS=ctx.UNITS;
 const strip=s=>s.replace(/[\s、。，,．.！!？?・「」…〜～]/g,'');
 const hira=s=>wk.toHiragana(strip(s),{passRomaji:true});
 // romaji normalisation: long vowels and spacing are written in different ways
