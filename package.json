@@ -1,0 +1,20 @@
+{
+  "name": "japantalk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Japans leren praten – web-app en Android-app (Capacitor)",
+  "scripts": {
+    "www": "mkdir -p www && cp index.html www/"
+  },
+  "dependencies": {
+    "@capacitor-community/speech-recognition": "7.0.1",
+    "@capacitor-community/text-to-speech": "6.1.0",
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/core": "^7.6.10"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.6.10"
+  }
+}
