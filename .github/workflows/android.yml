@@ -40,6 +40,18 @@ jobs:
       - name: Check lesson content (readings, romaji, duplicates)
         run: node tools/check-content.js
 
+      - name: Restore recorded voices (cache)
+        uses: actions/cache@v4
+        with:
+          path: audio
+          key: audio-${{ hashFiles('index.html', 'tools/make-audio.js') }}
+          restore-keys: audio-
+
+      - name: Record natural voices (Google Cloud TTS, only new texts)
+        env:
+          GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+        run: node tools/make-audio.js
+
       - name: Create Android project
         run: |
           npm run www

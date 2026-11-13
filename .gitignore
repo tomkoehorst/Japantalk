@@ -5,3 +5,4 @@ SLEUTEL-GEHEIM.txt
 *.p12
 *.png
 !assets/*.png
+audio/

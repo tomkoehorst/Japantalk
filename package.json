@@ -4,7 +4,7 @@
   "private": true,
   "description": "Japans leren praten – Android-app (Capacitor)",
   "scripts": {
-    "www": "rm -rf www && mkdir -p www/fonts && cp index.html www/ && for w in 400 600 700 800; do cp node_modules/@fontsource/nunito/files/nunito-latin-$w-normal.woff2 www/fonts/nunito-$w.woff2; done"
+    "www": "rm -rf www && mkdir -p www/fonts && cp index.html www/ && for w in 400 600 700 800; do cp node_modules/@fontsource/nunito/files/nunito-latin-$w-normal.woff2 www/fonts/nunito-$w.woff2; done && if [ -d audio ]; then cp -r audio www/; fi"
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "7.0.1",
