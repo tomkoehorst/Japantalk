@@ -1121,8 +1121,10 @@ function melodyChart(c){
     <div style="display:flex;gap:14px;font-size:.75rem;font-weight:700;color:var(--muted);margin-top:4px"><span><b style="color:#9CB6CB">━</b> echte stem</span><span><b style="color:#E9A9A0">━</b> jij</span></div>`;
 }
 function melodyHtml(r){
-  const col=v=>v>=75?"var(--good)":v>=55?"var(--butter)":"var(--bad)";
-  return `<div class="pron"><div class="pscores">🎵 Totaal <b>${r.total}</b> · Klank <b>${r.sound}</b> · Melodie <b>${r.melody}</b> · Ritme <b>${r.rhythm}</b></div>
+  const col=v=>v>=60?"var(--good)":v>=40?"var(--butter)":"var(--bad)";
+  const tip = r.melody<50 ? "Tip: luister naar hoe de stem omhoog en omlaag gaat, en doe dat na." : r.rhythm<50 ? "Tip: geef elke lettergreep ongeveer even lang." : "Mooi, dit lijkt al goed op de echte stem.";
+  return `<div class="pron"><div class="pscores">🎵 Lijkt <b>${r.total}%</b> op de echte stem · klank ${r.sound} · melodie ${r.melody} · ritme ${r.rhythm}</div>
+    <div style="font-size:.8rem;font-weight:700;margin-top:4px">${tip} <span style="color:var(--muted)">(alleen ter oefening)</span></div>
     ${melodyChart(r.curves)}
     <div class="pwords">${r.per.map(x=>`<span class="pw" style="background:${col(x.s)}">${esc(x.m)}</span>`).join("")}</div>
     <div class="play-row" style="margin-top:8px"><button class="play" onclick="playRef()">▶ Echte stem</button><button class="play slow" onclick="playYou()">▶ Jij</button><button class="play" style="background:var(--lav)" onclick="playBoth()">▶ Na elkaar</button></div></div>`;
@@ -1140,6 +1142,12 @@ async function measureMelody(p){
   const [ref, you]=await Promise.all([loadRef(p), to16k(rec.data, rec.rate)]);
   lastYou=you; lastRefP=p;
   return compareVoices(ref, you, p.kana) || {none:true};
+}
+async function lessonMelody(){
+  const p=curEx().p; lesson.melody={busy:true}; renderEx();
+  try{ const r=await measureMelody(p); if(view!=="lesson"||!lesson) return; lesson.melody = r.none ? {msg:"Niets gehoord: praat iets luider."} : r; }
+  catch(e){ lesson.melody={msg:"Vergelijken lukte niet: "+(e&&e.message||e)}; }
+  renderEx();
 }
 async function melodyTurn(){
   lesson.state="listening"; lesson.heard=""; lesson.melody=null; renderEx();
@@ -2199,7 +2207,7 @@ function renderEx(){
       ${lesson.noMic?"":micArea("Zeg het na")}`;
   }
   else if(t==="shadow"){
-    body = `<div class="ex-title">Luister en zeg na 👂${melodyReady(p)&&!lesson.melodyOff?` <small style="color:var(--muted);font-size:.85rem">🎵 we vergelijken je melodie</small>`:""}</div>
+    body = `<div class="ex-title">Luister en zeg na 👂</div>
       <div style="display:flex;gap:12px;justify-content:center;align-items:center">
         <button class="big-play" onclick="say()" aria-label="Luister">🔊</button><button class="play slow" onclick="say(.6)">🐢</button></div>
       <div class="card" style="margin-top:12px;text-align:center"><div class="nl" style="margin:0">“${esc(p.nl)}”</div>
@@ -2336,7 +2344,10 @@ function actionBar(t){
     const title = lesson.fbTitle || (lesson.fbTitle = titles[Math.random()*titles.length|0]);
     const speakish = ["intro","echo","shadow","speak","dialog","swap","respond"].includes(t) && canRecognize() && !lesson.selfJudged;
     return `<div class="actionbar ${st} pop">
-      ${lesson.melody?melodyHtml(lesson.melody):""}
+      ${lesson.melody&&lesson.melody.total!==undefined?melodyHtml(lesson.melody):""}
+      ${lesson.melody&&lesson.melody.msg?`<p style="margin:0 0 8px;font-weight:700">${esc(lesson.melody.msg)}</p>`:""}
+      ${!lesson.melody && ["intro","echo","shadow","speak","swap"].includes(t) && melodyReady(ex.p) ? `<button class="linkbtn" style="margin:-4px 0 8px;color:var(--text)" onclick="lessonMelody()">🎵 Vergelijk je melodie (extra, telt niet mee)</button>`:""}
+      ${lesson.melody&&lesson.melody.busy?`<p style="margin:0 0 8px;font-weight:700">🎙️ Zeg de zin nog een keer…</p>`:""}
       <div class="fb">${buddy(good?"happy":"worried",56)}<div><h4>${title}</h4>
         ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") :
           `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
@@ -2388,7 +2399,6 @@ function check(){
 }
 async function toggleMic(){
   if(lesson.state==="listening"){ if(azRec) azRec.stop(); stopListening(); return; }
-  if(curEx().type==="shadow" && melodyReady(curEx().p) && !lesson.melodyOff) return melodyTurn();
   lesson.state="listening"; lesson.heard=""; renderEx();
   try{
     const heard = await listen();
