@@ -189,6 +189,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .msg .r{color:var(--muted);font-size:.85rem}
 .msg .t{font-size:.85rem;margin-top:2px}
 .msg button{font-size:.85rem;margin-top:4px;color:var(--muted);font-weight:700}
+.scene-label{align-self:center;font-weight:800;font-size:.85rem;background:color-mix(in srgb,var(--butter) 45%,var(--card));border-radius:999px;padding:4px 12px}
+.scene-label span{color:var(--muted);font-weight:700}
 .chat-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 
 .actionbar{position:sticky;bottom:0;padding:16px 20px calc(18px + env(safe-area-inset-bottom));background:var(--bg);border-top:2px solid var(--line)}
@@ -1423,6 +1425,30 @@ function buildLesson(L){
   pick(ps,Math.min(2,ps.length)).forEach(p=>tail.push({type:"choose",p}));
   return ex.concat(shuffle(tail));
 }
+/* ---------- Dagelijks gesprek: one conversation through 3 places from units you finished ---------- */
+const SCENE = { groet:["☕","カフェで","Kafe de","In een café"], intro:["🎉","パーティーで","Pātī de","Op een feestje"], getal:["🛍️","お店で","O-mise de","In een winkeltje"],
+  hulp:["🗣️","町で","Machi de","In de stad"], konbini:["🏪","コンビニで","Konbini de","In de konbini"], restaurant:["🍜","レストランで","Resutoran de","In een restaurant"],
+  smaak:["🏮","居酒屋で","Izakaya de","In een izakaya"], betalen:["💴","レジで","Reji de","Bij de kassa"], richting:["🗺️","道で","Michi de","Op straat"],
+  trein:["🚃","駅で","Eki de","Op het station"], tijd:["🏯","お寺で","O-tera de","Bij een tempel"], taxi:["🚕","タクシーで","Takushī de","In de taxi"] };
+function dailyUnits(){ return UNITS.map((u,ui)=>ui).filter(ui=>SCENE[UNITS[ui].id] && S.done[lessonId(ui, lessonsOf(ui).length-1)]); }
+function buildDaily(){
+  const pickU = shuffle(dailyUnits()).slice(0,3), lines=[], ex=[];
+  for(const ui of pickU){
+    const u=UNITS[ui], dl=u.dialog.map(l=>l.ref?{...PHRASES[l.ref],who:"me"}:l);
+    const starts=dl.map((l,i)=>i).filter(i=>dl[i].who==="cat" && dl[i+1] && dl[i+1].who==="me");
+    if(!starts.length) continue;
+    const st=starts[Math.floor(Math.random()*starts.length)], win=dl.slice(st, st+4);
+    const [em,ja,ro,nl]=SCENE[u.id];
+    lines.push({who:"cat", ja:`${em} ${ja}`, romaji:ro, nl:nl, scene:true});
+    for(const l of win){ lines.push(l); if(l.who==="me") ex.push({type:"dialog", lines, idx:lines.length-1, p:l}); }
+  }
+  return ex;
+}
+function startDaily(){
+  const ex=buildDaily(); if(!ex.length){ toast("Rond eerst een gesprek-les af, dan kan het dagelijkse gesprek beginnen."); return; }
+  lesson = { L:{name:"Dagelijks gesprek", review:true, daily:true}, id:null, queue:ex, i:0, total:ex.length, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
+  view="lesson"; render();
+}
 function buildPractice(){
   ensureSrs();
   let keys = dueKeys().sort((a,b)=>(S.srs[a].due<S.srs[b].due?-1:S.srs[a].due>S.srs[b].due?1:0) || S.srs[b].lapses-S.srs[a].lapses).slice(0,REVIEW_MAX);
@@ -1858,6 +1884,8 @@ function renderHome(){
     </div>
   </div>
   ${g>=1?`<button class="cta" style="background:#F4B6C2" onclick="plantTree()"><span class="big">⛩️</span><span>Breng je boom naar de zen-tuin<small>en plant een nieuw zaadje</small></span></button>`:""}
+  ${dailyUnits().length && S.dailyDone!==today() ? `<button class="cta" style="background:var(--butter)" onclick="startDaily()"><span class="big">💬</span>
+     <span>Dagelijks gesprek<small>Vandaag: ${Math.min(3,dailyUnits().length)} plekken door elkaar, met zinnen die je al kent</small></span></button>`:""}
   ${due>0?`<button class="cta" style="background:var(--lav)" onclick="startPractice()"><span class="big">🔁</span>
      <span>Herhalen · ${due} ${due===1?"zin":"zinnen"}<small>${due>REVIEW_MAX?`in rondes van ${REVIEW_MAX} · `:""}eerst herhalen, dan pas iets nieuws</small></span></button>`:""}
   ${curL?`<button class="cta" ${due>0?'style="background:var(--card);box-shadow:var(--shadow)"':""} onclick="startLesson(${cur[0]},${cur[1]})"><span class="big">🌱</span>
@@ -2294,7 +2322,7 @@ function renderEx(){
   else if(t==="dialog"){
     const shown = ex.lines.slice(0, ex.idx);
     body = `<div class="chat-head">${buddy("talking",48)}<div><b>Gesprek met ${BUDDY.name}</b><div style="color:var(--muted);font-size:.85rem">Jij bent aan de beurt</div></div></div>
-      <div class="chat">${shown.map((l,i)=>`<div class="msg ${l.who}">
+      <div class="chat">${shown.map((l,i)=>l.scene?`<div class="scene-label">${esc(l.ja)} <span>· ${esc(l.nl)}</span></div>`:`<div class="msg ${l.who}">
           <div class="jp">${esc(l.ja)}</div>${S.settings.romaji?`<div class="r">${esc(l.romaji)}</div>`:""}<div class="t">${esc(l.nl)}</div>
           ${l.who==="cat"?`<button onclick="sayLine(${i})">🔊 nog eens</button>`:""}</div>`).join("")}
         <div class="msg me" style="opacity:.9;border:2px dashed var(--sage);background:var(--card)">
@@ -2460,6 +2488,7 @@ function finish(){
   const perfect = lesson.mistakes===0;
   const xp = lesson.L.review ? 5 + 2*lesson.correct : 10 + (perfect?5:0) + (lesson.L.dialog?5:0);
   if(lesson.L.phrases) lesson.L.phrases.forEach(introduce);
+  if(lesson.L.daily) S.dailyDone=today();
   const wasGoal = S.daily.xp>=S.goal;
   ensureGarden(); const g0 = treeGrowth();
   addXP(xp);
