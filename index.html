@@ -913,6 +913,13 @@ function renderGarden(){
        <p style="color:var(--muted);margin:4px 0 0">Boom ${S.tree.n} staat op ${Math.round(treeGrowth()*100)}%. Nog ±${daysLeft(treeGrowth())} dagen goed oefenen.</p></div>`}
   </div>${tabbar()}`;
 }
+// TEMPORARY test helpers (settings → Testen)
+function testGrow(frac){
+  ensureGarden(); let days=frac*TREE_DAYS, i=0;
+  while(days>0 && treeGrowth()<1){ const d=Math.min(DAY_CAP,days); S.tree.xp[`test-${Date.now()}-${i++}`]=d*S.goal; days-=d; }
+  save(); toast(`Boom staat nu op ${Math.round(treeGrowth()*100)}%`); render();
+}
+function testReset(){ ensureGarden(); S.tree.xp={}; save(); render(); }
 function plantTree(){
   ensureGarden(); if(treeGrowth()<1) return;
   S.garden.push({...S.tree, done:today()});
@@ -1178,6 +1185,8 @@ function renderSettings(){
     <div class="setting"><h3>App-versie</h3><p>Je hebt versie ${APP_BUILD?"1."+APP_BUILD:"(ontwikkelversie)"}.${upd?` Versie 1.${upd.build} staat klaar.`:""}</p>
       ${upd?`<button class="btn" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="installUpdate()">Bijwerken naar 1.${upd.build}</button>`
            :`<button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="checkUpdate(true)">Controleer op updates</button>`}</div>
+    <div class="setting" style="border:2px dashed var(--peach)"><h3>🧪 Testen (tijdelijk)</h3><p>Laat je boom vooruit groeien om de diertjes en de tuin te bekijken. Boom ${S.tree?S.tree.n:1} staat op ${Math.round(treeGrowth()*100)}%.</p>
+      <div class="seg"><button onclick="testGrow(.1)">+10%</button><button onclick="testGrow(.3)">+30%</button><button onclick="testGrow(1)">Volle bloei</button><button onclick="testReset()">Terug naar zaadje</button></div></div>
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
