@@ -3,12 +3,12 @@
 const fs=require('fs'), vm=require('vm'), kuromoji=require('kuromoji'), wk=require('wanakana');
 const src=fs.readFileSync(process.argv[2]||require('path').join(__dirname,'..','index.html'),'utf8');
 const block=src.slice(src.indexOf('const UNITS = ['), src.indexOf('// global phrase lookup'));
-const ctx={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}, BUDDY:{id:'neko',name:'Neko',ja:'ネコ',romaji:'Neko'}}; vm.runInNewContext(block.replace('const UNITS','UNITS'),ctx); const UNITS=ctx.UNITS;
+const ctx={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}, BUDDY:{id:'neko',name:'Neko',ja:'ネコ',romaji:'Neko'}}; vm.runInNewContext(block.replace('const UNITS','UNITS').replace('const STORIES','STORIES'),ctx); const UNITS=ctx.UNITS;
 const strip=s=>s.replace(/[\s、。，,．.！!？?・「」…〜～]/g,'');
 const hira=s=>wk.toHiragana(strip(s),{passRomaji:true});
 // romaji normalisation: long vowels and spacing are written in different ways
 const rnorm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,m=>m==='̄'?':':'')
-  .replace(/([aiueo]):/g,'$1$1').replace(/[^a-z]/g,'').replace(/wo/g,'o').replace(/nippon/g,'nihon').replace(/ou/g,'oo').replace(/(.)\1+/g,'$1$1').replace(/n(?=[aiueoy])/g,'n');
+  .replace(/([aiueo]):/g,'$1$1').replace(/[^a-z]/g,'').replace(/wo/g,'o').replace(/fye/g,'fe').replace(/nippon/g,'nihon').replace(/ou/g,'oo').replace(/(.)\1+/g,'$1$1').replace(/n(?=[aiueoy])/g,'n');
 kuromoji.builder({dicPath:require.resolve('kuromoji').replace(/src.*$/,'dict')}).build((err,tk)=>{
   if(err) throw err;
   const issues=[]; const seen={};
@@ -31,6 +31,12 @@ kuromoji.builder({dicPath:require.resolve('kuromoji').replace(/src.*$/,'dict')})
     if(strip(p.kana).length>3 && pr!==ro) issues.push(`[${tag} romaji] ${p.ja}: uitspraak ≈ "${toRomaji(pron(p.ja))}", app zegt "${p.romaji}"`);
     if(seen[p.nl] && seen[p.nl]!==p.ja) issues.push(`[dubbel] "${p.nl}" bij ${seen[p.nl]} en ${p.ja}`); seen[p.nl]=p.ja;
     if(p.reply && !known.has(p.reply)) issues.push(`[${tag}] antwoord ontbreekt: ${p.reply}`);
+  }
+  for(const st of (ctx.STORIES||[])){
+    if(!ctx.UNITS.some(u=>u.id===st.after)) issues.push(`[verhaal ${st.id}] onbekende unit: ${st.after}`);
+    st.lines.forEach((l,k)=>{ const said=l.tts||l.ja, pr=rnorm(toRomaji(pron(said)).replace(/(.)-/g,'$1$1')), ro=rnorm(l.romaji);
+      if(pr!==ro) issues.push(`[verhaal ${st.id} r${k+1}] ${l.ja}: uitspraak ≈ "${toRomaji(pron(said))}", app zegt "${l.romaji}"`); });
+    st.questions.forEach((q,k)=>{ if(!(q.a>=0 && q.a<q.o.length)) issues.push(`[verhaal ${st.id} vraag ${k+1}] antwoord klopt niet`); });
   }
   UNITS.forEach((u,ui)=>{
     if(u.branch){ const N=u.branch.nodes;

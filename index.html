@@ -189,6 +189,14 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .msg .r{color:var(--muted);font-size:.85rem}
 .msg .t{font-size:.85rem;margin-top:2px}
 .msg button{font-size:.85rem;margin-top:4px;color:var(--muted);font-weight:700}
+.storycard{display:flex;gap:12px;align-items:center;text-align:left;width:calc(100% - 36px);padding:12px 16px;background:color-mix(in srgb,var(--lav) 35%,var(--card))}
+.storycard small{display:block;color:var(--muted);font-weight:700}.storycard.locked{opacity:.55}
+.storybars{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.sbar{height:12px;border-radius:999px;background:var(--line);transition:background .2s}
+.sbar.on{background:var(--sage)}
+.prow.reading{background:color-mix(in srgb,var(--sage) 25%,var(--card))}
+.opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 35%,var(--card))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 30%,var(--card))}
 .scene-label{align-self:center;font-weight:800;font-size:.85rem;background:color-mix(in srgb,var(--butter) 45%,var(--card));border-radius:999px;padding:4px 12px}
 .scene-label span{color:var(--muted);font-weight:700}
 .chat-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -805,6 +813,60 @@ const UNITS = [
    ]},
 ];
 
+// listening stories (one per block): first listen, then read along, then a few questions
+const STORIES = [
+ { id:"cafe", block:"A", after:"hulp", title:"Anna in het café", emoji:"☕",
+   lines:[
+    {ja:"アンナさんはオランダ人です。",romaji:"Anna-san wa Oranda-jin desu.",nl:"Anna is Nederlandse."},
+    {ja:"日本語を勉強しています。",romaji:"Nihongo o benkyō shite imasu.",nl:"Ze leert Japans."},
+    {ja:"今日、カフェに行きました。",tts:"きょう、カフェに行きました。",romaji:"Kyō, kafe ni ikimashita.",nl:"Vandaag ging ze naar een café."},
+    {ja:"「コーヒー、お願いします。」",romaji:"\"Kōhī, onegai shimasu.\"",nl:"\"Een koffie, graag.\""},
+    {ja:"店員さんは「三百円です」と言いました。",tts:"てんいんさんは「さんびゃくえんです」と言いました。",romaji:"Ten'in-san wa \"sanbyaku en desu\" to iimashita.",nl:"De medewerker zei: \"Dat is 300 yen.\""},
+    {ja:"アンナさんは「ありがとうございます」と言いました。",romaji:"Anna-san wa \"arigatō gozaimasu\" to iimashita.",nl:"Anna zei: \"Dank u wel.\""},
+    {ja:"店員さんは「日本語、上手ですね！」と言いました。",tts:"てんいんさんは「日本語、上手ですね！」と言いました。",romaji:"Ten'in-san wa \"nihongo, jōzu desu ne!\" to iimashita.",nl:"De medewerker zei: \"Je Japans is goed!\""},
+    {ja:"アンナさんはちょっとうれしかったです。",romaji:"Anna-san wa chotto ureshikatta desu.",nl:"Anna was een beetje blij."},
+   ],
+   questions:[
+    {q:"Waar komt Anna vandaan?", o:["Nederland","België","Japan"], a:0},
+    {q:"Wat bestelt ze?", o:["Koffie","Thee","Water"], a:0},
+    {q:"Hoeveel kost het?", o:["300 yen","1000 yen","3000 yen"], a:0},
+    {q:"Wat zegt de medewerker over haar Japans?", o:["Dat het goed is","Dat hij het niet begrijpt","Dat het te snel is"], a:0},
+   ]},
+ { id:"ramen", block:"B", after:"betalen", title:"Ramen in de avond", emoji:"🍜",
+   lines:[
+    {ja:"夜、アンナさんとケンさんはラーメン屋に行きました。",romaji:"Yoru, Anna-san to Ken-san wa rāmen-ya ni ikimashita.",nl:"'s Avonds gingen Anna en Ken naar een ramenzaak."},
+    {ja:"店員さん：「いらっしゃいませ！何名様ですか？」",tts:"てんいんさん：「いらっしゃいませ！なんめいさまですか？」",romaji:"Ten'in-san: \"Irasshaimase! Nanmei-sama desu ka?\"",nl:"Medewerker: \"Welkom! Met hoeveel personen bent u?\""},
+    {ja:"ケンさん：「二人です。」",tts:"ケンさん：「ふたりです。」",romaji:"Ken-san: \"Futari desu.\"",nl:"Ken: \"Met z'n tweeën.\""},
+    {ja:"アンナさんは「おすすめはなんですか」と聞きました。",romaji:"Anna-san wa \"o-susume wa nan desu ka\" to kikimashita.",nl:"Anna vroeg: \"Wat raadt u aan?\""},
+    {ja:"店員さん：「みそラーメンがおすすめです。」",tts:"てんいんさん：「みそラーメンがおすすめです。」",romaji:"Ten'in-san: \"Miso rāmen ga o-susume desu.\"",nl:"Medewerker: \"Ik raad de miso-ramen aan.\""},
+    {ja:"でも、アンナさんは肉が食べられません。",romaji:"Demo, Anna-san wa niku ga taberaremasen.",nl:"Maar Anna eet geen vlees."},
+    {ja:"だから、野菜ラーメンにしました。",romaji:"Dakara, yasai rāmen ni shimashita.",nl:"Daarom nam ze groenteramen."},
+    {ja:"最後に、ケンさんが「お会計お願いします」と言いました。",romaji:"Saigo ni, Ken-san ga \"o-kaikei onegai shimasu\" to iimashita.",nl:"Tot slot zei Ken: \"De rekening, alstublieft.\""},
+   ],
+   questions:[
+    {q:"Met hoeveel personen zijn ze?", o:["Twee","Eén","Drie"], a:0},
+    {q:"Wat raadt de medewerker aan?", o:["Miso-ramen","Udon","Bier"], a:0},
+    {q:"Waarom neemt Anna groenteramen?", o:["Ze eet geen vlees","Ze heeft weinig geld","Het is goedkoper"], a:0},
+    {q:"Wie vraagt de rekening?", o:["Ken","Anna","De medewerker"], a:0},
+   ]},
+ { id:"kyoto", block:"C", after:"taxi", title:"Naar Kyoto", emoji:"🚄",
+   lines:[
+    {ja:"朝、アンナさんは東京駅に行きました。",romaji:"Asa, Anna-san wa Tōkyō-eki ni ikimashita.",nl:"'s Ochtends ging Anna naar station Tokio."},
+    {ja:"「京都までいくらですか」と聞きました。",romaji:"\"Kyōto made ikura desu ka\" to kikimashita.",nl:"Ze vroeg: \"Hoeveel kost het tot Kyoto?\""},
+    {ja:"駅の人：「一万四千円です。」",tts:"えきのひと：「いちまんよんせんえんです。」",romaji:"Eki no hito: \"Ichiman yonsen en desu.\"",nl:"Iemand van het station: \"14.000 yen.\""},
+    {ja:"「高いですね！」",romaji:"\"Takai desu ne!\"",nl:"\"Dat is duur!\""},
+    {ja:"電車は十時に出ました。",tts:"電車はじゅうじに出ました。",romaji:"Densha wa jūji ni demashita.",nl:"De trein vertrok om tien uur."},
+    {ja:"京都で、アンナさんは道に迷いました。",romaji:"Kyōto de, Anna-san wa michi ni mayoimashita.",nl:"In Kyoto verdwaalde Anna."},
+    {ja:"親切な人が「駅はまっすぐですよ」と教えてくれました。",romaji:"Shinsetsu na hito ga \"eki wa massugu desu yo\" to oshiete kuremashita.",nl:"Een vriendelijk iemand vertelde: \"Het station is rechtdoor.\""},
+    {ja:"アンナさんは「ありがとうございます！」と言いました。",romaji:"Anna-san wa \"arigatō gozaimasu!\" to iimashita.",nl:"Anna zei: \"Dank u wel!\""},
+   ],
+   questions:[
+    {q:"Waar gaat Anna naartoe?", o:["Kyoto","Osaka","Nara"], a:0},
+    {q:"Hoeveel kost de trein?", o:["14.000 yen","4.000 yen","1.400 yen"], a:0},
+    {q:"Hoe laat vertrekt de trein?", o:["Om 10 uur","Om 9 uur","Om 12 uur"], a:0},
+    {q:"Wat gebeurt er in Kyoto?", o:["Ze verdwaalt","Ze verliest haar kaartje","Ze mist de trein"], a:0},
+   ]},
+];
 // pattern lessons: one frame, several words to swap in
 function expandPattern(pat){
   if(!pat) return [];
@@ -1834,6 +1896,7 @@ function render(){
   else if(view==="onboard") renderOnboard();
   else if(view==="listenmode") renderListenMode();
   else if(view==="melody") renderMelody();
+  else if(view==="story") renderStory();
   else if(view==="lesson") renderEx();
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
@@ -1914,6 +1977,13 @@ function renderLearn(){
         <span style="font-size:1.2rem">${done?"🌸":open?L.icon:"🔒"}</span>${esc(L.name)}</button>`;
     });
     html+=`</div></div>`;
+    if(ui===UNITS.length-1 || UNITS[ui+1].block!==u.block){
+      for(const st of STORIES.filter(x=>x.block===u.block)){
+        const open=storyOpen(st), done=S.stories&&S.stories[st.id], au=UNITS.find(x=>x.id===st.after), aui=UNITS.indexOf(au);
+        html+=`<button class="ucard storycard ${open?"":"locked"}" onclick="${open?`openStory('${st.id}')`:`toast('Rond eerst Unit ${aui+1} (${esc(au.title)}) af 🌱')`}">
+          <span style="font-size:1.8rem">${open?st.emoji:"🔒"}</span><span><b>Luisterverhaal: ${esc(st.title)}</b>${done?" 🌸":""}<small>${open?"Luisteren, meelezen en vragen":"Na Unit "+(aui+1)}</small></span></button>`;
+      }
+    }
   });
   html+=`<div class="footer-note">Geen kistjes, geen edelstenen, geen winkel.<br>Gewoon praten. がんばって！</div></div>${tabbar()}`;
   $app.innerHTML=html;
@@ -2099,6 +2169,65 @@ function renderListenMode(){
     <p style="color:var(--muted);font-weight:600;max-width:340px">Je hoeft niet naar het scherm te kijken: luister en praat. Het scherm blijft aan.</p>
     <button class="btn coral" style="flex:none;width:100%;max-width:360px;margin-top:auto" onclick="stopListenMode();lm=null;go('home')">⏹ Stoppen</button>
   </div>`;
+}
+
+/* ---------- Luisterverhaaltjes: listen first, then read along, then a few questions ---------- */
+let sto=null;
+const storyOpen = st => { const ui=UNITS.findIndex(u=>u.id===st.after); return ui>=0 && unitDone(ui); };
+function openStory(id){ const st=STORIES.find(x=>x.id===id); sto={st, phase:"listen", idx:-1, playing:false, showNL:false, q:0, correct:0, mistakes:0, picked:null, heard:false}; view="story"; render(); }
+async function playStory(mult=1){
+  if(!sto || sto.playing) return; sto.playing=true;
+  const me=sto;
+  for(let i=0;i<me.st.lines.length;i++){
+    if(sto!==me || view!=="story" || !me.playing) break;
+    me.idx=i; renderStory(); const l=me.st.lines[i];
+    await speak(l.ja, mult, l.tts); await wait(380);
+  }
+  me.playing=false; me.idx=-1; me.heard=true; if(sto===me) renderStory();
+}
+function stopStory(){ if(sto) sto.playing=false; stopAudio(); }
+function storyAnswer(i){
+  const q=sto.st.questions[sto.q]; if(sto.picked!==null) return;
+  sto.picked=i; if(i===q.a){ sto.correct++; chime(true); } else { sto.mistakes++; chime(false); }
+  renderStory();
+}
+function storyNext(){
+  sto.picked=null; sto.q++;
+  if(sto.q>=sto.st.questions.length){
+    S.stories=S.stories||{}; S.stories[sto.st.id]=true; save();
+    lesson={L:{name:"Luisterverhaal", review:true}, id:null, queue:[], i:0, total:0, correct:sto.correct, mistakes:sto.mistakes};
+    sto=null; finish(); return;
+  }
+  renderStory();
+}
+function renderStory(){
+  if(!sto) return; const st=sto.st;
+  let body="";
+  if(sto.phase==="listen"){
+    body=`<div style="text-align:center">${buddy(sto.playing?"talking":"happy",110)}</div>
+      <p class="obp" style="text-align:center;margin:6px auto">Luister eerst zonder tekst. Probeer te volgen wat er gebeurt: je hoeft niet alles te verstaan.</p>
+      <div class="storybars">${st.lines.map((l,i)=>`<div class="sbar ${i===sto.idx?"on":""}" style="width:${40+Math.min(55,[...l.ja].length*2.2)}%"></div>`).join("")}</div>
+      <div class="btnrow" style="margin-top:16px">${sto.playing?`<button class="btn secondary" onclick="stopStory();renderStory()">⏸ Pauze</button>`
+        :`<button class="btn" onclick="playStory()">▶ ${sto.heard?"Nog eens":"Luister"}</button><button class="btn secondary" style="flex:0 0 28%" onclick="playStory(.75)">🐢</button>`}</div>
+      ${sto.heard?`<button class="btn" style="margin-top:10px;width:100%;background:var(--lav)" onclick="stopStory();sto.phase='read';renderStory()">Verder: meelezen 📖</button>`:""}`;
+  } else if(sto.phase==="read"){
+    body=`<p class="obp" style="margin:0 0 10px">Lees mee en tik op een zin om hem te horen.</p>
+      <div class="ucard" style="margin:0">${st.lines.map((l,i)=>`<div class="prow ${i===sto.idx?"reading":""}" onclick="speak(${JSON.stringify(l.ja).replace(/"/g,"&quot;")},1,${JSON.stringify(l.tts||"").replace(/"/g,"&quot;")}||undefined)">
+        <div class="pm"><div class="jp" style="font-weight:700;font-size:1.05rem">${esc(l.ja)}</div>${S.settings.romaji?`<div class="romaji" style="font-size:.85rem">${esc(l.romaji)}</div>`:""}
+        ${sto.showNL?`<div style="font-size:.9rem;font-weight:600">${esc(l.nl)}</div>`:""}</div><span>🔊</span></div>`).join("")}</div>
+      <div class="btnrow" style="margin-top:12px"><button class="btn secondary" onclick="sto.showNL=!sto.showNL;renderStory()">${sto.showNL?"Verberg":"Toon"} vertaling</button>
+        <button class="btn secondary" onclick="${sto.playing?"stopStory();renderStory()":"playStory()"}">${sto.playing?"⏸":"▶ Alles"}</button></div>
+      <button class="btn" style="margin-top:10px;width:100%" onclick="stopStory();sto.phase='quiz';renderStory()">Naar de vragen ❓</button>`;
+  } else {
+    const q=st.questions[sto.q], order=sto.order&&sto.order.q===sto.q ? sto.order.o : (sto.order={q:sto.q, o:shuffle(q.o.map((_,i)=>i))}).o;
+    body=`<div style="color:var(--muted);font-weight:800">Vraag ${sto.q+1} van ${st.questions.length}</div>
+      <div class="prompt-nl" style="margin:8px 0 4px">${esc(q.q)}</div>
+      <div class="options">${order.map(i=>{ const cls = sto.picked===null ? "" : i===q.a ? "right" : i===sto.picked ? "wrong" : "";
+        return `<button class="opt ${cls}" onclick="storyAnswer(${i})">${esc(q.o[i])}</button>`; }).join("")}</div>
+      ${sto.picked!==null?`<button class="btn" style="margin-top:14px;width:100%" onclick="storyNext()">${sto.q+1<st.questions.length?"Volgende":"Klaar"}</button>`:""}`;
+  }
+  $app.innerHTML=`<div class="topbar"><button class="iconbtn" onclick="stopStory();sto=null;go('learn')" aria-label="Terug">←</button><div class="brand">${st.emoji} ${esc(st.title)}</div></div>
+    <div class="page">${body}</div>`;
 }
 
 /* ---------- Mijn zinnen: phrasebook of everything you've learned ---------- */
@@ -2603,6 +2732,7 @@ if(window.Capacitor?.addListener){
     if(view==="listenmode"){ stopListenMode(); lm=null; go("home"); }
     else if(view==="lesson") quitLesson();
     else if(view==="melody") go("phrases");
+    else if(view==="story"){ stopStory(); sto=null; go("learn"); }
     else if(view!=="home"){ lesson=null; go("home"); }
     else nat("App","exitApp").catch(()=>{});
   });

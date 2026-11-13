@@ -13,7 +13,7 @@ const src=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
 const block=src.slice(src.indexOf('const UNITS = ['), src.indexOf('// global phrase lookup'));
 // evaluate the lessons once per companion (Neko / Panda say their own name)
 const ctxs=[{id:'neko',name:'Neko',ja:'ネコ',romaji:'Neko'},{id:'panda',name:'Panda',ja:'パンダ',romaji:'Panda'}].map(B=>{
-  const c={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}, BUDDY:B}; vm.runInNewContext(block.replace('const UNITS','UNITS'),c); return c; });
+  const c={ME:{kata:'トム',romaji:'Tomu',nl:'Tom'}, BUDDY:B}; vm.runInNewContext(block.replace('const UNITS','UNITS').replace('const STORIES','STORIES'),c); return c; });
 const ctx=ctxs[0];
 
 const jobs=[]; const add=(key,text,voice,rate,kind)=>jobs.push({key,text:(text||key).replace(/[～〜]/g,''),voice,rate,kind});
@@ -26,6 +26,7 @@ for(const u of ctxs.flatMap(c=>c.UNITS)){
   for(const l of u.dialog) if(!l.ref && l.who==='cat') add(l.ja,l.tts,'F',l.fast?1.25:l.slow?0.75:1.0,'n');
   for(const l of u.dialog) if(!l.ref && l.who==='me') { add(l.ja,l.kana,'F',1.0,'n'); add(l.ja,l.kana,'F',0.7,'s'); }
 }
+for(const st of (ctx.STORIES||[])) for(const l of st.lines){ add(l.ja,l.tts,'F',0.95,'n'); add(l.ja,l.tts,'F',0.7,'s'); }
 add('こんにちは、よろしくおねがいします',null,'F',1.0,'n');
 
 // dedupe: first definition of a key+kind wins (same as the app's phrase lookup)
