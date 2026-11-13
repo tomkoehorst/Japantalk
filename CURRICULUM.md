@@ -66,7 +66,7 @@ Daarna komen alle zinnen terug in **herhalen** over dagen en weken. Na elke 4 un
 - Patroon: 〇〇でいいですか？
 - Zij zeggen: お会計は別々ですか？
 
-## Blok C: Onderweg (apr – mei 2027)
+## Blok C: Onderweg (apr – mei 2027) ✅ in de app
 **9. De weg vragen**
 - Kan-doelen: ik kan vragen waar iets is en simpele aanwijzingen begrijpen.
 - Patroon: 〇〇はどこですか.
