@@ -72,6 +72,7 @@
 #flash.flashing{animation:flash .55s ease-out}@keyframes flash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
 .spark{animation:spark 1.4s ease-out both;transform-box:fill-box;transform-origin:center}
 @keyframes spark{0%{opacity:0;transform:scale(.2) rotate(0)}30%{opacity:1;transform:scale(1.3) rotate(45deg)}100%{opacity:0;transform:scale(.6) rotate(90deg)}}
+.snowflake{animation:snow linear infinite}@keyframes snow{to{transform:translate(-20px,275px)}}
 .drift{animation:drift 40s ease-in-out infinite alternate}@keyframes drift{to{transform:translateX(40px)}}
 .twinkle{animation:tw 3s ease-in-out infinite}@keyframes tw{50%{opacity:.2}}
 .firefly{animation:ff 3s ease-in-out infinite}@keyframes ff{0%,100%{opacity:.1;transform:translate(0,0)}50%{opacity:1;transform:translate(6px,-6px)}}
@@ -1250,15 +1251,16 @@ function treeShape(seed){
 }
 // returns svg markup of the tree at growth g (0..1); also fills `out.perch` with a branch point for the bird
 function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
+  const sea=season(), [L0,L1]=LEAF[sea];
   if(g < .05){
     const s = g/.05;
     const h = 4 + s*16;
     return `<path d="M150 224 q-2 ${-h/2} 0 ${-h}" stroke="#7FA77A" stroke-width="3" fill="none" stroke-linecap="round"/>
-      ${s>.2?`<ellipse cx="${144-s*3}" cy="${224-h+2}" rx="${3+s*4}" ry="${2+s*2}" fill="#A8CFA0" transform="rotate(-25 ${144-s*3} ${224-h+2})"/>
-      <ellipse cx="${156+s*3}" cy="${224-h+3}" rx="${3+s*4}" ry="${2+s*2}" fill="#A8CFA0" transform="rotate(25 ${156+s*3} ${224-h+3})"/>`:""}
+      ${s>.2?`<ellipse cx="${144-s*3}" cy="${224-h+2}" rx="${3+s*4}" ry="${2+s*2}" fill="${L0}" transform="rotate(-25 ${144-s*3} ${224-h+2})"/>
+      <ellipse cx="${156+s*3}" cy="${224-h+3}" rx="${3+s*4}" ry="${2+s*2}" fill="${L0}" transform="rotate(25 ${156+s*3} ${224-h+3})"/>`:""}
       <ellipse cx="150" cy="225" rx="10" ry="3" fill="#9C7B6B" opacity=".5"/>`;
   }
-  const br=treeShape(seed); let wood="", woodOut="", leaves="", blossoms="";
+  const br=treeShape(seed); let wood="", woodOut="", leaves="", blossoms="", snow="";
   for(const b of br){
     const p = clamp01((g-b.t0)/b.span); if(p<=0) continue;
     const ex=b.x+(b.ex-b.x)*p, ey=b.y+(b.ey-b.y)*p;
@@ -1269,10 +1271,11 @@ function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
     wood += `<path d="${d}" stroke="#9C7B6B" stroke-width="${w.toFixed(1)}" fill="none" stroke-linecap="round"/>`;
     if(b.depth<2) wood += `<path d="${d}" stroke="#B8977E" stroke-width="${(w*.25).toFixed(1)}" fill="none" stroke-linecap="round" transform="translate(-${(w*.22).toFixed(1)} 0)" opacity=".7"/>`;
     if(b.depth===2 && p===1 && !out.perch) out.perch={x:b.ex,y:b.ey};
+    if(sea==="winter" && b.depth<=3 && p>.5) snow += `<ellipse cx="${((b.x+ex)/2).toFixed(1)}" cy="${(((b.y+ey)/2)-w*.55).toFixed(1)}" rx="${(Math.max(2.5,w*.9)+2).toFixed(1)}" ry="${Math.max(1.4,w*.32).toFixed(1)}" fill="#fff" opacity=".95"/>`;
     if(b.depth<3){   // young twigs get a few leaves until the canopy takes over
       const lp = clamp01((g-b.t0-b.span*.5)/.08) * (1-clamp01((g-(b.t0+b.span*1.7))/.15));
       if(lp>0){ const s2=6*lp;
-        leaves += `<circle cx="${(ex-s2*.5).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s2.toFixed(1)}" fill="#A8CFA0"/><circle cx="${(ex+s2*.5).toFixed(1)}" cy="${(ey-s2*.5).toFixed(1)}" r="${(s2*.8).toFixed(1)}" fill="#8FBF8A"/>`; }
+        leaves += `<circle cx="${(ex-s2*.5).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s2.toFixed(1)}" fill="${L0}"/><circle cx="${(ex+s2*.5).toFixed(1)}" cy="${(ey-s2*.5).toFixed(1)}" r="${(s2*.8).toFixed(1)}" fill="${L1}"/>`; }
     }
     if(b.depth>=3){
       const lp = clamp01((g-b.t0-b.span*.5)/.1);
@@ -1280,7 +1283,7 @@ function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
       const R = (b.depth===5?6:b.depth===4?7:8);
       if(lp>0 && bp<1){
         const s=R*lp*(1-bp*.6);
-        leaves += `<g opacity="${(1-bp).toFixed(2)}"><circle cx="${(ex-s*.6).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s.toFixed(1)}" fill="#A8CFA0"/><circle cx="${(ex+s*.5).toFixed(1)}" cy="${(ey-s*.4).toFixed(1)}" r="${(s*.85).toFixed(1)}" fill="#8FBF8A"/></g>`;
+        leaves += `<g opacity="${(1-bp).toFixed(2)}"><circle cx="${(ex-s*.6).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s.toFixed(1)}" fill="${L0}"/><circle cx="${(ex+s*.5).toFixed(1)}" cy="${(ey-s*.4).toFixed(1)}" r="${(s*.85).toFixed(1)}" fill="${L1}"/></g>`;
       }
       if(bp>0){
         const s=R*1.25*bp, c=["#F4B6C2","#F9CFD7","#F7C1CC"];
@@ -1293,7 +1296,7 @@ function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
     }
   }
   const halo = `<ellipse cx="150" cy="${(224-g*120).toFixed(0)}" rx="${(40+g*90).toFixed(0)}" ry="${(30+g*80).toFixed(0)}" fill="url(#halo)"/>`;
-  return (withHalo?halo:"")+woodOut+wood+leaves+blossoms;
+  return (withHalo?halo:"")+woodOut+wood+snow+leaves+blossoms;
 }
 // what grew between two moments: new branches, longer branches, new leaves and blossoms (with positions for sparkles)
 function treeDiff(g0, g1, seed){
@@ -1357,6 +1360,16 @@ function animalSpot(id, perch){
            tsuru:[42,222,false], neko:[214,224,true], tanuki:[218,224,false]})[id];
 }
 /* ---------- living scenery: time of day, sky, mountains, fence, gravel, decorations ---------- */
+/* ---------- real seasons (northern hemisphere, like Japan and the Netherlands) ---------- */
+function season(d=new Date()){ const m=d.getMonth(); return m<2||m===11 ? "winter" : m<5 ? "spring" : m<8 ? "summer" : "autumn"; }
+const SEASON_INFO = {
+  spring:{nl:"Lente",  emoji:"🌸", ja:"春・花見", kana:"はる・はなみ", romaji:"haru · hanami", note:"lente · samen onder de kersenbloesem zitten"},
+  summer:{nl:"Zomer",  emoji:"🎆", ja:"夏・花火", kana:"なつ・はなび", romaji:"natsu · hanabi", note:"zomer · vuurwerk"},
+  autumn:{nl:"Herfst", emoji:"🍁", ja:"秋・紅葉", kana:"あき・こうよう", romaji:"aki · kōyō", note:"herfst · de rode en gele herfstbladeren"},
+  winter:{nl:"Winter", emoji:"❄️", ja:"冬・雪", kana:"ふゆ・ゆき", romaji:"fuyu · yuki", note:"winter · sneeuw"},
+};
+// leaf colours per season (the blossom always stays: it shows your progress)
+const LEAF = { spring:["#B5DCA6","#9CCB8E"], summer:["#8FBF8A","#77AD74"], autumn:["#F3B49F","#F4C870"], winter:["#B9C4B4","#A3B0A0"] };
 function timeOfDay(h=new Date().getHours()){ return h<6||h>=21 ? "night" : h<10 ? "morning" : h<17 ? "day" : "evening"; }
 const SKY = { morning:["#FCE3D6","#FBF4EC"], day:["#D6E8F5","#FBF8F4"], evening:["#E7CBE3","#F8DCC8"], night:["#262845","#47486A"] };
 // decorations you earn by finishing units (in order)
@@ -1378,8 +1391,9 @@ function unitsDone(){ let n=0; for(let u=0;u<UNITS.length;u++) if(unitDone(u)) n
 function earnedDecos(){ return DECOS.slice(0, Math.min(DECOS.length, unitsDone())); }
 function nextDeco(){ const n=unitsDone(); return n<DECOS.length ? DECOS[n] : null; }
 
+const SEASON_SKY = { winter:{day:["#DCE6F0","#F4F6F8"],morning:["#E8E4F0","#F6F4F8"]}, autumn:{day:["#E2E2F0","#FBF1E6"]}, spring:{day:["#DCEBF5","#FDF6F7"]}, summer:{day:["#C9E3F5","#FBF8F0"]} };
 function skySVG(tod){
-  const [a,b]=SKY[tod]; let s=`<defs><linearGradient id="sky-${tod}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>
+  const [a,b]=(SEASON_SKY[season()]||{})[tod] || SKY[tod]; let s=`<defs><linearGradient id="sky-${tod}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>
     <radialGradient id="glow"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></radialGradient>
     <radialGradient id="halo"><stop offset="0" stop-color="${tod==="night"?"#FCE8EC":"#FFFFFF"}" stop-opacity="${tod==="night"?".28":".6"}"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></radialGradient></defs>
     <rect width="300" height="260" fill="url(#sky-${tod})"/>`;
@@ -1401,6 +1415,7 @@ function earnedIds(){ return new Set(earnedDecos().map(d=>d.id)); }
 function fenceSVG(){
   let s=`<g opacity=".9"><rect x="0" y="191" width="300" height="3" fill="#C9B48A"/><rect x="0" y="200" width="300" height="3" fill="#C9B48A"/>`;
   for(let x=4;x<300;x+=9) s+=`<rect x="${x}" y="186" width="5" height="22" rx="2" fill="#E3D3AE" stroke="#C9B48A" stroke-width=".8"/>`;
+  if(season()==="winter") s+=`<path d="M0 187 Q75 183 150 187 T300 186 V189 H0z" fill="#fff"/>${[...Array(34)].map((_,i)=>`<ellipse cx="${6.5+i*9}" cy="186" rx="3.4" ry="1.6" fill="#fff"/>`).join("")}`;
   return s+`</g>`;
 }
 function groundSVG(){
@@ -1412,9 +1427,16 @@ function groundSVG(){
       <ellipse cx="232" cy="238" rx="22" ry="8" fill="none" stroke="var(--rake)" stroke-width="1.1"/>
       <ellipse cx="232" cy="236" rx="13" ry="7" fill="#C9C3BD"/><ellipse cx="226" cy="233" rx="5" ry="2" fill="#DAD5CF"/><ellipse cx="246" cy="240" rx="7" ry="4" fill="#D8D2CC"/>`;
   const r=rng(7);   // grass tufts and little flowers
+  const sea=season();
   for(const [x,y] of [[112,222],[186,221],[100,250],[200,254],[20,214],[280,212],[176,232]]){
-    s+=`<path d="M${x} ${y} l-3 -6 M${x} ${y} l0 -8 M${x} ${y} l3 -6" stroke="#8FBF8A" stroke-width="1.4" stroke-linecap="round"/>`;
-    if(r()<.6) s+=`<circle cx="${x+4}" cy="${y-5}" r="1.6" fill="${r()<.5?"#F7C1CC":"#F4E6B0"}"/>`;
+    if(sea==="winter") continue;
+    s+=`<path d="M${x} ${y} l-3 -6 M${x} ${y} l0 -8 M${x} ${y} l3 -6" stroke="${sea==="autumn"?"#C9B48A":"#8FBF8A"}" stroke-width="1.4" stroke-linecap="round"/>`;
+    if(sea==="spring" ? true : sea==="summer" ? r()<.5 : false) s+=`<circle cx="${x+4}" cy="${y-5}" r="1.7" fill="${r()<.5?"#F7C1CC":"#F4E6B0"}"/>`;
+    if(sea==="autumn") s+=`<ellipse cx="${x+5}" cy="${y-1}" rx="2.4" ry="1.3" fill="${r()<.5?"#F3B49F":"#F4C870"}" transform="rotate(30 ${x+5} ${y-1})"/>`;
+  }
+  if(sea==="winter"){   // a blanket of snow, raked lines still faintly visible
+    s+=`<rect x="0" y="206" width="300" height="54" fill="#FBFBFD" opacity=".78"/><ellipse cx="150" cy="226" rx="46" ry="10" fill="#fff" opacity=".7"/>
+      <ellipse cx="232" cy="233" rx="11" ry="3.2" fill="#fff"/><ellipse cx="246" cy="237.5" rx="6" ry="2" fill="#fff"/>`;
   }
   return s;
 }
@@ -1437,7 +1459,9 @@ function decoSVG(id, tod){
     case "bridge": return `<g><path d="M28 242 Q62 220 96 242" stroke="#B88F6E" stroke-width="5" fill="none" stroke-linecap="round"/>
       <path d="M30 236 Q62 214 94 236" stroke="#C9A88E" stroke-width="1.6" fill="none"/>${[38,50,62,74,86].map(x=>`<line x1="${x}" y1="${(242-((1-((x-62)/34)**2)*22)).toFixed(1)}" x2="${x}" y2="${(236-((1-((x-62)/32)**2)*22)).toFixed(1)}" stroke="#C9A88E" stroke-width="1.4"/>`).join("")}</g>`;
     case "maple": return `<g transform="translate(286 214)"><path d="M0 0 v-14" stroke="#9C7B6B" stroke-width="3"/>
-      <circle cx="-7" cy="-18" r="8" fill="#F3B49F"/><circle cx="5" cy="-22" r="9" fill="#E9A9A0"/><circle cx="-1" cy="-28" r="7" fill="#F6C9A8"/><circle cx="8" cy="-13" r="5" fill="#F3B49F"/></g>`;
+      ${(()=>{ const sea=season(), c = sea==="autumn"?["#F3B49F","#E9A9A0","#F6C9A8"] : sea==="spring"?["#C8E3B5","#B5DCA6","#D9EDC9"] : ["#9CCB8E","#8FBF8A","#B5DCA6"];
+        return sea==="winter" ? `<path d="M0 -14 l-8 -8 M0 -14 l7 -10 M0 -18 l1 -10" stroke="#9C7B6B" stroke-width="1.6"/><ellipse cx="-4" cy="-22" rx="5" ry="1.6" fill="#fff"/><ellipse cx="4" cy="-25" rx="4" ry="1.4" fill="#fff"/>`
+          : `<circle cx="-7" cy="-18" r="8" fill="${c[0]}"/><circle cx="5" cy="-22" r="9" fill="${c[1]}"/><circle cx="-1" cy="-28" r="7" fill="${c[2]}"/><circle cx="8" cy="-13" r="5" fill="${c[0]}"/>`; })()}</g>`;
     case "pine": return `<g transform="translate(14 222)"><path d="M0 0 q-2 -10 4 -16 q5 -6 1 -14" stroke="#9C7B6B" stroke-width="3" fill="none"/>
       <ellipse cx="-2" cy="-17" rx="9" ry="4" fill="#7FA77A"/><ellipse cx="10" cy="-24" rx="8" ry="3.5" fill="#8FBF8A"/><ellipse cx="4" cy="-32" rx="7" ry="3.5" fill="#7FA77A"/>
       <rect x="-9" y="0" width="20" height="5" rx="2" fill="#B88F6E"/></g>`;
@@ -1456,6 +1480,13 @@ function decoSVG(id, tod){
       <circle cx="-3" cy="-11" r="1" fill="#fff"/><circle cx="3" cy="-12" r="1" fill="#fff"/><circle cx="-12" cy="-19" r=".9" fill="${ink}"/></g>`;
   }
   return "";
+}
+function seasonParticles(){
+  const sea=season(), r=rng(11); let s="";
+  if(sea==="winter") for(let i=0;i<16;i++) s+=`<circle class="snowflake" cx="${(r()*300).toFixed(0)}" cy="-6" r="${(1+r()*1.4).toFixed(1)}" fill="#fff" style="animation-duration:${(6+r()*6).toFixed(1)}s;animation-delay:-${(r()*10).toFixed(1)}s"/>`;
+  if(sea==="autumn") for(let i=0;i<6;i++) s+=`<ellipse class="petal" cx="${(60+r()*200).toFixed(0)}" cy="60" rx="3.2" ry="1.8" fill="${r()<.5?"#F3B49F":"#F4C870"}" style="animation-duration:${(6+r()*5).toFixed(1)}s;animation-delay:-${(r()*8).toFixed(1)}s"/>`;
+  if(sea==="spring") for(let i=0;i<5;i++) s+=`<ellipse class="petal" cx="${(40+r()*220).toFixed(0)}" cy="40" rx="2.6" ry="1.7" fill="#F9CFD7" style="animation-duration:${(6+r()*5).toFixed(1)}s;animation-delay:-${(r()*8).toFixed(1)}s"/>`;
+  return s;
 }
 function lifeSVG(tod){   // butterflies by day, fireflies at night
   if(tod==="night"){ const r=rng(3); let s=""; for(let i=0;i<7;i++) s+=`<circle class="firefly" cx="${(40+r()*220).toFixed(0)}" cy="${(150+r()*70).toFixed(0)}" r="1.6" fill="#FFF3B0" style="animation-delay:-${(r()*3).toFixed(1)}s"/>`; return s; }
@@ -1495,7 +1526,7 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
     <g id="${evolve?"treeLayer":""}">${treeMarkup}</g>
     ${front}
     ${animals}
-    ${sky ? lifeSVG(tod) : ""}
+    ${sky ? lifeSVG(tod) + seasonParticles() : ""}
     ${petals && g>=.8 ? petalsSVG(Math.round((g-.75)*30), tree.seed) : ""}
     ${evolve?`<g id="sparkLayer"></g><rect id="flash" width="300" height="260" fill="#fff" opacity="0"/>`:""}
   </svg>`;
@@ -1583,6 +1614,7 @@ function renderHome(){
       <div class="bar"><i style="width:${g*100}%;background:#F4B6C2"></i></div>
       <div class="animals">${set.map(a=>{const ag=animalGrowth(a,g);
         return `<span class="animal-chip ${ag>=0?"on":""}">${ag<0?"🥚":a.emoji} ${ag<0?`komt bij ${Math.round(a.hatch*100)}%`:`${esc(a.name)}${ag>=1?" ✓":""}`}</span>`;}).join("")}</div>
+      ${(()=>{ const si=SEASON_INFO[season()]; return `<button class="animal-chip on" style="margin-top:8px;display:inline-block" onclick="speak('${si.kana}')">${si.emoji} ${si.nl}: <span class="jp">${si.ja}</span> · ${si.romaji} 🔊</button>`; })()}
       ${(()=>{ const nd=nextDeco(); if(!nd) return ""; let u=0; while(u<UNITS.length && unitDone(u)) u++;
         return u<UNITS.length ? `<div class="animal-chip" style="margin-top:8px;display:inline-block">🎁 Volgende beloning: ${nd.emoji} ${esc(nd.name)} · rond Unit ${u+1} af</div>` : ""; })()}
     </div>
