@@ -921,13 +921,27 @@ async function listen(){
   }
   const av = await nat("SpeechRecognition","available").catch(()=>({available:false}));
   if(!av.available) throw "geen spraakherkenning op dit toestel";
-  listening=true;
+  listening=true; lastListenError="";
   try{
-    const r = await nat("SpeechRecognition","start",{language:"ja-JP", maxResults:5, partialResults:false, popup:false});
-    return (r && r.matches) || [];
-  }catch(e){ return []; }   // "No match" etc. → treated as nothing heard
+    await new Promise(r=>setTimeout(r,250));          // let the voice/audio release the speaker before the mic opens
+    for(let attempt=0; attempt<2; attempt++){
+      const t0=Date.now();
+      try{
+        const r = await nat("SpeechRecognition","start",{language:"ja-JP", maxResults:5, partialResults:false, popup:false});
+        const m = (r && r.matches) || [];
+        if(m.length || Date.now()-t0>1500 || !listening) return m;
+      }catch(e){
+        lastListenError = String(e && e.message || e);
+        if(Date.now()-t0>1500 || !listening) return [];   // a real "no match" after listening
+      }
+      // came back almost immediately without hearing anything: recogniser wasn't ready yet → try once more
+      await new Promise(r=>setTimeout(r,350));
+    }
+    return [];
+  }
   finally{ listening=false; }
 }
+let lastListenError="";
 /* ---------- in-app updates (GitHub Releases) ---------- */
 const APP_BUILD = Number("__BUILD__") || 0;          // filled in by the CI build
 const UPDATE_API = "https://api.github.com/repos/tomkoehorst/Japantalk/releases/latest";
@@ -988,7 +1002,7 @@ function updateCard(){
     </div></div>`;
 }
 
-function stopListening(){ if(listening) nat("SpeechRecognition","stop").catch(()=>{}); }
+function stopListening(){ if(listening){ listening=false; nat("SpeechRecognition","stop").catch(()=>{}); } }
 
 // --- matching ---
 function toHira(s){ return s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60)); }
@@ -1004,13 +1018,16 @@ function lev(a,b){
     prev=cur; }
   return prev[n];
 }
+// how strict the pronunciation check is: how many of the recogniser's guesses count, and the pass mark
+const STRICT = { mild:{alts:5, pass:.75, extra:true}, normaal:{alts:3, pass:.85, extra:true}, streng:{alts:1, pass:.92, extra:false} };
+const strict = () => STRICT[S.settings.strict] || STRICT.streng;
 function score(heard, p){
-  const targets=[p.ja,p.kana,...(p.alt||[])].map(norm);
+  const targets=[p.ja,p.kana,...(p.alt||[])].map(norm), st=strict();
   let best=0;
-  for(const h of heard){ const hn=norm(h); if(!hn) continue;
+  for(const h of heard.slice(0, st.alts)){ const hn=norm(h); if(!hn) continue;
     for(const t of targets){
       let sc = 1 - lev(hn,t)/Math.max(hn.length,t.length);
-      if(t.length>=4 && hn.includes(t)) sc=Math.max(sc,0.95);   // said extra words around it
+      if(st.extra && t.length>=4 && hn.includes(t)) sc=Math.max(sc,0.95);   // said extra words around it
       best=Math.max(best,sc);
     }}
   return best;
@@ -1631,7 +1648,7 @@ function obSaveName(){
 }
 async function obTestMic(){
   ob.test="listening"; render();
-  try{ const heard=await listen(); ob.heard=heard[0]||""; ob.test = score(heard, PHRASES["こんにちは"])>=.75 ? "ok" : "bad"; }
+  try{ const heard=await listen(); ob.heard=heard[0]||""; ob.test = score(heard, PHRASES["こんにちは"])>=strict().pass ? "ok" : "bad"; }
   catch(e){ ob.test="err"; }
   render();
 }
@@ -1878,7 +1895,7 @@ function actionBar(t){
     return `<div class="actionbar ${st} pop">
       <div class="fb">${cat(good?"happy":"worried",56)}<div><h4>${title}</h4>
         ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") :
-          `<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
+          `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
         <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
       <div class="btnrow">
         ${!good&&speakish?`<button class="btn secondary" onclick="retry()">Opnieuw</button>`:""}
@@ -1921,11 +1938,12 @@ async function toggleMic(){
   try{
     const heard = await listen();
     if(view!=="lesson"||!lesson) return;
-    if(!heard.length){ lesson.state="ask"; lesson.heard="(niets gehoord – probeer het nog eens)"; renderEx(); return; }
-    lesson.heard = heard[0];
-    const sc = score(heard, curEx().p); lesson.lastScore = sc;
-    lesson.fbNote = sc>=.95 ? "Uitspraak klinkt perfect." : sc>=.75 ? "Goed verstaanbaar!" : "";
-    resolve(sc>=.75);
+    if(!heard.length){ lesson.state="ask"; lesson.heard=`(niets gehoord – probeer het nog eens${lastListenError?` · ${lastListenError}`:""})`; renderEx(); return; }
+    const sc = score(heard, curEx().p), pass=strict().pass; lesson.lastScore = sc;
+    lesson.heard = `${heard[0]}  ·  ${Math.round(sc*100)}%`;
+    lesson.fbNote = sc>=.98 ? `Uitspraak ${Math.round(sc*100)}%: perfect.` : `Uitspraak ${Math.round(sc*100)}%: goed verstaanbaar.`;
+    lesson.failNote = sc<pass ? `Ik hoorde “${heard[0]}” (${Math.round(sc*100)}%, nodig: ${Math.round(pass*100)}%).` : "";
+    resolve(sc>=pass);
   }catch(err){
     lesson.state="ask"; renderEx();
     if(err==="not-allowed"||err==="service-not-allowed"){
@@ -1938,7 +1956,7 @@ function selfJudgeReveal(){ lesson.state="self"; lesson.selfJudged=true; renderE
 function judge(ok){ resolve(ok); }
 function noMic(){ lesson.noMic=true; stopListening(); lesson.state="ask"; lesson.autoplayed=false; renderEx(); toast("Oké! De rest van deze les zonder praten 🤫"); }
 function skip(){ stopListening(); resolve(false, true); }
-function retry(){ lesson.state="ask"; lesson.heard=""; lesson.fbTitle=null; renderEx(); }
+function retry(){ lesson.state="ask"; lesson.heard=""; lesson.failNote=""; lesson.fbTitle=null; renderEx(); }
 
 function resolve(ok, skipped=false){
   const ex=curEx();
@@ -1962,7 +1980,7 @@ function resolve(ok, skipped=false){
 function next(){
   stopAudio();
   lesson.i++;
-  Object.assign(lesson,{lastScore:null,state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
+  Object.assign(lesson,{lastScore:null,failNote:"",state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
   if(lesson.i>=lesson.queue.length) return finish();
   renderEx();
 }
@@ -2030,7 +2048,9 @@ function renderSettings(){
       ${seg("romaji",[[true,"Romaji aan"],[false,"Romaji uit"]],s.romaji)}<div style="height:8px"></div>
       ${seg("kana",[[true,"Japans schrift aan"],[false,"Japans schrift uit"]],s.kana)}</div>
     <div class="setting"><h3>Beoordeling van je uitspraak</h3><p>Laat de app meeluisteren, of beoordeel jezelf (handig als de herkenning je niet goed verstaat).</p>
-      ${seg("mode",[["auto","🎙️ App luistert mee"],["self","🙋 Zelf beoordelen"]],s.mode)}</div>
+      ${seg("mode",[["auto","🎙️ App luistert mee"],["self","🙋 Zelf beoordelen"]],s.mode)}
+      <p style="margin-top:12px">Hoe streng: <b>Streng</b> = alleen de eerste gok van de spraakherkenning telt en hij moet voor 92% kloppen.</p>
+      ${seg("strict",[["mild","Mild · 75%"],["normaal","Normaal · 85%"],["streng","Streng · 92%"]],s.strict||"streng")}</div>
     <div class="setting"><h3>App-versie</h3><p>Je hebt versie ${APP_BUILD?"1."+APP_BUILD:"(ontwikkelversie)"}.${upd?` Versie 1.${upd.build} staat klaar.`:""}</p>
       ${upd?`<button class="btn" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="installUpdate()">Bijwerken naar 1.${upd.build}</button>`
            :`<button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="checkUpdate(true)">Controleer op updates</button>`}</div>
