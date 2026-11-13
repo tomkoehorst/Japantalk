@@ -82,6 +82,9 @@
 .prow:last-child{border-bottom:none}.pm{flex:1;min-width:0}
 .pa{display:flex;align-items:center;gap:4px}.pa button{font-size:1.1rem;padding:6px}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--line)}.dot.s1{background:var(--peach)}.dot.s2{background:var(--butter)}.dot.s3{background:var(--good)}
+.scene-svg.editing{touch-action:none}.scene-svg.editing .deco{cursor:grab}
+.deco.lifted{filter:drop-shadow(0 4px 4px rgba(61,58,68,.35))}
+.warn2{margin:10px 18px 0;background:color-mix(in srgb,var(--butter) 50%,var(--card));border-radius:14px;padding:10px 14px;font-weight:700;font-size:.9rem}
 .collect{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 18px 0}
 .citem{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:10px 6px;text-align:center;font-weight:800;font-size:.75rem}
 .citem span{display:block;font-size:1.6rem;margin-bottom:2px}
@@ -1374,11 +1377,25 @@ function lifeSVG(tod){   // butterflies by day, fireflies at night
   return `<g class="flutter"><g transform="translate(200 175)"><ellipse cx="-2.5" cy="0" rx="2.8" ry="2" fill="#CFC6EA"/><ellipse cx="2.5" cy="0" rx="2.8" ry="2" fill="#F7C1CC"/><rect x="-.4" y="-1.5" width=".8" height="3" fill="${INK}"/></g></g>`;
 }
 
-function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true}={}){
+// movable decorations: where each one stands by default (bottom-centre of the drawing)
+const DECO_ANCHOR = {toro:[266,237], stones:[153,256], torii:[32,206], bridge:[62,244], maple:[286,214], pine:[15,227], bench:[206,223], bamboo:[294,210], deer:[118,218]};
+const persp = y => .7 + (y-200)/60*.45;          // further back = a bit smaller
+function decoPos(id){ const [ax,ay]=DECO_ANCHOR[id], p=(S.place||{})[id]; return p ? [p.x,p.y] : [ax,ay]; }
+function decoTransform(id){ const [ax,ay]=DECO_ANCHOR[id], [x,y]=decoPos(id), k=persp(y)/persp(ay);
+  return `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k.toFixed(3)}) translate(${-ax} ${-ay})`; }
+function placedDeco(id, tod, highlight, edit){
+  const [ax,ay]=DECO_ANCHOR[id];
+  return `<g class="deco ${highlight===id?"hatch":""}" data-id="${id}" transform="${decoTransform(id)}">${decoSVG(id,tod)}
+    ${edit?`<ellipse cx="${ax}" cy="${ay}" rx="14" ry="5" fill="rgba(255,255,255,.35)" stroke="#E9A9A0" stroke-width="1.5" stroke-dasharray="3 2"/>`:""}</g>`;
+}
+function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, edit=false}={}){
   const tod=timeOfDay(), set=ANIMAL_SETS[tree.set||0], out={};
   const treeMarkup=treeSVG(g, tree.seed, out);
   const have = decos ? earnedIds() : new Set();
   const D = id => have.has(id) ? `<g class="${highlight===id?"hatch":""}">${decoSVG(id,tod)}</g>` : "";
+  const movable = Object.keys(DECO_ANCHOR).filter(id=>have.has(id)).map(id=>[id, decoPos(id)[1]]).sort((a,b)=>a[1]-b[1]);
+  const back  = movable.filter(([,y])=>y<224).map(([id])=>placedDeco(id,tod,highlight,edit)).join("");
+  const front = movable.filter(([,y])=>y>=224).map(([id])=>placedDeco(id,tod,highlight,edit)).join("");
   let animals="";
   for(const a of set){
     const ag=animalGrowth(a,g); if(ag<0) continue;
@@ -1386,12 +1403,12 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true}={
     const cls = a.id==="koi"||a.id==="kame" ? "swim" : "bob";
     animals += `<g class="${highlight===a.id?"hatch ":""}${cls}">${animalSVG(a.id,x,y,.5+.5*ag,flip)}</g>`;
   }
-  return `<svg viewBox="0 0 300 260" class="scene-svg" aria-label="Je sakura-boom in de zen-tuin">
+  return `<svg viewBox="0 0 300 260" class="scene-svg ${edit?"editing":""}" ${edit?'id="gscene"':""} aria-label="Je sakura-boom in de zen-tuin">
     ${sky ? skySVG(tod) + D("lamps") + fenceSVG() : `<defs><radialGradient id="glow"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></radialGradient></defs>`}
     ${groundSVG()}${pondSVG()}
-    ${D("bamboo")}${D("torii")}${D("maple")}${D("pine")}
+    ${back}
     ${treeMarkup}
-    ${D("stones")}${D("bridge")}${D("bench")}${D("deer")}${D("toro")}
+    ${front}
     ${animals}
     ${sky ? lifeSVG(tod) : ""}
     ${petals && g>=.8 ? petalsSVG(Math.round((g-.75)*30), tree.seed) : ""}
@@ -1654,13 +1671,34 @@ function renderPhrases(){
     ${body || `<div style="text-align:center;padding:30px 20px">${cat("sleepy",100)}<p style="color:var(--muted);font-weight:600">${total?"Niets in deze lijst.":"Nog geen zinnen. Na je eerste les staan ze hier, als spiekboekje voor op reis."}</p></div>`}
   </div>${tabbar()}`;
 }
+let gardenEdit=false, dragging=null;
+function attachGardenDrag(){
+  const svg=document.getElementById("gscene"); if(!svg) return;
+  const toSvg=e=>{ const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); };
+  svg.addEventListener("pointerdown",e=>{ const g=e.target.closest(".deco"); if(!g) return;
+    const p=toSvg(e), [x,y]=decoPos(g.dataset.id); dragging={id:g.dataset.id, el:g, dx:x-p.x, dy:y-p.y};
+    svg.setPointerCapture(e.pointerId); g.classList.add("lifted"); e.preventDefault(); });
+  svg.addEventListener("pointermove",e=>{ if(!dragging) return; const p=toSvg(e);
+    const x=Math.max(8,Math.min(292,p.x+dragging.dx)), y=Math.max(207,Math.min(258,p.y+dragging.dy));
+    S.place=S.place||{}; S.place[dragging.id]={x:Math.round(x),y:Math.round(y)};
+    dragging.el.setAttribute("transform", decoTransform(dragging.id)); });
+  const drop=()=>{ if(!dragging) return; dragging=null; save();
+    document.getElementById("gwrap").innerHTML=sceneSVG(treeGrowth(), S.tree, {edit:true}); attachGardenDrag(); };   // redraw for depth (behind/in front of the tree)
+  svg.addEventListener("pointerup",drop); svg.addEventListener("pointercancel",drop);
+}
 function renderGarden(){
   ensureGarden();
   const n=S.garden.length, have=earnedIds(), g=treeGrowth();
   const animals=[...S.garden.flatMap(t=>ANIMAL_SETS[t.set||0]), ...ANIMAL_SETS[S.tree.set||0].filter(a=>animalGrowth(a,g)>=0)];
   const allAnimals=[...new Map(ANIMAL_SETS.flat().map(a=>[a.id,a])).values()];
   $app.innerHTML=`<div class="tabpage">${topbar("Zen-tuin")}
-    <div class="scene">${sceneSVG(g, S.tree)}</div>
+    <div class="scene" id="gwrap">${sceneSVG(g, S.tree, {edit:gardenEdit})}</div>
+    ${gardenEdit
+      ? `<div class="warn2">✋ Sleep je decoraties naar een plek rond de boom.</div>
+         <div class="btnrow" style="margin:10px 18px 0"><button class="btn secondary" onclick="S.place={};save();renderGarden()">Standaardplekken</button><button class="btn" onclick="gardenEdit=false;renderGarden()">Klaar</button></div>`
+      : Object.keys(DECO_ANCHOR).some(id=>have.has(id))
+        ? `<button class="cta" onclick="gardenEdit=true;renderGarden()"><span class="big">✏️</span><span>Tuin inrichten<small>Zet je decoraties waar jij ze wilt</small></span></button>`
+        : `<p style="margin:10px 22px 0;color:var(--muted);font-weight:600">🎁 Rond je eerste unit af en verdien een stenen lantaarn voor je tuin.</p>`}
     <h3 class="sect">Decoraties · ${have.size}/${DECOS.length}</h3>
     <div class="collect">${DECOS.map((d,i)=>`<div class="citem ${have.has(d.id)?"":"locked"}"><span>${d.emoji}</span>${esc(d.name)}${have.has(d.id)?"":`<small>Unit ${i+1}</small>`}</div>`).join("")}</div>
     <h3 class="sect">Diertjes · ${new Set(animals.map(a=>a.id)).size}/${allAnimals.length}</h3>
@@ -1670,6 +1708,7 @@ function renderGarden(){
     ${n?`<div class="garden-wrap">${gardenSVG()}</div>`:
       `<p style="margin:6px 22px 0;color:var(--muted);font-weight:600">Boom ${S.tree.n} staat op ${Math.round(g*100)}%. In volle bloei komt hij hier te staan, met zijn diertjes. Nog ±${daysLeft(g)} dagen goed oefenen.</p>`}
   </div>${tabbar()}`;
+  if(gardenEdit) attachGardenDrag();
 }
 // TEMPORARY test helpers (settings → Testen)
 function testGrow(frac){
@@ -1686,7 +1725,7 @@ function plantTree(){
   toast("Je boom staat in de zen-tuin. Een nieuw zaadje is geplant 🌱");
 }
 
-function go(v){ if(view==="learn") window._learnScroll=window.scrollY; view=v; render(); }
+function go(v){ if(v!=="garden") gardenEdit=false; if(view==="learn") window._learnScroll=window.scrollY; view=v; render(); }
 
 /* ---------- lesson flow ---------- */
 function startLesson(ui,li){
