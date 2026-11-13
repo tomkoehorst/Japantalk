@@ -20,8 +20,8 @@
 
 ## 🎯 Leerkwaliteit (prioriteit)
 1. ✅ **Veel herhalen** over dagen, zie hierboven.
-2. **Lesprogramma op een vast kader:** JF Standaard / CEFR A1→A2 van de Japan Foundation (de methodes Irodori en Marugoto), met "kan ik…"-doelen per unit, plus de woordenlijst van JLPT N5. Opzet in `CURRICULUM.md`.
-3. **Patroonoefeningen:** één woord wisselen in een zin die je kent (水をください → お茶をください), zodat je zelf nieuwe zinnen leert maken.
+2. 🚧 **Lesprogramma op een vast kader** (Blok A staat in de app): JF Standaard / CEFR A1→A2 van de Japan Foundation (de methodes Irodori en Marugoto), met "kan ik…"-doelen per unit, plus de woordenlijst van JLPT N5. Opzet in `CURRICULUM.md`.
+3. ✅ **Patroonoefeningen:** één woord wisselen in een zin die je kent (水をください → お茶をください), zodat je zelf nieuwe zinnen leert maken.
 4. *(Later)* **Controle door een moedertaalspreker:** per blok units een overzicht voor een Japanse docent.
 
 ## 🧠 Later: de app leert zelf mee (niet vergeten!)

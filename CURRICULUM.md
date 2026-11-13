@@ -25,7 +25,7 @@ Daarna komen alle zinnen terug in **herhalen** over dagen en weken. Na elke 4 un
 
 ---
 
-## Blok A: Fundament (dec 2026 – jan 2027)
+## Blok A: Fundament (dec 2026 – jan 2027) ✅ in de app
 **1. Begroeten & beleefd zijn**
 - Kan-doelen: ik kan groeten op elk moment van de dag, bedanken en sorry zeggen.
 - Patroon: ～ございます.

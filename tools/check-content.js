@@ -15,19 +15,29 @@ kuromoji.builder({dicPath:require.resolve('kuromoji').replace(/src.*$/,'dict')})
   const reading=t=>strip(tk.tokenize(t).map(x=>x.reading||x.surface_form).join(''));
   const pron=t=>strip(tk.tokenize(t).map(x=>x.pronunciation||x.reading||x.surface_form).join(''));
   const toRomaji=k=>wk.toRomaji(k.replace(/ー/g,m=>m)).replace(/-/g,'');
+  const all=[]; UNITS.forEach((u,ui)=>{
+    u.phrases.forEach(p=>all.push([ui,p,'zin']));
+    ctx.expandPattern(u.pattern).forEach(p=>all.push([ui,p,'patroon']));
+    (u.theysay||[]).forEach(p=>all.push([ui,p,'zij zeggen']));
+  });
+  const known=new Set(all.map(([,p])=>p.ja));
+  for(const [ui,p,kind] of all){
+    const tag=`U${ui+1} ${kind}`;
+    if(!p.kana||!p.romaji||!p.nl) { issues.push(`[${tag}] ${p.ja}: kana, romaji of nl ontbreekt`); continue; }
+    const said=p.tts||p.ja;   // what the voice reads
+    const r=hira(reading(said)).replace(/にっぽん/g,'にほん'), k=hira(p.kana);
+    if(r!==k) issues.push(`[${tag} lezing] ${p.ja}: analyser leest "${r}", kana-veld zegt "${k}"`);
+    const pr=rnorm(toRomaji(pron(said)).replace(/(.)-/g,'$1$1')), ro=rnorm(p.romaji);
+    if(strip(p.kana).length>3 && pr!==ro) issues.push(`[${tag} romaji] ${p.ja}: uitspraak ≈ "${toRomaji(pron(p.ja))}", app zegt "${p.romaji}"`);
+    if(seen[p.nl] && seen[p.nl]!==p.ja) issues.push(`[dubbel] "${p.nl}" bij ${seen[p.nl]} en ${p.ja}`); seen[p.nl]=p.ja;
+    if(p.reply && !known.has(p.reply)) issues.push(`[${tag}] antwoord ontbreekt: ${p.reply}`);
+  }
   UNITS.forEach((u,ui)=>{
-    u.phrases.forEach(p=>{
-      const r=hira(reading(p.ja)), k=hira(p.kana);
-      if(r!==k) issues.push(`[U${ui+1} lezing] ${p.ja}: analyser leest "${r}", kana-veld zegt "${k}"`);
-      const pr=rnorm(toRomaji(pron(p.ja)).replace(/(.)-/g,'$1$1')), ro=rnorm(p.romaji);
-      if(strip(p.kana).length<=3) { /* single short words (numbers): analyser guesses particles */ } else
-      if(pr!==ro) issues.push(`[U${ui+1} romaji] ${p.ja}: uitspraak ≈ "${toRomaji(pron(p.ja))}", app zegt "${p.romaji}"`);
-      if(seen[p.nl]) issues.push(`[dubbel] "${p.nl}" bij ${seen[p.nl]} en ${p.ja}`); seen[p.nl]=p.ja;
-    });
-    u.dialog.forEach(l=>{ if(l.ref||!l.romaji) return;
-      const pr=rnorm(toRomaji(pron(l.ja)).replace(/(.)-/g,'$1$1')), ro=rnorm(l.romaji);
-      if(pr!==ro) issues.push(`[U${ui+1} gesprek] ${l.ja}: uitspraak ≈ "${toRomaji(pron(l.ja))}", app zegt "${l.romaji}"`);
-      if(l.ref && !u.phrases.concat(...UNITS.map(x=>x.phrases)).some(p=>p.ja===l.ref)) issues.push(`ref ontbreekt: ${l.ref}`);
+    u.dialog.forEach(l=>{
+      if(l.ref){ if(!known.has(l.ref)) issues.push(`[U${ui+1} gesprek] verwijzing ontbreekt: ${l.ref}`); return; }
+      if(!l.romaji) return;
+      const said=l.tts||l.ja, pr=rnorm(toRomaji(pron(said)).replace(/(.)-/g,'$1$1')), ro=rnorm(l.romaji);
+      if(pr!==ro) issues.push(`[U${ui+1} gesprek] ${l.ja}: uitspraak ≈ "${toRomaji(pron(said))}", app zegt "${l.romaji}"`);
     });
   });
   console.log(`${UNITS.reduce((a,u)=>a+u.phrases.length,0)} zinnen + ${UNITS.reduce((a,u)=>a+u.dialog.length,0)} gespreksregels gecontroleerd, ${issues.length} meldingen:`);
