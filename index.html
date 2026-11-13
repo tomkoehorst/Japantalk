@@ -27,6 +27,47 @@
   --good:#7FAE8E; --good-ink:#D6F0DE; --bad:#C28880; --bad-ink:#FBE0DB;
   --shadow:0 4px 18px rgba(0,0,0,.3);
 }
+
+:root{--sky1:#FBEFF2;--sky2:#FBF8F4;--gravel:#EFE9E1;--rake:#E2D9CE}
+:root.dark{--sky1:#2F2A3A;--sky2:#24222A;--gravel:#34303A;--rake:#403B47}
+@media (prefers-color-scheme: dark){ :root:not(.light){--sky1:#2F2A3A;--sky2:#24222A;--gravel:#34303A;--rake:#403B47} }
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:var(--card);box-shadow:0 -4px 18px rgba(61,58,68,.08);padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+.tabbar .in{display:flex;width:100%;max-width:560px}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;font-weight:800;font-size:.75rem;color:var(--muted);border-radius:12px}
+.tabbar button span{font-size:1.35rem;filter:grayscale(.6);opacity:.75}
+.tabbar button.on{color:var(--text)}
+.tabbar button.on span{filter:none;opacity:1}
+.tabpage{padding-bottom:96px}
+.scene{margin:6px 18px 0;border-radius:20px;overflow:hidden;box-shadow:var(--shadow);background:var(--card)}
+.scene-svg{display:block;width:100%;height:auto}
+.scene-info{padding:12px 16px 14px}
+.scene-info h3{margin:0;font-size:1.05rem;display:flex;justify-content:space-between;gap:8px}
+.scene-info h3 small{color:var(--muted);font-weight:700}
+.animals{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.animal-chip{font-size:.8rem;font-weight:700;background:var(--bg);border-radius:999px;padding:4px 10px;color:var(--muted)}
+.animal-chip.on{color:var(--text);background:color-mix(in srgb,var(--sage) 35%,var(--card))}
+.cta{margin:12px 18px 0;width:calc(100% - 36px);display:flex;align-items:center;gap:12px;text-align:left;background:var(--sage);border-radius:18px;padding:14px 16px;font-weight:800;box-shadow:0 4px 0 rgba(61,58,68,.12);color:#3D3A44}
+.cta small{display:block;font-weight:600;opacity:.75}
+.cta .big{font-size:1.7rem}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 18px 0}
+.mini{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:12px 14px;text-align:left;font-weight:800}
+.mini small{display:block;color:var(--muted);font-weight:700;font-size:.8rem;margin-top:2px}
+.mini[disabled]{opacity:.55}
+.ucard{margin:12px 18px;background:var(--card);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.ucard .uh{padding:12px 16px;color:#3D3A44}
+.ucard .uh h2{margin:0;font-size:1rem}.ucard .uh p{margin:2px 0 0;font-size:.85rem;opacity:.8}
+.pills{display:flex;gap:8px;padding:12px}
+.pill{flex:1;border-radius:14px;padding:10px 6px;font-weight:800;font-size:.85rem;border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:2px}
+.pill.done{background:color-mix(in srgb,var(--sage) 30%,var(--card));border-color:transparent}
+.pill.cur{border-color:var(--sage);box-shadow:0 3px 0 var(--sage)}
+.pill.locked{color:var(--muted);opacity:.6}
+.garden-wrap{margin:6px 18px;border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
+.garden-svg{display:block;width:100%;height:auto}
+.petal{animation:fall linear infinite}
+@keyframes fall{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(-40px,210px) rotate(220deg);opacity:0}}
+.hatch{animation:hatch .9s ease}
+@keyframes hatch{0%{transform:scale(.2);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+.hatch{transform-box:fill-box;transform-origin:center bottom}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Nunito,system-ui,sans-serif;}
 body{min-height:100vh;min-height:100dvh}
@@ -350,7 +391,7 @@ function lessonsOf(ui){
    STATE
    ========================================================= */
 const STORE = "japantalk-v1";
-const today = () => new Date().toISOString().slice(0,10);
+const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const defaults = () => ({ xp:0, daily:{date:today(),xp:0}, streak:{count:0,last:null}, goal:20,
   done:{}, ph:{}, settings:{rate:0.9, romaji:true, kana:true, mode:"auto", theme:"auto"} });
 let S = load();
@@ -370,6 +411,7 @@ function rollDay(){
 function addXP(n){
   rollDay();
   S.xp+=n; S.daily.xp+=n;
+  ensureGarden(); S.tree.xp[today()] = (S.tree.xp[today()]||0) + n;
   if(S.streak.last!==today()){ S.streak.count+=1; S.streak.last=today(); }
   save();
 }
@@ -603,6 +645,176 @@ function buildPractice(){
 }
 
 /* =========================================================
+   GARDEN: sakura tree that grows in ~1 month, animals grow along,
+   finished trees move into the zen garden
+   ========================================================= */
+const TREE_DAYS = 25;          // days of reaching your daily goal for full bloom
+const DAY_CAP = 1.5;           // a big day counts at most 1.5 days (no binge-growing)
+const ANIMAL_SETS = [
+  [{id:"koi",name:"Koi",emoji:"🐟",hatch:.08},{id:"mejiro",name:"Mejiro (vogeltje)",emoji:"🐦",hatch:.3},{id:"neko",name:"Neko",emoji:"🐱",hatch:.55}],
+  [{id:"kame",name:"Kame (schildpad)",emoji:"🐢",hatch:.08},{id:"tsuru",name:"Tsuru (kraanvogel)",emoji:"🕊️",hatch:.3},{id:"tanuki",name:"Tanuki",emoji:"🦝",hatch:.55}],
+];
+function newTree(n){ return {n, seed:(Math.random()*1e9)|0, start:today(), xp:{}, set:(n-1)%ANIMAL_SETS.length}; }
+function ensureGarden(){
+  if(!S.tree) S.tree = newTree(1);
+  if(!S.garden) S.garden = [];
+}
+function treeGrowth(t=S.tree){
+  let d=0; for(const k in t.xp) d += Math.min(t.xp[k]/S.goal, DAY_CAP);
+  return Math.min(1, d/TREE_DAYS);
+}
+function daysLeft(g){ return Math.max(0, Math.ceil((1-g)*TREE_DAYS)); }
+const clamp01 = x => Math.max(0, Math.min(1, x));
+function animalGrowth(a, g){ return g < a.hatch ? -1 : clamp01((g - a.hatch)/(1 - a.hatch)); }
+
+function rng(seed){ let s=seed>>>0||1; return ()=>((s=(s*1664525+1013904223)>>>0)/4294967296); }
+const _treeCache = {};
+function treeShape(seed){
+  if(_treeCache[seed]) return _treeCache[seed];
+  const r=rng(seed), br=[];
+  (function add(x,y,a,len,w,depth,t0,span){
+    a = Math.max(-Math.PI+0.3, Math.min(-0.3, a));
+    const b={x,y,a,len,w,depth,t0,span,ex:x+Math.cos(a)*len,ey:y+Math.sin(a)*len,bend:(r()-.5)*len*.25,bloom:.62+r()*.33,rot:r()*6};
+    br.push(b);
+    if(depth<5){
+      const n = depth===0 ? 2 : (r()<.3?3:2);
+      for(let i=0;i<n;i++){
+        const spread=(depth===0?30:22)+r()*14;
+        const da = n===2 ? (i?spread:-spread) : (i-1)*spread*1.1;
+        add(b.ex,b.ey,a+da*Math.PI/180+(r()-.5)*.2,len*(.68+r()*.12),w*.64,depth+1,t0+span*.75,span*.82);
+      }
+    }
+  })(150,224,-Math.PI/2+(r()-.5)*.12,56,15,0,.05,.22);
+  return _treeCache[seed]=br;
+}
+// returns svg markup of the tree at growth g (0..1); also fills `out.perch` with a branch point for the bird
+function treeSVG(g, seed, out={}){
+  if(g < .05){
+    const s = g/.05;
+    const h = 4 + s*16;
+    return `<path d="M150 224 q-2 ${-h/2} 0 ${-h}" stroke="#7FA77A" stroke-width="3" fill="none" stroke-linecap="round"/>
+      ${s>.2?`<ellipse cx="${144-s*3}" cy="${224-h+2}" rx="${3+s*4}" ry="${2+s*2}" fill="#A8CFA0" transform="rotate(-25 ${144-s*3} ${224-h+2})"/>
+      <ellipse cx="${156+s*3}" cy="${224-h+3}" rx="${3+s*4}" ry="${2+s*2}" fill="#A8CFA0" transform="rotate(25 ${156+s*3} ${224-h+3})"/>`:""}
+      <ellipse cx="150" cy="225" rx="10" ry="3" fill="#9C7B6B" opacity=".5"/>`;
+  }
+  const br=treeShape(seed); let wood="", leaves="", blossoms="";
+  for(const b of br){
+    const p = clamp01((g-b.t0)/b.span); if(p<=0) continue;
+    const ex=b.x+(b.ex-b.x)*p, ey=b.y+(b.ey-b.y)*p;
+    const mx=(b.x+ex)/2 - Math.sin(b.a)*b.bend*p, my=(b.y+ey)/2 + Math.cos(b.a)*b.bend*p;
+    const w = Math.max(1, b.w*(.35+.65*clamp01((g-b.t0)/(b.span*3))));
+    wood += `<path d="M${b.x.toFixed(1)} ${b.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" stroke="#9C7B6B" stroke-width="${w.toFixed(1)}" fill="none" stroke-linecap="round"/>`;
+    if(b.depth===2 && p===1 && !out.perch) out.perch={x:b.ex,y:b.ey};
+    if(b.depth<3){   // young twigs get a few leaves until the canopy takes over
+      const lp = clamp01((g-b.t0-b.span*.5)/.08) * (1-clamp01((g-(b.t0+b.span*1.7))/.15));
+      if(lp>0){ const s2=6*lp;
+        leaves += `<circle cx="${(ex-s2*.5).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s2.toFixed(1)}" fill="#A8CFA0"/><circle cx="${(ex+s2*.5).toFixed(1)}" cy="${(ey-s2*.5).toFixed(1)}" r="${(s2*.8).toFixed(1)}" fill="#8FBF8A"/>`; }
+    }
+    if(b.depth>=3){
+      const lp = clamp01((g-b.t0-b.span*.5)/.1);
+      const bp = clamp01((g-b.bloom)/.07);
+      const R = (b.depth===5?6:b.depth===4?7:8);
+      if(lp>0 && bp<1){
+        const s=R*lp*(1-bp*.6);
+        leaves += `<g opacity="${(1-bp).toFixed(2)}"><circle cx="${(ex-s*.6).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s.toFixed(1)}" fill="#A8CFA0"/><circle cx="${(ex+s*.5).toFixed(1)}" cy="${(ey-s*.4).toFixed(1)}" r="${(s*.85).toFixed(1)}" fill="#8FBF8A"/></g>`;
+      }
+      if(bp>0){
+        const s=R*1.25*bp, c=["#F4B6C2","#F9CFD7","#F7C1CC"];
+        for(let k=0;k<4;k++){
+          const ang=b.rot+k*1.6, rr=s*.6;
+          blossoms += `<circle cx="${(ex+Math.cos(ang)*rr).toFixed(1)}" cy="${(ey+Math.sin(ang)*rr).toFixed(1)}" r="${(s*.75).toFixed(1)}" fill="${c[k%3]}"/>`;
+        }
+        blossoms += `<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="${(s*.3).toFixed(1)}" fill="#FCE8EC"/>`;
+      }
+    }
+  }
+  return wood+leaves+blossoms;
+}
+function petalsSVG(n=8, seed=7){
+  const r=rng(seed); let s="";
+  for(let i=0;i<n;i++){
+    const x=40+r()*220, d=(4+r()*5).toFixed(1), del=(r()*6).toFixed(1);
+    s+=`<ellipse class="petal" cx="${x.toFixed(0)}" cy="40" rx="3" ry="2" fill="#F7C1CC" style="animation-duration:${d}s;animation-delay:-${del}s"/>`;
+  }
+  return s;
+}
+
+/* ---- animals: drawn around (0,0) = where they stand, ~40px tall at scale 1 ---- */
+const INK="#3D3A44";
+function animalSVG(id, x, y, s, flip=false){
+  const k=`stroke="${INK}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"`;
+  const T=`transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(flip?-s:s).toFixed(2)} ${s.toFixed(2)})"`;
+  const eye=(cx,cy)=>`<circle cx="${cx}" cy="${cy}" r="1.6" fill="${INK}"/>`;
+  switch(id){
+    case "koi": return `<g ${T}><path d="M12 0 l9 -6 v12 z" fill="#F4A983" ${k}/><ellipse cx="0" cy="0" rx="14" ry="6.5" fill="#fff" ${k}/>
+      <ellipse cx="-2" cy="-2" rx="5" ry="3.5" fill="#F4A983"/><ellipse cx="6" cy="2" rx="3" ry="2" fill="#F4A983"/>${eye(-9,-1.5)}</g>`;
+    case "mejiro": return `<g ${T}><path d="M7 -6 l9 3 -8 2z" fill="#9DB873" ${k}/><circle cx="0" cy="-8" r="9" fill="#B9CF8A" ${k}/>
+      <ellipse cx="1" cy="-4" rx="5.5" ry="4" fill="#F4E6B0"/><circle cx="-4" cy="-11" r="3" fill="#fff" stroke="${INK}" stroke-width="1"/>${eye(-4,-11)}
+      <path d="M-9 -10 l-4 1.5 4 1.5z" fill="${INK}"/><path d="M-2 1 v3 M2 1 v3" ${k}/></g>`;
+    case "neko": return `<g ${T}><path d="M10 -6 q12 -4 8 -16" fill="none" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M10 -6 q12 -4 8 -16" fill="none" stroke="#F6D2BE" stroke-width="3" stroke-linecap="round"/>
+      <ellipse cx="0" cy="-9" rx="11" ry="10" fill="#F6D2BE" ${k}/><svg x="-14" y="-40" width="28" height="28" viewBox="0 0 100 100">${cat("happy",100).replace(/^<svg[^>]*>|<\/svg>\s*$/g,"")}</svg></g>`;
+    case "kame": return `<g ${T}><ellipse cx="-14" cy="-3" rx="4.5" ry="4" fill="#CFE3B5" ${k}/>${eye(-15,-4)}
+      <path d="M-8 0 v3 M8 0 v3" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M-12 0 a12 11 0 0 1 24 0 z" fill="#A8CFA0" ${k}/>
+      <path d="M-6 -6 l6 -3 6 3 M0 -9 v9" stroke="#7FA77A" stroke-width="1.4" fill="none"/></g>`;
+    case "tsuru": return `<g ${T}><path d="M-2 0 v-12 M3 0 v-12" stroke="${INK}" stroke-width="1.4"/><ellipse cx="2" cy="-17" rx="11" ry="7" fill="#fff" ${k}/>
+      <path d="M8 -19 q8 1 10 6 q-6 0 -10 -2z" fill="${INK}"/><path d="M-6 -19 q-6 -10 -2 -22" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/><path d="M-6 -19 q-6 -10 -2 -22" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="-8" cy="-42" r="4" fill="#fff" ${k}/><circle cx="-8" cy="-45" r="1.8" fill="#E9A9A0"/>${eye(-9,-42)}<path d="M-12 -42 l-6 1 6 1z" fill="#E8C27A" stroke="${INK}" stroke-width="1"/></g>`;
+    case "tanuki": return `<g ${T}><path d="M10 -5 q10 2 9 -9" stroke="${INK}" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M10 -5 q10 2 9 -9" stroke="#B8977E" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="0" cy="-10" rx="12" ry="11" fill="#C9A88E" ${k}/><ellipse cx="0" cy="-7" rx="7" ry="6.5" fill="#F1E2D3"/>
+      <circle cx="-8" cy="-30" r="3.5" fill="#B8977E" ${k}/><circle cx="8" cy="-30" r="3.5" fill="#B8977E" ${k}/><circle cx="0" cy="-23" r="10" fill="#C9A88E" ${k}/>
+      <ellipse cx="-4" cy="-23" rx="3.5" ry="3" fill="#6E5A50"/><ellipse cx="4" cy="-23" rx="3.5" ry="3" fill="#6E5A50"/><circle cx="-4" cy="-23" r="1.2" fill="#fff"/><circle cx="4" cy="-23" r="1.2" fill="#fff"/>
+      <ellipse cx="0" cy="-18" rx="3" ry="2" fill="#F1E2D3"/><circle cx="0" cy="-19" r="1" fill="${INK}"/><path d="M-2 -34 q2 -6 7 -5 q-2 5 -7 5z" fill="#A8CFA0" ${k}/></g>`;
+  }
+  return "";
+}
+// where each animal lives in the 300x260 scene
+function animalSpot(id, perch){
+  return ({koi:[66,240,false], kame:[62,234,false], mejiro: perch?[perch.x,perch.y-1,false]:[236,231,false],
+           tsuru:[42,222,false], neko:[214,224,true], tanuki:[218,224,false]})[id];
+}
+function sceneSVG(g, tree, {sky=true, petals=true, highlight=null}={}){
+  const set=ANIMAL_SETS[tree.set||0]; const out={};
+  const treeMarkup=treeSVG(g, tree.seed, out);
+  let animals="", hasPond=set.some(a=>a.id==="koi"||a.id==="kame");
+  for(const a of set){
+    const ag=animalGrowth(a,g); if(ag<0) continue;
+    const [x,y,flip]=animalSpot(a.id, out.perch);
+    animals += `<g class="${highlight===a.id?"hatch":""}">${animalSVG(a.id,x,y,.5+.5*ag,flip)}</g>`;
+  }
+  return `<svg viewBox="0 0 300 260" class="scene-svg" aria-label="Je sakura-boom">
+    ${sky?`<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sky1)"/><stop offset="1" stop-color="var(--sky2)"/></linearGradient></defs>
+      <rect width="300" height="260" fill="url(#sky)"/>
+      <circle cx="248" cy="52" r="18" fill="var(--butter)" opacity=".8"/>
+      <path d="M0 200 Q60 150 120 196 Q190 140 300 192 V260 H0z" fill="var(--lav)" opacity=".35"/>`:""}
+    <ellipse cx="150" cy="232" rx="132" ry="22" fill="var(--gravel)"/>
+    <path d="M30 232 q120 -14 240 0 M40 240 q110 -12 220 0" stroke="var(--rake)" stroke-width="1.2" fill="none"/>
+    <ellipse cx="150" cy="226" rx="46" ry="9" fill="var(--sage)"/>
+    <ellipse cx="236" cy="236" rx="13" ry="7" fill="#C9C3BD"/><ellipse cx="250" cy="240" rx="7" ry="4" fill="#D8D2CC"/>
+    ${hasPond?`<ellipse cx="62" cy="241" rx="34" ry="9" fill="var(--blue)" opacity=".9"/><ellipse cx="80" cy="238" rx="6" ry="2.5" fill="#A8CFA0"/>`:""}
+    ${treeMarkup}
+    ${animals}
+    ${petals && g>=.8 ? petalsSVG(Math.round((g-.75)*30), tree.seed) : ""}
+  </svg>`;
+}
+function gardenSVG(){
+  const trees=S.garden;
+  const rows=Math.max(1,trees.length);
+  let plots="";
+  trees.forEach((t,i)=>{
+    const x = i%2 ? 150 : 0, y = i*170;
+    plots += `<g transform="translate(${x} ${y})"><svg x="0" y="0" width="300" height="260" viewBox="0 0 300 260">${sceneSVG(1,t,{sky:false,petals:true}).replace(/^<svg[^>]*>|<\/svg>$/g,"")}</svg>
+      <text x="150" y="258" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="13" fill="var(--muted)">Boom ${t.n} · ${fmtDate(t.done)}</text></g>`;
+  });
+  const H = Math.max(300, rows*170+110);
+  return `<svg viewBox="0 0 450 ${H}" class="garden-svg">
+    <defs><pattern id="rake" width="40" height="14" patternUnits="userSpaceOnUse"><path d="M0 7 q10 -5 20 0 t20 0" stroke="var(--rake)" stroke-width="1.3" fill="none"/></pattern></defs>
+    <rect width="450" height="${H}" fill="var(--gravel)"/><rect width="450" height="${H}" fill="url(#rake)"/>
+    ${plots}
+  </svg>`;
+}
+function fmtDate(d){ try{ return new Date(d+"T12:00").toLocaleDateString("nl-NL",{day:"numeric",month:"short",year:"numeric"}); }catch(e){ return d; } }
+
+/* =========================================================
    VIEWS
    ========================================================= */
 const $app = document.getElementById("app");
@@ -619,10 +831,12 @@ function jpBlock(p, big=true){
 function render(){
   applyTheme(); rollDay();
   if(view==="home") renderHome();
+  else if(view==="learn") renderLearn();
+  else if(view==="garden") renderGarden();
   else if(view==="lesson") renderEx();
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
-  window.scrollTo?.(0, view==="home" ? (window._homeScroll||0) : 0);
+  window.scrollTo?.(0, view==="learn" ? (window._learnScroll||0) : 0);
 }
 
 function isUnlocked(ui,li){
@@ -630,54 +844,84 @@ function isUnlocked(ui,li){
   const prev = li>0 ? `${ui}.${li-1}` : `${ui-1}.2`;
   return !!S.done[prev];
 }
-function renderHome(){
-  const pct = Math.min(100, S.daily.xp/S.goal*100);
-  const goalMet = S.daily.xp>=S.goal;
-  const nLearned = learnedPhrases().length;
-  let current=null;
-  outer: for(let u=0;u<UNITS.length;u++) for(let l=0;l<3;l++) if(!S.done[`${u}.${l}`] && isUnlocked(u,l)){ current=`${u}.${l}`; break outer; }
-  const icons=["🗣️","🎧","💬"];
-  let html = `
-  <div class="topbar">
-    <div class="brand">${cat("happy",34)} Japantalk</div>
-    <div class="chip" title="Dagen op rij">🔥 ${S.streak.count}</div>
+function currentLesson(){
+  for(let u=0;u<UNITS.length;u++) for(let l=0;l<3;l++) if(!S.done[`${u}.${l}`] && isUnlocked(u,l)) return [u,l];
+  return null;
+}
+function tabbar(){
+  const t=[["home","🌸","Boom"],["learn","📖","Lessen"],["garden","⛩️","Tuin"]];
+  return `<nav class="tabbar"><div class="in">${t.map(([v,i,l])=>`<button class="${view===v?"on":""}" onclick="go('${v}')"><span>${i}</span>${l}</button>`).join("")}</div></nav>`;
+}
+function topbar(title){
+  return `<div class="topbar">
+    <div class="brand">${title}</div>
+    <div class="chip" title="Dagen op rij water gegeven">💧 ${S.streak.count}</div>
     <button class="iconbtn" onclick="go('settings')" aria-label="Instellingen">⚙️</button>
-  </div>
+  </div>`;
+}
+function renderHome(){
+  ensureGarden();
+  const g=treeGrowth(), set=ANIMAL_SETS[S.tree.set||0];
+  const water=Math.min(1,S.daily.xp/S.goal), goalMet=S.daily.xp>=S.goal;
+  const cur=currentLesson(), nLearned=learnedPhrases().length;
+  const curL = cur ? lessonsOf(cur[0])[cur[1]] : null;
+  const mood = g>=1 ? "Volle bloei! 🌸" : goalMet ? "Water gekregen vandaag 💧" : S.daily.xp>0 ? "Nog even water geven…" : "Je boom heeft dorst";
+  $app.innerHTML = `<div class="tabpage">
+  ${topbar(`${cat(goalMet?"happy":"sleepy",34)} Japantalk`)}
   ${updateCard()}
-  <div class="goalcard">
-    ${cat(goalMet?"proud":(S.daily.xp===0?"sleepy":"happy"),64)}
-    <div class="info">
-      <h3>${goalMet?"Dagdoel gehaald! すごい！":"Dagdoel"}</h3>
-      <p>${S.daily.xp} / ${S.goal} XP vandaag · ${S.xp} XP totaal</p>
-      <div class="bar"><i style="width:${pct}%"></i></div>
+  <div class="scene">
+    ${sceneSVG(g, S.tree)}
+    <div class="scene-info">
+      <h3>Boom ${S.tree.n} <small>${Math.round(g*100)}% · ${g>=1?"klaar!":`nog ±${daysLeft(g)} dagen`}</small></h3>
+      <div class="bar"><i style="width:${g*100}%;background:#F4B6C2"></i></div>
+      <div class="animals">${set.map(a=>{const ag=animalGrowth(a,g);
+        return `<span class="animal-chip ${ag>=0?"on":""}">${ag<0?"🥚":a.emoji} ${ag<0?`komt bij ${Math.round(a.hatch*100)}%`:`${esc(a.name)}${ag>=1?" ✓":""}`}</span>`;}).join("")}</div>
     </div>
   </div>
-  <button class="practice-btn" ${nLearned<4?"disabled":""} onclick="startPractice()">
-    <span style="font-size:1.6rem">🔁</span>
-    <span>Oefenen<small>${nLearned<4?"Leer eerst een paar zinnen":`Herhaal je lastigste zinnen · ${nLearned} zinnen geleerd`}</small></span>
-  </button>`;
+  ${g>=1?`<button class="cta" style="background:#F4B6C2" onclick="plantTree()"><span class="big">⛩️</span><span>Breng je boom naar de zen-tuin<small>en plant een nieuw zaadje</small></span></button>`:""}
+  ${curL?`<button class="cta" onclick="startLesson(${cur[0]},${cur[1]})"><span class="big">🌱</span>
+     <span>Verder leren<small>Unit ${cur[0]+1} · ${esc(UNITS[cur[0]].title)} · ${esc(curL.name)}</small></span></button>`
+    :`<button class="cta" onclick="startPractice()"><span class="big">🔁</span><span>Alles gedaan!<small>Oefen om je boom te laten groeien</small></span></button>`}
+  <div class="row2">
+    <div class="mini">💧 ${S.daily.xp}/${S.goal} XP<small>${mood}</small><div class="bar"><i style="width:${water*100}%;background:var(--blue)"></i></div></div>
+    <button class="mini" ${nLearned<4?"disabled":""} onclick="startPractice()">🔁 Oefenen<small>${nLearned<4?"Leer eerst een paar zinnen":`${nLearned} zinnen herhalen`}</small></button>
+  </div>
+  </div>${tabbar()}`;
+}
+function renderLearn(){
+  const cur=currentLesson(); const icons=["🗣️","🎧","💬"];
+  let html=`<div class="tabpage">${topbar("Lessen")}`;
   UNITS.forEach((u,ui)=>{
-    html += `<section class="unit"><div class="unit-head" style="background:${u.color}">
-      <h2>Unit ${ui+1} · ${esc(u.title)}</h2><p>${esc(u.desc)}</p></div><div class="path">`;
+    html+=`<div class="ucard"><div class="uh" style="background:${u.color}"><h2>Unit ${ui+1} · ${esc(u.title)}</h2><p>${esc(u.desc)}</p></div><div class="pills">`;
     lessonsOf(ui).forEach((L,li)=>{
-      const id=`${ui}.${li}`, done=!!S.done[id], open=isUnlocked(ui,li), isCur=id===current;
-      const x = [0,-60,40][li] + (ui%2? 20:-20);
-      html += `<div class="node-wrap" style="transform:translateX(${x}px)">
-        ${isCur?`<div class="start-bubble">START</div>`:""}
-        <button class="node ${open?"":"locked"}" style="background:${u.color}" ${open?`onclick="startLesson(${ui},${li})"`:`onclick="toast('Rond eerst de vorige les af 🐾')"`} aria-label="${esc(L.name)}">
-          ${done?"★":open?icons[li]:"🔒"}
-        </button>
-        ${isCur?`<div class="side-cat" style="left:${x>0?-90:90}px">${cat("curious",64)}</div>`:""}
-        <div class="node-label">${esc(L.name)}${done?` · ${"★".repeat(Math.min(3,S.done[id]))}`:""}</div>
-      </div>`;
+      const id=`${ui}.${li}`, done=!!S.done[id], open=isUnlocked(ui,li), isCur=cur&&cur[0]===ui&&cur[1]===li;
+      html+=`<button class="pill ${done?"done":""} ${isCur?"cur":""} ${open?"":"locked"}" ${open?`onclick="startLesson(${ui},${li})"`:`onclick="toast('Rond eerst de vorige les af 🌱')"`}>
+        <span style="font-size:1.2rem">${done?"🌸":open?icons[li]:"🔒"}</span>${esc(L.name)}</button>`;
     });
-    html += `</div></section>`;
+    html+=`</div></div>`;
   });
-  html += `<div class="footer-note">Geen kistjes, geen edelstenen, geen winkel.<br>Gewoon praten. がんばって！</div>`;
-  $app.innerHTML = html;
+  html+=`<div class="footer-note">Geen kistjes, geen edelstenen, geen winkel.<br>Gewoon praten. がんばって！</div></div>${tabbar()}`;
+  $app.innerHTML=html;
+}
+function renderGarden(){
+  ensureGarden();
+  const n=S.garden.length;
+  $app.innerHTML=`<div class="tabpage">${topbar("Zen-tuin")}
+    <p style="margin:0 18px 8px;color:var(--muted);font-weight:600">${n?`${n} ${n===1?"boom":"bomen"} in je tuin · ${n*3} diertjes`:"Als je boom in volle bloei staat, komt hij hier te staan met zijn diertjes."}</p>
+    ${n?`<div class="garden-wrap">${gardenSVG()}</div>`:
+      `<div class="scene" style="text-align:center;padding:30px 20px">${cat("sleepy",110)}<p style="font-weight:700;margin:10px 0 0">Nog een lege tuin…</p>
+       <p style="color:var(--muted);margin:4px 0 0">Boom ${S.tree.n} staat op ${Math.round(treeGrowth()*100)}%. Nog ±${daysLeft(treeGrowth())} dagen goed oefenen.</p></div>`}
+  </div>${tabbar()}`;
+}
+function plantTree(){
+  ensureGarden(); if(treeGrowth()<1) return;
+  S.garden.push({...S.tree, done:today()});
+  S.tree = newTree(S.tree.n+1);
+  save(); view="garden"; render();
+  toast("Je boom staat in de zen-tuin. Een nieuw zaadje is geplant 🌱");
 }
 
-function go(v){ if(view==="home") window._homeScroll=window.scrollY; view=v; render(); }
+function go(v){ if(view==="learn") window._learnScroll=window.scrollY; view=v; render(); }
 
 /* ---------- lesson flow ---------- */
 function startLesson(ui,li){
@@ -877,29 +1121,42 @@ function finish(){
   const perfect = lesson.mistakes===0;
   const xp = 10 + (perfect?5:0) + (lesson.L.dialog?5:0);
   const wasGoal = S.daily.xp>=S.goal;
+  ensureGarden(); const g0 = treeGrowth();
   addXP(xp);
+  const g1 = treeGrowth();
   if(lesson.id){
     const stars = perfect?3: lesson.mistakes<=2?2:1;
     S.done[lesson.id] = Math.max(S.done[lesson.id]||0, stars);
   }
   save();
-  lesson.result = {xp, perfect, goalNow: !wasGoal && S.daily.xp>=S.goal};
+  const hatched = ANIMAL_SETS[S.tree.set||0].find(a=>g0<a.hatch && g1>=a.hatch);
+  lesson.result = {xp, perfect, goalNow: !wasGoal && S.daily.xp>=S.goal, g0, g1, hatched};
   view="result"; render();
 }
 function renderResult(){
   const r=lesson.result;
   const acc = Math.round(lesson.correct/Math.max(1,lesson.correct+lesson.mistakes)*100);
-  $app.innerHTML = `<div class="result pop">
-    ${cat("proud",150)}
-    <h1>${r.perfect?"Foutloos! 完璧！":"Les voltooid!"}</h1>
-    <p style="color:var(--muted);margin:0">${r.goalNow?"🎉 Je hebt je dagdoel gehaald!":`${esc(lesson.L.name)} · ${S.streak.count} ${S.streak.count===1?"dag":"dagen"} op rij 🔥`}</p>
+  const grew = Math.max(0, Math.round((r.g1-r.g0)*1000)/10);
+  const head = r.g1>=1 && r.g0<1 ? "Volle bloei! 🌸" : r.hatched ? `Er is een ${r.hatched.name.split(" ")[0].toLowerCase()} bij gekomen! ${r.hatched.emoji}` : r.perfect ? "Foutloos! 完璧！" : "Les voltooid!";
+  $app.innerHTML = `<div class="result pop" style="justify-content:flex-start">
+    <div class="scene" style="margin:0;width:100%;max-width:420px" id="growscene">${sceneSVG(r.g0,S.tree,{petals:false})}</div>
+    <h1>${head}</h1>
+    <p style="color:var(--muted);margin:0;font-weight:700">Je boom groeide +${grew}% ${r.goalNow?"· dagdoel gehaald 💧":""}</p>
     <div class="stats">
       <div class="stat"><b>+${r.xp}</b><span>XP</span></div>
       <div class="stat"><b>${acc}%</b><span>Goed</span></div>
-      <div class="stat"><b>${S.daily.xp}/${S.goal}</b><span>Dagdoel</span></div>
+      <div class="stat"><b>${Math.round(r.g1*100)}%</b><span>Boom</span></div>
     </div>
     <button class="btn" style="flex:none;width:100%;max-width:360px" onclick="lesson=null;go('home')">Doorgaan</button>
   </div>`;
+  // animate growth
+  const el=document.getElementById("growscene"), t0=performance.now(), dur=1600;
+  (function step(now){
+    if(view!=="result"||!el.isConnected) return;
+    const k=Math.min(1,(now-t0)/dur), e=1-Math.pow(1-k,3);
+    el.innerHTML = sceneSVG(r.g0+(r.g1-r.g0)*e, S.tree, {petals:k>=1, highlight: k>=1&&r.hatched?r.hatched.id:null});
+    if(k<1) requestAnimationFrame(step);
+  })(t0+16);
 }
 
 /* ---------- settings ---------- */

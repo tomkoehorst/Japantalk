@@ -12,11 +12,22 @@
 ## ✅ Gedaan
 - Spreek-app in Duolingo-stijl, zonder kistjes of aankopen: 8 units en 24 lessen.
 - Android-app via GitHub Actions, met de spraak en spraakherkenning van Android.
-- Updates in de app: melden, downloaden en installeren.
+- Updates in de app: melden, downloaden en installeren (alleen met je eigen sleutel).
+- Notificatiebalk verborgen in de app.
+- Sakura-boom met diertjes en zen-tuin (eerste versie).
+
+## 🌸 Kern-concept: sakura-boom & zen-tuin
+- Je startscherm is een **sakura-boom** die groeit van zaadje tot volle bloei. Dat duurt **±1 maand** goed oefenen (25 dagen dagdoel; een grote dag telt max. 1,5 dag).
+- Bij elke boom horen **3 diertjes** die uitkomen tijdens de groei en meegroeien (bijv. koi, mejiro-vogeltje en Neko; daarna schildpad, kraanvogel en tanuki).
+- Staat de boom in volle bloei, dan breng je hem met zijn diertjes naar je **zen-tuin** en plant je een nieuw zaadje. Bij je vertrek heb je zo een tuin vol bomen.
+- Niets gaat dood: mis je een dag, dan groeit de boom gewoon wat later.
+- Inspiratie: Forest (groeien), Finch (zachte gamification), Pimsleur (audio-first), Drops (kort en visueel), Animal Crossing (levende wereld).
+
+**Ideeën voor later:** seizoenen in de tuin (sneeuw, herfst), decoraties verdienen (lantaarn, torii, koi-vijver) met gesprekken, tikken op een bloesem om de zin te horen, diertjes koppelen aan vaardigheden (spreken, luisteren, gesprekken).
 
 ## Fase 1: UX-basis (nu)
 1. **Onboarding:** je naam (私は〇〇です met je eigen naam), je dagdoel, uitleg over de microfoon en een test of je de stem hoort.
-2. **Tabs onderin:** Leren · Oefenen · Mijn zinnen · Profiel.
+2. ✅ **Tabs onderin:** Boom · Lessen · Tuin.
 3. **Gevoel tijdens een les:** trillen, vloeiendere animaties, een combo bij meerdere goede antwoorden op rij, en een statusbalk in de kleuren van de app.
 4. **Betere feedback op je uitspraak:** laten zien wélk deel van de zin niet goed was.
 5. **Technisch:** de lesinhoud uit `index.html` halen en in een eigen bestand zetten.
