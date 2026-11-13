@@ -391,7 +391,9 @@ function lessonsOf(ui){
    STATE
    ========================================================= */
 const STORE = "japantalk-v1";
-const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const today = () => ymd(new Date());
+const dayAdd = n => { const d=new Date(); d.setDate(d.getDate()+n); return ymd(d); };
 const defaults = () => ({ xp:0, daily:{date:today(),xp:0}, streak:{count:0,last:null}, goal:20,
   done:{}, ph:{}, settings:{rate:0.9, romaji:true, kana:true, mode:"auto", theme:"auto"} });
 let S = load();
@@ -421,6 +423,38 @@ function mark(p, ok){
   r.n++; r.s = Math.max(0, Math.min(5, r.s + (ok?1:-2))); r.t=Date.now();
   S.ph[p.key]=r;
 }
+/* ---------- spaced repetition (herhalen over dagen) ----------
+   learned → tomorrow → 3 → 7 → 16 → 37 → 85 days; a mistake sends it back to tomorrow */
+const SRS_EASE = 2.3, REVIEW_MAX = 15;
+function phraseByKey(k){ const [u,p]=k.split("."); return UNITS[u]?.phrases[p]; }
+function ensureSrs(){
+  if(S.srs) return;
+  S.srs={};
+  for(const k in S.ph) if(phraseByKey(k)) S.srs[k]={iv:0,due:today(),ease:SRS_EASE,reps:0,lapses:0};   // migrate: review today
+}
+function introduce(p){
+  ensureSrs();
+  if(p && p.key && !S.srs[p.key]) S.srs[p.key]={iv:0,due:dayAdd(1),ease:SRS_EASE,reps:0,lapses:0};
+}
+function reviewResult(p, ok, quality=1){
+  ensureSrs(); const c=S.srs[p.key]; if(!c) return;
+  if(ok){
+    if(c.due>today()) return;                       // extra practice before it's due: no jump ahead
+    c.reps++;
+    let iv = c.iv<1 ? 3 : c.iv<3 ? 7 : Math.round(c.iv*c.ease);
+    if(quality>=.95) c.ease=Math.min(2.8,c.ease+.05);
+    if(iv>7) iv=Math.round(iv*(.9+Math.random()*.2));   // spread reviews a little
+    c.iv=iv; c.due=dayAdd(iv);
+  } else {
+    c.lapses++; c.reps=0; c.iv=1; c.ease=Math.max(1.3,c.ease-.2); c.due=dayAdd(1);
+  }
+}
+function softLapse(p){   // mistake outside a review: make sure it comes back soon
+  ensureSrs(); const c=p.key&&S.srs[p.key]; if(c && c.due>dayAdd(1)) c.due=dayAdd(1);
+}
+function dueKeys(day=today()){ ensureSrs(); return Object.keys(S.srs).filter(k=>S.srs[k].due<=day && phraseByKey(k)); }
+function dueTomorrow(){ return dueKeys(dayAdd(1)).length - dueKeys().length; }
+
 function applyTheme(){
   const t=S.settings.theme, el=document.documentElement;
   el.classList.toggle("dark", t==="dark"); el.classList.toggle("light", t==="light");
@@ -611,7 +645,7 @@ function cat(mood="happy", size=72, fur="#F6D2BE"){
    ========================================================= */
 const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
 const pick = (a,n) => shuffle(a).slice(0,n);
-function learnedPhrases(){ return Object.keys(S.ph).map(k=>{const [u,p]=k.split(".");return UNITS[u]?.phrases[p];}).filter(Boolean); }
+function learnedPhrases(){ ensureSrs(); const ks=new Set([...Object.keys(S.ph),...Object.keys(S.srs)]); return [...ks].map(phraseByKey).filter(Boolean); }
 function distractors(p, n){
   let pool = UNITS[p.unit].phrases.filter(x=>x!==p && x.nl!==p.nl);
   if(pool.length<n) pool = pool.concat(Object.values(PHRASES).filter(x=>x.unit!==p.unit));
@@ -636,12 +670,19 @@ function buildLesson(L){
   return ex.concat(shuffle(tail));
 }
 function buildPractice(){
-  const all = learnedPhrases();
-  const sorted = [...all].sort((a,b)=>(S.ph[a.key].s - S.ph[b.key].s) || (S.ph[a.key].t - S.ph[b.key].t));
-  const sel = shuffle(sorted.slice(0, Math.min(8, sorted.length)));
-  const ex=[];
-  sel.forEach((p,i)=>ex.push({type:["speak","listen","speak","choose"][i%4], p}));
-  return ex.concat(shuffle(sel).slice(0,4).map(p=>({type:"speak",p})));
+  ensureSrs();
+  let keys = dueKeys().sort((a,b)=>(S.srs[a].due<S.srs[b].due?-1:S.srs[a].due>S.srs[b].due?1:0) || S.srs[b].lapses-S.srs[a].lapses).slice(0,REVIEW_MAX);
+  let extra=false;
+  if(!keys.length){   // nothing due: extra round with the weakest / youngest cards
+    extra=true;
+    keys = Object.keys(S.srs).filter(phraseByKey).sort((a,b)=>(S.srs[a].iv-S.srs[b].iv)||(S.srs[b].lapses-S.srs[a].lapses)).slice(0,10);
+  }
+  const ex = shuffle(keys).map(k=>{
+    const p=phraseByKey(k), c=S.srs[k];
+    const type = c.iv<3 ? (Math.random()<.5?"listen":"speak") : (Math.random()<.75?"speak":"listen");
+    return {type, p, review:true};
+  });
+  return {ex, extra};
 }
 
 /* =========================================================
@@ -865,6 +906,7 @@ function renderHome(){
   const water=Math.min(1,S.daily.xp/S.goal), goalMet=S.daily.xp>=S.goal;
   const cur=currentLesson(), nLearned=learnedPhrases().length;
   const curL = cur ? lessonsOf(cur[0])[cur[1]] : null;
+  const due = dueKeys().length, tomorrow = dueTomorrow();
   const mood = g>=1 ? "Volle bloei! 🌸" : goalMet ? "Water gekregen vandaag 💧" : S.daily.xp>0 ? "Nog even water geven…" : "Je boom heeft dorst";
   $app.innerHTML = `<div class="tabpage">
   ${topbar(`${cat(goalMet?"happy":"sleepy",34)} Japantalk`)}
@@ -879,12 +921,14 @@ function renderHome(){
     </div>
   </div>
   ${g>=1?`<button class="cta" style="background:#F4B6C2" onclick="plantTree()"><span class="big">⛩️</span><span>Breng je boom naar de zen-tuin<small>en plant een nieuw zaadje</small></span></button>`:""}
-  ${curL?`<button class="cta" onclick="startLesson(${cur[0]},${cur[1]})"><span class="big">🌱</span>
-     <span>Verder leren<small>Unit ${cur[0]+1} · ${esc(UNITS[cur[0]].title)} · ${esc(curL.name)}</small></span></button>`
-    :`<button class="cta" onclick="startPractice()"><span class="big">🔁</span><span>Alles gedaan!<small>Oefen om je boom te laten groeien</small></span></button>`}
+  ${due>0?`<button class="cta" style="background:var(--lav)" onclick="startPractice()"><span class="big">🔁</span>
+     <span>Herhalen · ${due} ${due===1?"zin":"zinnen"}<small>${due>REVIEW_MAX?`in rondes van ${REVIEW_MAX} · `:""}eerst herhalen, dan pas iets nieuws</small></span></button>`:""}
+  ${curL?`<button class="cta" ${due>0?'style="background:var(--card);box-shadow:var(--shadow)"':""} onclick="startLesson(${cur[0]},${cur[1]})"><span class="big">🌱</span>
+     <span>${due>0?"Nieuwe les":"Verder leren"}<small>Unit ${cur[0]+1} · ${esc(UNITS[cur[0]].title)} · ${esc(curL.name)}</small></span></button>`
+    :due>0?"":`<button class="cta" onclick="startPractice()"><span class="big">🔁</span><span>Alles gedaan!<small>Extra herhalen laat je boom groeien</small></span></button>`}
   <div class="row2">
     <div class="mini">💧 ${S.daily.xp}/${S.goal} XP<small>${mood}</small><div class="bar"><i style="width:${water*100}%;background:var(--blue)"></i></div></div>
-    <button class="mini" ${nLearned<4?"disabled":""} onclick="startPractice()">🔁 Oefenen<small>${nLearned<4?"Leer eerst een paar zinnen":`${nLearned} zinnen herhalen`}</small></button>
+    <button class="mini" ${nLearned<4?"disabled":""} onclick="startPractice()">🔁 ${due>0?"Herhalen":"Extra herhalen"}<small>${nLearned<4?"Leer eerst een paar zinnen":due>0?`${due} nu · ${tomorrow} morgen`:`niets te doen · morgen ${tomorrow}`}</small></button>
   </div>
   </div>${tabbar()}`;
 }
@@ -940,7 +984,8 @@ function startLesson(ui,li){
 }
 function startPractice(){
   window._homeScroll=window.scrollY;
-  lesson = { L:{name:"Oefenen"}, id:null, queue:buildPractice(), i:0, total:0, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
+  const r=buildPractice();
+  lesson = { L:{name: r.extra?"Extra herhalen":"Herhalen", review:true}, id:null, queue:r.ex, i:0, total:0, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
   lesson.total = lesson.queue.length;
   view="lesson"; render();
 }
@@ -1082,7 +1127,7 @@ async function toggleMic(){
     if(view!=="lesson"||!lesson) return;
     if(!heard.length){ lesson.state="ask"; lesson.heard="(niets gehoord – probeer het nog eens)"; renderEx(); return; }
     lesson.heard = heard[0];
-    const sc = score(heard, curEx().p);
+    const sc = score(heard, curEx().p); lesson.lastScore = sc;
     lesson.fbNote = sc>=.95 ? "Uitspraak klinkt perfect." : sc>=.75 ? "Goed verstaanbaar!" : "";
     resolve(sc>=.75);
   }catch(err){
@@ -1108,6 +1153,7 @@ function resolve(ok, skipped=false){
     ex.counted=true;
     if(ok) lesson.correct++; else lesson.mistakes++;
     if(ex.p.key) mark(ex.p, ok);
+    if(ex.p.key){ if(ex.review) reviewResult(ex.p, ok, lesson.lastScore ?? 1); else if(!ok) softLapse(ex.p); }
   }
   // wrong answers come back later (once), like Duolingo
   if(!ok && ex.type!=="dialog" && !ex.requeued){
@@ -1120,13 +1166,14 @@ function resolve(ok, skipped=false){
 function next(){
   stopAudio();
   lesson.i++;
-  Object.assign(lesson,{state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
+  Object.assign(lesson,{lastScore:null,state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
   if(lesson.i>=lesson.queue.length) return finish();
   renderEx();
 }
 function finish(){
   const perfect = lesson.mistakes===0;
-  const xp = 10 + (perfect?5:0) + (lesson.L.dialog?5:0);
+  const xp = lesson.L.review ? 5 + 2*lesson.correct : 10 + (perfect?5:0) + (lesson.L.dialog?5:0);
+  if(lesson.L.phrases) lesson.L.phrases.forEach(introduce);
   const wasGoal = S.daily.xp>=S.goal;
   ensureGarden(); const g0 = treeGrowth();
   addXP(xp);

@@ -15,6 +15,22 @@
 - Updates in de app: melden, downloaden en installeren (alleen met je eigen sleutel).
 - Notificatiebalk verborgen in de app.
 - Sakura-boom met diertjes en zen-tuin (eerste versie).
+- Automatische controle van de lesinhoud bij elke build (lezingen, romaji, dubbele betekenissen).
+- Herhalen over dagen (spaced repetition): morgen → 3 → 7 → 16 → 37 → 85 dagen, fout = morgen opnieuw. Herhalen staat vóór nieuwe lessen.
+
+## 🎯 Leerkwaliteit (prioriteit)
+1. ✅ **Veel herhalen** over dagen, zie hierboven.
+2. **Lesprogramma op een vast kader:** JF Standaard / CEFR A1→A2 van de Japan Foundation (de methodes Irodori en Marugoto), met "kan ik…"-doelen per unit, plus de woordenlijst van JLPT N5. Opzet in `CURRICULUM.md`.
+3. **Patroonoefeningen:** één woord wisselen in een zin die je kent (水をください → お茶をください), zodat je zelf nieuwe zinnen leert maken.
+4. *(Later)* **Controle door een moedertaalspreker:** per blok units een overzicht voor een Japanse docent.
+
+## 🧠 Later: de app leert zelf mee (niet vergeten!)
+De app past zich aan jou aan op basis van je eigen resultaten:
+- Zinnen die vaak fout gaan (veel lapses) krijgen extra oefeningen en een kortere tussenpoos.
+- Het type oefening past zich aan: wat je kunt herkennen maar nog niet kunt zeggen, gaat naar spreken.
+- Het tempo van nieuwe lessen hangt af van hoeveel er te herhalen staat (niet te veel tegelijk).
+- De drempel van de spraakherkenning past zich per zin aan (sommige zinnen herkent Android slecht).
+- Een overzicht van je zwakke plekken per situatie (bijv. "trein gaat goed, restaurant nog niet").
 
 ## 🌸 Kern-concept: sakura-boom & zen-tuin
 - Je startscherm is een **sakura-boom** die groeit van zaadje tot volle bloei. Dat duurt **±1 maand** goed oefenen (25 dagen dagdoel; een grote dag telt max. 1,5 dag).
@@ -33,7 +49,7 @@
 5. **Technisch:** de lesinhoud uit `index.html` halen en in een eigen bestand zetten.
 
 ## Fase 2: effectiever leren
-6. **Herhaling op het juiste moment** (spaced repetition), met een dagelijkse herhaalsessie.
+6. ✅ **Herhaling op het juiste moment** (spaced repetition), met een dagelijkse herhaalsessie.
 7. **Mijn zinnen:** een lijst met alles wat je geleerd hebt, af te spelen en met favorieten. Handig als spiekboekje op reis.
 8. **Shadowing:** direct met Neko meepraten, voor je ritme en uitspraak.
 9. **Korte uitleg** bij nieuwe patronen (は, を, ください, ～ますか …).
