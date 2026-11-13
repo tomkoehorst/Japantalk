@@ -30,6 +30,7 @@ De app past zich aan jou aan op basis van je eigen resultaten:
 - Het type oefening past zich aan: wat je kunt herkennen maar nog niet kunt zeggen, gaat naar spreken.
 - Het tempo van nieuwe lessen hangt af van hoeveel er te herhalen staat (niet te veel tegelijk).
 - De drempel van de spraakherkenning past zich per zin aan (sommige zinnen herkent Android slecht).
+- De drempels van "Vergelijk je melodie" (nu een eerste schatting: Streng 65 / Normaal 55 / Mild 45) afstemmen op je echte scores.
 - Een overzicht van je zwakke plekken per situatie (bijv. "trein gaat goed, restaurant nog niet").
 
 ## 🌸 Kern-concept: sakura-boom & zen-tuin

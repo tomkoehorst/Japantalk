@@ -988,19 +988,17 @@ async function listen(){
   finally{ listening=false; }
 }
 let lastListenError="";
-/* ---------- pronunciation per sound: Azure Pronunciation Assessment ----------
-   Your own key is pasted once in Settings and only stored on your phone (never in the app or on GitHub). */
-const azureOn = () => !!(S.azure && S.azure.on && S.azure.key && S.azure.region);
-const AZ_PASS = { mild:60, normaal:70, streng:80 };
 let azRec = null;      // {stop:fn} while recording
-async function recordWav({maxMs=7000, silenceMs=1100}={}){
+async function recordPCM({maxMs=7000, silenceMs=1000}={}){
   const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, autoGainControl:true}});
   const ctx = new (window.AudioContext||window.webkitAudioContext)();
   const src = ctx.createMediaStreamSource(stream), proc = ctx.createScriptProcessor(4096,1,1);
   const chunks=[]; let started=false, lastLoud=0; const t0=performance.now();
   return await new Promise(resolve=>{
     const finish=()=>{ try{ proc.disconnect(); src.disconnect(); }catch(e){} stream.getTracks().forEach(t=>t.stop()); const rate=ctx.sampleRate; ctx.close(); azRec=null;
-      resolve(started ? encodeWav(chunks, rate) : null); };
+      if(!started) return resolve(null);
+      const len=chunks.reduce((a,c)=>a+c.length,0), data=new Float32Array(len); let o=0; for(const c of chunks){ data.set(c,o); o+=c.length; }
+      resolve({data, rate}); };
     azRec={ stop: finish };
     proc.onaudioprocess = e=>{
       const d=new Float32Array(e.inputBuffer.getChannelData(0)); chunks.push(d);
@@ -1011,38 +1009,172 @@ async function recordWav({maxMs=7000, silenceMs=1100}={}){
     src.connect(proc); proc.connect(ctx.destination);
   });
 }
-function encodeWav(chunks, rate){   // → base64 WAV, 16 kHz mono 16-bit (what Azure wants)
-  const len=chunks.reduce((a,c)=>a+c.length,0), all=new Float32Array(len); let o=0; for(const c of chunks){ all.set(c,o); o+=c.length; }
-  const ratio=rate/16000, n=Math.floor(len/ratio), pcm=new Int16Array(n);
-  for(let i=0;i<n;i++){ const v=Math.max(-1,Math.min(1, all[Math.floor(i*ratio)])); pcm[i]=v<0?v*0x8000:v*0x7fff; }
-  const buf=new ArrayBuffer(44+pcm.length*2), dv=new DataView(buf), w=(p,str)=>{ for(let i=0;i<str.length;i++) dv.setUint8(p+i,str.charCodeAt(i)); };
-  w(0,"RIFF"); dv.setUint32(4,36+pcm.length*2,true); w(8,"WAVE"); w(12,"fmt "); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
-  dv.setUint32(24,16000,true); dv.setUint32(28,32000,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true); w(36,"data"); dv.setUint32(40,pcm.length*2,true);
-  new Int16Array(buf,44).set(pcm);
-  let bin=""; const bytes=new Uint8Array(buf); for(let i=0;i<bytes.length;i+=8192) bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+8192));
-  return btoa(bin);
+/* ---------- "Vergelijk je melodie": on-device comparison with the recorded native voice ----------
+   sound (MFCC + DTW), melody (pitch contour, normalised to your own voice) and rhythm, per mora */
+const MEL_PASS = { mild:45, normaal:55, streng:65 };   // first guess: to be tuned with real use
+const melodyReady = p => !!(p && AUDIO[p.ja] && AUDIO[p.ja].n && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+const refCache = {};
+async function to16k(data, rate){
+  const len=Math.ceil(data.length*16000/rate), off=new OfflineAudioContext(1, len, 16000);
+  const buf=off.createBuffer(1, data.length, rate); buf.copyToChannel(data,0);
+  const src=off.createBufferSource(); src.buffer=buf; src.connect(off.destination); src.start();
+  return (await off.startRendering()).getChannelData(0);
 }
-async function azureAssess(reference, wavB64){
-  const cfg={ReferenceText:reference, GradingSystem:"HundredMark", Granularity:"Phoneme", Dimension:"Comprehensive", EnableMiscue:true};
-  const r = await nat("CapacitorHttp","request",{
-    url:`https://${S.azure.region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=ja-JP&format=detailed`,
-    method:"POST", dataType:"file", data:wavB64,
-    headers:{"Ocp-Apim-Subscription-Key":S.azure.key, "Content-Type":"audio/wav; codecs=audio/pcm; samplerate=16000", "Accept":"application/json",
-             "Pronunciation-Assessment":btoa(unescape(encodeURIComponent(JSON.stringify(cfg))))}});
-  if(!r || r.status>=300) throw `Azure ${r&&r.status}${r&&r.status===401?" (sleutel of regio klopt niet)":r&&r.status===429?" (gratis tegoed even op)":""}`;
-  const d = typeof r.data==="string" ? JSON.parse(r.data) : r.data;
-  if(d.RecognitionStatus!=="Success" || !d.NBest || !d.NBest.length) return {text:"", score:0, acc:0, flu:0, comp:0, words:[]};
-  const b=d.NBest[0], pa=b.PronunciationAssessment||b;
-  return { text:d.DisplayText||b.Display||"", score:Math.round(pa.PronScore??pa.AccuracyScore??0), acc:Math.round(pa.AccuracyScore??0), flu:Math.round(pa.FluencyScore??0), comp:Math.round(pa.CompletenessScore??0),
-    words:(b.Words||[]).map(w=>{ const wp=w.PronunciationAssessment||w; return { w:w.Word, s:Math.round(wp.AccuracyScore??0), err:wp.ErrorType||"None",
-      syl:(w.Syllables||[]).map(x=>({s:x.Syllable||x.Grapheme||"", v:Math.round((x.PronunciationAssessment||x).AccuracyScore??0)})) }; }) };
+async function loadRef(p){
+  const file=AUDIO[p.ja].n; if(refCache[file]) return refCache[file];
+  const ab=await (await fetch("audio/"+file)).arrayBuffer();
+  const ctx=new OfflineAudioContext(1, 16000, 16000), dec=await ctx.decodeAudioData(ab);
+  return refCache[file]=await to16k(dec.getChannelData(0), dec.sampleRate);
 }
-function pronHtml(pr){
-  if(!pr) return "";
-  const col=v=>v>=80?"var(--good)":v>=60?"var(--butter)":"var(--bad)";
-  return `<div class="pron"><div class="pscores">🎯 Uitspraak <b>${pr.score}</b> · Klanken <b>${pr.acc}</b> · Vloeiend <b>${pr.flu}</b> · Volledig <b>${pr.comp}</b></div>
-    <div class="pwords">${pr.words.map(w=>`<span class="pw" style="background:${w.err==="Omission"?"var(--line)":col(w.s)}" title="${w.s}">${esc(w.w)}${w.err==="Omission"?" ✗":""}
-      ${w.s<80 && w.syl.length>1 ? `<small>${w.syl.map(x=>`<i style="color:${x.v>=80?"var(--good-ink)":x.v>=60?"#9A7A20":"var(--bad-ink)"}">${esc(x.s)}</i>`).join("·")}</small>`:""}</span>`).join("")}</div></div>`;
+// --- small DSP toolkit ---
+function fft(re, im){ const n=re.length;
+  for(let i=1,j=0;i<n;i++){ let bit=n>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit; if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; } }
+  for(let len=2;len<=n;len<<=1){ const a=-2*Math.PI/len, wr=Math.cos(a), wi=Math.sin(a);
+    for(let i=0;i<n;i+=len){ let cr=1, ci=0; for(let k=0;k<len/2;k++){ const ur=re[i+k], ui=im[i+k], vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci, vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;
+      re[i+k]=ur+vr; im[i+k]=ui+vi; re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi; const t=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=t; } } } }
+const MEL = (()=>{ const nf=26, N=512, sr=16000, mel=f=>2595*Math.log10(1+f/700), inv=m=>700*(10**(m/2595)-1);
+  const pts=[...Array(nf+2)].map((_,i)=>Math.floor((N+1)*inv(mel(80)+(mel(7600)-mel(80))*i/(nf+1))/sr));
+  return [...Array(nf)].map((_,m)=>({a:pts[m],b:pts[m+1],c:pts[m+2]})); })();
+function analyse(x){
+  const hop=160, win=400, frames=[];
+  for(let s=0; s+640<=x.length; s+=hop){
+    let e=0; for(let i=0;i<win;i++) e+=x[s+i]*x[s+i]; e/=win;
+    // MFCC
+    const re=new Float64Array(512), im=new Float64Array(512);
+    for(let i=0;i<win;i++) re[i]=(x[s+i]-.97*(x[s+i-1]||0))*(.54-.46*Math.cos(2*Math.PI*i/(win-1)));
+    fft(re,im); const pw=[]; for(let k=0;k<257;k++) pw[k]=re[k]*re[k]+im[k]*im[k];
+    const fb=MEL.map(({a,b,c})=>{ let v=1e-10; for(let k=a;k<c;k++) v+=pw[k]*(k<b?(k-a)/Math.max(1,b-a):(c-k)/Math.max(1,c-b)); return Math.log(v); });
+    const mf=[]; for(let q=1;q<=12;q++){ let v=0; for(let m=0;m<fb.length;m++) v+=fb[m]*Math.cos(Math.PI*q*(m+.5)/fb.length); mf.push(v); }
+    // pitch (normalised autocorrelation, 70–450 Hz)
+    const W=640, rs=new Float64Array(229);
+    for(let L=36; L<=228; L++){ let num=0, d1=0, d2=0; for(let i=0;i<W-L;i+=2){ num+=x[s+i]*x[s+i+L]; d1+=x[s+i]*x[s+i]; d2+=x[s+i+L]*x[s+i+L]; }
+      rs[L]=num/Math.sqrt(d1*d2+1e-12); }
+    let best=0; for(let L=36;L<=228;L++) if(rs[L]>best) best=rs[L];
+    // the shortest period that is (almost) as strong as the best one: avoids octave-down errors
+    let lag=0; for(let L=37;L<228;L++) if(rs[L]>=best*.88 && rs[L]>=rs[L-1] && rs[L]>=rs[L+1]){ lag=L; break; }
+    frames.push({e, mf, f0: best>.55 && lag ? 16000/lag : 0});
+  }
+  // trim leading/trailing silence
+  const maxE=Math.max(...frames.map(f=>f.e)), on=f=>f.e>maxE*.02;
+  let a=frames.findIndex(on), b=frames.length-1-[...frames].reverse().findIndex(on);
+  const fr=frames.slice(Math.max(0,a), b+1);
+  fr.forEach(f=>{ if(f.e<maxE*.01) f.f0=0; });
+  // cepstral mean normalisation + pitch in semitones around your own median
+  const mean=[...Array(12)].map((_,q)=>fr.reduce((s,f)=>s+f.mf[q],0)/fr.length); fr.forEach(f=>f.mf=f.mf.map((v,q)=>v-mean[q]));
+  const vs=fr.filter(f=>f.f0).map(f=>f.f0).sort((p,q)=>p-q), med=vs[vs.length>>1]||150;
+  fr.forEach((f,i)=>{ f.st = f.f0 ? 12*Math.log2(f.f0/med) : null; });
+  for(let i=0;i<fr.length;i++){ const t=[]; for(let k=i-2;k<=i+2;k++) if(fr[k] && fr[k].st!==null) t.push(fr[k].st);   // median over 5 frames
+    if(fr[i].st!==null && t.length>=3){ t.sort((p,q)=>p-q); fr[i].st2=t[t.length>>1]; } }
+  fr.forEach(f=>{ if(f.st2!==undefined) f.st=f.st2; });
+  return fr;
+}
+function dtw(A,B){
+  const n=A.length, m=B.length, band=Math.max(Math.abs(n-m), Math.ceil(Math.max(n,m)*.35));
+  const d=(i,j)=>{ let s=0; for(let q=0;q<12;q++){ const t=A[i].mf[q]-B[j].mf[q]; s+=t*t; } return Math.sqrt(s); };
+  const C=new Float64Array(n*m).fill(Infinity), D=(i,j)=>C[i*m+j];
+  for(let i=0;i<n;i++){ const jc=Math.round(i*m/n), j0=Math.max(0,jc-band), j1=Math.min(m-1,jc+band);
+    for(let j=j0;j<=j1;j++){ const prev = i===0&&j===0 ? 0 : Math.min(i>0?D(i-1,j):Infinity, j>0?D(i,j-1):Infinity, i>0&&j>0?D(i-1,j-1):Infinity); C[i*m+j]=prev+d(i,j); } }
+  const path=[]; let i=n-1, j=m-1;
+  while(i>0||j>0){ path.push([i,j]); const o=[i>0&&j>0?D(i-1,j-1):Infinity, i>0?D(i-1,j):Infinity, j>0?D(i,j-1):Infinity], k=o.indexOf(Math.min(...o)); if(k===0){i--;j--;} else if(k===1) i--; else j--; }
+  path.push([0,0]); path.reverse();
+  return {path, cost:D(n-1,m-1)/path.length, d};
+}
+function morae(kana){ const s=kana.replace(/[、。！？!?\s・「」]/g,""), out=[];
+  for(const c of s){ if(/[ゃゅょぁぃぅぇぉャュョァィゥェォ]/.test(c) && out.length) out[out.length-1]+=c; else out.push(c); } return out; }
+const clampS = v => Math.max(0, Math.min(100, Math.round(v)));
+function compareVoices(ref, you, kana){
+  const R=analyse(ref), Y=analyse(you);
+  if(R.length<5 || Y.length<5) return null;
+  const {path, cost, d}=dtw(R,Y);
+  // per reference frame: matched user frame
+  const map=new Array(R.length); for(const [i,j] of path) map[i]=j;
+  const sound=clampS(100-(cost-7)*7);
+  // melody: compare the aligned contours (shape matters, not your voice height)
+  let diffs=[], xs=[], ys=[];
+  R.forEach((f,i)=>{ const u=Y[map[i]]; if(f.st!==null && u && u.st!==null){ diffs.push(Math.abs(f.st-u.st)); xs.push(f.st); ys.push(u.st); } });
+  const mdiff = diffs.length ? diffs.reduce((a,b)=>a+b,0)/diffs.length : 6;
+  const corr = (()=>{ if(xs.length<5) return 0; const mx=xs.reduce((a,b)=>a+b)/xs.length, my=ys.reduce((a,b)=>a+b)/ys.length;
+    let sxy=0,sxx=0,syy=0; xs.forEach((x,k)=>{ sxy+=(x-mx)*(ys[k]-my); sxx+=(x-mx)**2; syy+=(ys[k]-my)**2; }); return sxy/Math.sqrt(sxx*syy+1e-9); })();
+  const melody=clampS(.5*(100-mdiff*14) + .5*(50+50*corr));
+  // rhythm: how far the alignment wanders from an even pace
+  // rhythm: compare your local tempo with the native one over ~120 ms windows (even mora timing = steady ratio)
+  const speed=Y.length/R.length, ratios=[];
+  for(let i=0;i+12<R.length;i+=6){ const dj=(map[i+12]-map[i])/12/speed; ratios.push(Math.log(Math.max(.15,dj))); }
+  const rm=ratios.reduce((a,b)=>a+b,0)/Math.max(1,ratios.length), rsd=Math.sqrt(ratios.reduce((a,b)=>a+(b-rm)**2,0)/Math.max(1,ratios.length));
+  const rhythm=clampS(100-rsd*80);
+  const total=clampS(.45*sound + .35*melody + .2*rhythm);
+  // per mora (Japanese is mora-timed: split the native voice evenly)
+  const mo=morae(kana), K=mo.length, per=mo.map((m,k)=>{
+    const i0=Math.floor(k*R.length/K), i1=Math.max(i0+1, Math.floor((k+1)*R.length/K));
+    let sc=0, pd=0, pn=0; for(let i=i0;i<i1;i++){ const j=map[i]; sc+=d(i,j); if(R[i].st!==null && Y[j].st!==null){ pd+=Math.abs(R[i].st-Y[j].st); pn++; } }
+    const s1=100-(sc/(i1-i0)-7)*7, s2=pn? 100-(pd/pn)*14 : s1;
+    return {m, s:clampS(.6*s1+.4*s2)};
+  });
+  return {total, sound, melody, rhythm, per, curves:{ref:R.map(f=>f.st), you:R.map((f,i)=>Y[map[i]].st)}};
+}
+function melodyChart(c){
+  const W=300, H=90, n=c.ref.length, all=[...c.ref,...c.you].filter(v=>v!==null), lo=Math.min(-6,...all), hi=Math.max(6,...all);
+  const X=i=>(i/(n-1)*W).toFixed(1), Yp=v=>(H-6-(v-lo)/(hi-lo)*(H-12)).toFixed(1);
+  const line=(arr,col,w)=>{ let p="", on=false; arr.forEach((v,i)=>{ if(v===null){ on=false; return; } p+=(on?"L":"M")+X(i)+" "+Yp(v)+" "; on=true; }); return `<path d="${p}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`; };
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">
+    <rect width="${W}" height="${H}" rx="10" fill="var(--bg)"/>${line(c.ref,"#9CB6CB",5)}${line(c.you,"#E9A9A0",3)}</svg>
+    <div style="display:flex;gap:14px;font-size:.75rem;font-weight:700;color:var(--muted);margin-top:4px"><span><b style="color:#9CB6CB">━</b> echte stem</span><span><b style="color:#E9A9A0">━</b> jij</span></div>`;
+}
+function melodyHtml(r){
+  const col=v=>v>=75?"var(--good)":v>=55?"var(--butter)":"var(--bad)";
+  return `<div class="pron"><div class="pscores">🎵 Totaal <b>${r.total}</b> · Klank <b>${r.sound}</b> · Melodie <b>${r.melody}</b> · Ritme <b>${r.rhythm}</b></div>
+    ${melodyChart(r.curves)}
+    <div class="pwords">${r.per.map(x=>`<span class="pw" style="background:${col(x.s)}">${esc(x.m)}</span>`).join("")}</div>
+    <div class="play-row" style="margin-top:8px"><button class="play" onclick="playRef()">▶ Echte stem</button><button class="play slow" onclick="playYou()">▶ Jij</button><button class="play" style="background:var(--lav)" onclick="playBoth()">▶ Na elkaar</button></div></div>`;
+}
+let lastYou=null, lastRefP=null;
+function playPCM(data){ return new Promise(res=>{ try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+  const b=actx.createBuffer(1,data.length,16000); b.copyToChannel(data,0); const s=actx.createBufferSource(); s.buffer=b; s.connect(actx.destination); s.onended=res; s.start(); }catch(e){ res(); } }); }
+const playRef = () => lastRefP && speak(lastRefP.ja);
+const playYou = () => lastYou && playPCM(lastYou);
+async function playBoth(){ if(!lastRefP) return; await speak(lastRefP.ja); await wait(300); await playYou(); }
+async function measureMelody(p){
+  stopAudio(); await wait(150);
+  const rec=await recordPCM();
+  if(!rec) return {none:true};
+  const [ref, you]=await Promise.all([loadRef(p), to16k(rec.data, rec.rate)]);
+  lastYou=you; lastRefP=p;
+  return compareVoices(ref, you, p.kana) || {none:true};
+}
+async function melodyTurn(){
+  lesson.state="listening"; lesson.heard=""; lesson.melody=null; renderEx();
+  try{
+    const p=curEx().p, r=await measureMelody(p);
+    if(view!=="lesson"||!lesson) return;
+    if(r.none){ lesson.state="ask"; lesson.heard="(niets gehoord – praat iets luider of houd je telefoon dichterbij)"; renderEx(); return; }
+    const pass=MEL_PASS[S.settings.strict||"streng"];
+    lesson.melody=r; lesson.lastScore=r.total/100; lesson.heard="";
+    lesson.fbNote=`Lijkt ${r.total}% op de echte stem.`; lesson.failNote = r.total<pass ? `Lijkt ${r.total}% op de echte stem (nodig: ${pass}%). Luister naar beide en probeer het nog eens.` : "";
+    resolve(r.total>=pass);
+  }catch(e){
+    lesson.melodyOff=true; lesson.state="ask"; renderEx();
+    toast("Vergelijken lukte niet ("+(e&&e.message||e)+"). Ik gebruik de gewone herkenning.");
+  }
+}
+// standalone practice from the phrasebook
+let melP=null, melR=null, melBusy=false;
+function openMelody(ja){ melP=PHRASES[ja]; melR=null; view="melody"; render(); }
+async function melodyPractice(){
+  if(melBusy) return; melBusy=true; melR={busy:true}; renderMelody();
+  try{ const r=await measureMelody(melP); melR = r.none ? {msg:"Niets gehoord: praat iets luider."} : r; }
+  catch(e){ melR={msg:"Lukt niet: "+(e&&e.message||e)}; }
+  melBusy=false; renderMelody();
+}
+function renderMelody(){
+  const p=melP; if(!p) return;
+  $app.innerHTML=`<div class="topbar"><button class="iconbtn" onclick="go('phrases')" aria-label="Terug">←</button><div class="brand">🎵 Vergelijk je melodie</div></div>
+  <div class="page">
+    <div class="card"><div class="jp big-jp">${esc(p.ja)}</div><div class="romaji">${esc(p.romaji)}</div><div class="nl">${esc(p.nl)}</div>
+      <div class="play-row"><button class="play" onclick="speak(melP.ja)">🔊 Luister</button><button class="play slow" onclick="speak(melP.ja,.6)">🐢</button></div></div>
+    <p style="color:var(--muted);font-weight:600;margin:12px 4px">Luister, zeg de zin na, en vergelijk jouw melodie en ritme met de echte stem.</p>
+    <button class="mic ${melR&&melR.busy?"listening":""}" onclick="melodyPractice()">🎙️ ${melR&&melR.busy?"Ik luister…":"Zeg het na"}</button>
+    <div style="margin-top:14px">${melR&&melR.total!==undefined?melodyHtml(melR):melR&&melR.msg?`<p>${esc(melR.msg)}</p>`:""}</div>
+  </div>`;
 }
 
 /* ---------- in-app updates (GitHub Releases) ---------- */
@@ -1667,6 +1799,7 @@ function render(){
   else if(view==="phrases") renderPhrases();
   else if(view==="onboard") renderOnboard();
   else if(view==="listenmode") renderListenMode();
+  else if(view==="melody") renderMelody();
   else if(view==="lesson") renderEx();
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
@@ -1952,6 +2085,7 @@ function renderPhrases(){
           ${S.settings.romaji?`<div class="romaji" style="font-size:.9rem">${esc(p.romaji)}</div>`:""}<div style="font-size:.9rem;font-weight:600">${esc(p.nl)}</div></div>
         <div class="pa"><span class="dot s${st}" title="${["","nieuw","bezig","zit erin"][st]}"></span>
           <button onclick="event.stopPropagation();speak(${js},.6)" aria-label="Langzaam">🐢</button>
+          ${p.kind!=="hear" && AUDIO[p.ja] ? `<button onclick="event.stopPropagation();openMelody(${js})" aria-label="Vergelijk melodie">🎵</button>`:""}
           <button onclick="event.stopPropagation();toggleFav(${js})" aria-label="Favoriet">${S.fav[p.ja]?"⭐":"☆"}</button></div>
       </div>`;}).join("")}</div>`;
   });
@@ -2065,7 +2199,7 @@ function renderEx(){
       ${lesson.noMic?"":micArea("Zeg het na")}`;
   }
   else if(t==="shadow"){
-    body = `<div class="ex-title">Luister en zeg na 👂</div>
+    body = `<div class="ex-title">Luister en zeg na 👂${melodyReady(p)&&!lesson.melodyOff?` <small style="color:var(--muted);font-size:.85rem">🎵 we vergelijken je melodie</small>`:""}</div>
       <div style="display:flex;gap:12px;justify-content:center;align-items:center">
         <button class="big-play" onclick="say()" aria-label="Luister">🔊</button><button class="play slow" onclick="say(.6)">🐢</button></div>
       <div class="card" style="margin-top:12px;text-align:center"><div class="nl" style="margin:0">“${esc(p.nl)}”</div>
@@ -2202,7 +2336,7 @@ function actionBar(t){
     const title = lesson.fbTitle || (lesson.fbTitle = titles[Math.random()*titles.length|0]);
     const speakish = ["intro","echo","shadow","speak","dialog","swap","respond"].includes(t) && canRecognize() && !lesson.selfJudged;
     return `<div class="actionbar ${st} pop">
-      ${lesson.pron?pronHtml(lesson.pron):""}
+      ${lesson.melody?melodyHtml(lesson.melody):""}
       <div class="fb">${buddy(good?"happy":"worried",56)}<div><h4>${title}</h4>
         ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") :
           `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
@@ -2254,27 +2388,7 @@ function check(){
 }
 async function toggleMic(){
   if(lesson.state==="listening"){ if(azRec) azRec.stop(); stopListening(); return; }
-  const ex0=curEx();
-  if(azureOn() && ["intro","echo","shadow","speak","swap","dialog","respond"].includes(ex0.type)){
-    lesson.state="listening"; lesson.heard=""; lesson.pron=null; renderEx(); stopAudio();
-    try{
-      await wait(200);
-      const wav = await recordWav();
-      if(view!=="lesson"||!lesson) return;
-      if(!wav){ lesson.state="ask"; lesson.heard="(niets gehoord – praat iets luider of houd je telefoon dichterbij)"; renderEx(); return; }
-      lesson.heard="…beoordelen…"; renderEx();
-      const p=curEx().p, pr=await azureAssess(p.tts||p.ja, wav);
-      if(view!=="lesson"||!lesson) return;
-      const pass=AZ_PASS[S.settings.strict||"streng"];
-      lesson.pron=pr; lesson.lastScore=pr.score/100; lesson.heard=pr.text?`${pr.text} · ${pr.score}`:"";
-      lesson.fbNote=`Uitspraak ${pr.score}/100.`; lesson.failNote = pr.score<pass||pr.comp<80 ? `Uitspraak ${pr.score}/100 (nodig: ${pass})${pr.comp<80?", niet alles gezegd":""}.` : "";
-      resolve(pr.score>=pass && pr.comp>=80);
-      return;
-    }catch(err){
-      toast("Uitspraakcheck lukte niet ("+err+"). Ik gebruik de gewone herkenning.");
-      lesson.state="ask"; renderEx();
-    }
-  }
+  if(curEx().type==="shadow" && melodyReady(curEx().p) && !lesson.melodyOff) return melodyTurn();
   lesson.state="listening"; lesson.heard=""; renderEx();
   try{
     const heard = await listen();
@@ -2304,7 +2418,7 @@ function selfJudgeReveal(){ lesson.state="self"; lesson.selfJudged=true; renderE
 function judge(ok){ resolve(ok); }
 function noMic(){ lesson.noMic=true; stopListening(); lesson.state="ask"; lesson.autoplayed=false; renderEx(); toast("Oké! De rest van deze les zonder praten 🤫"); }
 function skip(){ stopListening(); resolve(false, true); }
-function retry(){ lesson.state="ask"; lesson.heard=""; lesson.failNote=""; lesson.pron=null; lesson.fbTitle=null; renderEx(); }
+function retry(){ lesson.state="ask"; lesson.heard=""; lesson.failNote=""; lesson.melody=null; lesson.fbTitle=null; renderEx(); }
 
 function resolve(ok, skipped=false){
   const ex=curEx();
@@ -2328,7 +2442,7 @@ function resolve(ok, skipped=false){
 function next(){
   stopAudio();
   lesson.i++;
-  Object.assign(lesson,{lastScore:null,failNote:"",pron:null,state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
+  Object.assign(lesson,{lastScore:null,failNote:"",melody:null,state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
   if(lesson.i>=lesson.queue.length) return finish();
   renderEx();
 }
@@ -2412,15 +2526,6 @@ function runEvolution(r){
 /* ---------- settings ---------- */
 function setS(k,v){ if(k==="goal") S.goal=v; else S.settings[k]=v; save(); render(); }
 function seg(k,opts,cur){ return `<div class="seg">${opts.map(([v,l])=>`<button class="${cur===v?"on":""}" onclick='setS("${k}",${JSON.stringify(v)})'>${l}</button>`).join("")}</div>`; }
-function azSet(k,v){ S.azure=S.azure||{region:"westeurope"}; S.azure[k]=v; save(); if(k==="on") render(); }
-async function azTest(){
-  const out=document.getElementById("aztest"); if(!S.azure||!S.azure.key){ out.textContent="Vul eerst je sleutel in."; return; }
-  if(!S.azure.region) S.azure.region="westeurope";
-  try{ out.textContent="🎙️ Zeg nu: こんにちは"; await speak("こんにちは"); out.textContent="🎙️ Jouw beurt…"; const wav=await recordWav();
-    if(!wav){ out.textContent="Niets gehoord. Probeer iets luider."; return; }
-    out.textContent="…beoordelen…"; const pr=await azureAssess("こんにちは", wav); out.innerHTML=pronHtml(pr)+(pr.text?"":"<p>Azure verstond niets.</p>");
-  }catch(e){ out.textContent="Lukt niet: "+e; }
-}
 function renderSettings(){
   const s=S.settings;
   $app.innerHTML = `<div class="topbar"><button class="iconbtn" onclick="go('home')" aria-label="Terug">←</button><div class="brand">Instellingen</div></div>
@@ -2447,13 +2552,6 @@ function renderSettings(){
            :`<button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="checkUpdate(true)">Controleer op updates</button>`}</div>
     <div class="setting" style="border:2px dashed var(--peach)"><h3>🧪 Testen (tijdelijk)</h3><p>Laat je boom vooruit groeien om de diertjes en de tuin te bekijken. Boom ${S.tree?S.tree.n:1} staat op ${Math.round(treeGrowth()*100)}%.</p>
       <div class="seg"><button onclick="testGrow(.1)">+10%</button><button onclick="testGrow(.3)">+30%</button><button onclick="testGrow(1)">Volle bloei</button><button onclick="testReset()">Terug naar zaadje</button></div></div>
-    <div class="setting"><h3>🎯 Uitspraak per klank (Azure)</h3>
-      <p>Met een eigen Azure-sleutel krijg je een score per woord en lettergreep. De sleutel blijft alleen op deze telefoon.</p>
-      <input class="obinput" style="font-size:.95rem;margin-top:0" type="password" placeholder="Azure Speech-sleutel" value="${esc((S.azure&&S.azure.key)||"")}" onchange="azSet('key',this.value.trim())">
-      <input class="obinput" style="font-size:.95rem" placeholder="Regio, bijv. westeurope" value="${esc((S.azure&&S.azure.region)||"westeurope")}" onchange="azSet('region',this.value.trim().toLowerCase())">
-      <div class="seg" style="margin-top:10px"><button class="${azureOn()?"on":""}" onclick="azSet('on',true)">Aan</button><button class="${azureOn()?"":"on"}" onclick="azSet('on',false)">Uit</button>
-        <button onclick="azTest()">🎙️ Test met こんにちは</button></div>
-      <div id="aztest" style="margin-top:10px"></div></div>
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
@@ -2465,6 +2563,7 @@ if(window.Capacitor?.addListener){
   window.Capacitor.addListener("App","backButton",()=>{
     if(view==="listenmode"){ stopListenMode(); lm=null; go("home"); }
     else if(view==="lesson") quitLesson();
+    else if(view==="melody") go("phrases");
     else if(view!=="home"){ lesson=null; go("home"); }
     else nat("App","exitApp").catch(()=>{});
   });
