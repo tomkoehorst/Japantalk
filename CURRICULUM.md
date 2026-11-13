@@ -46,7 +46,7 @@ Daarna komen alle zinnen terug in **herhalen** over dagen en weken. Na elke 4 un
 - Patroon: もう一度 / ゆっくり ～てください.
 - Zij zeggen: 英語？大丈夫ですよ.
 
-## Blok B: Eten & drinken (feb – mrt 2027)
+## Blok B: Eten & drinken (feb – mrt 2027) ✅ in de app
 **5. Konbini**
 - Kan-doelen: ik kan afrekenen en de standaardvragen van de kassa beantwoorden.
 - Zij zeggen: 温めますか？, 袋はご利用ですか？, ポイントカードは？, お箸は？
