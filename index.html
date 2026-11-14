@@ -87,6 +87,7 @@
 .pwords{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .pw{border-radius:10px;padding:4px 9px;font-family:"Noto Sans CJK JP",sans-serif;font-weight:700;color:#3D3A44;display:inline-flex;flex-direction:column;align-items:center}
 .pw small{font-size:.7rem;font-weight:700;margin-top:2px}.pw i{font-style:normal}
+.phon{margin-top:4px;font-weight:800;color:var(--good-ink);font-size:.95rem;letter-spacing:.01em}
 .obp{color:var(--muted);font-weight:600;max-width:380px;line-height:1.5;margin:6px 0}
 .obinput{width:100%;max-width:380px;font:inherit;font-size:1.2rem;font-weight:700;padding:14px 16px;border-radius:14px;border:2px solid var(--line);background:var(--card);color:var(--text);margin-top:10px}
 .result h2{margin:10px 0 0}
@@ -946,9 +947,45 @@ function addXP(n){
 function mark(p, ok){
   if(!p.key) return;
   const r = S.ph[p.key] || {s:0,n:0};
-  r.n++; r.s = Math.max(0, Math.min(5, r.s + (ok?1:-2))); r.t=Date.now();
+  r.n++; r.s = Math.max(0, Math.min(5, r.s + (ok?1:-2))); r.t=Date.now(); if(!ok) r.missed=true;
   S.ph[p.key]=r;
 }
+/* ---------- Dutch pronunciation helper: romaji → how a Dutch speaker should read it ----------
+   ie = fiets, oe = boek, e = bed, ː = hold it longer; the u of desu/masu is almost silent */
+const PH_CONS = {sh:"sj", ch:"tsj", j:"dzj", y:"j", ts:"ts", ky:"kj", gy:"gj", ny:"nj", hy:"hj", by:"bj", py:"pj", my:"mj", ry:"rj"};
+const PH_VOW = {a:"a", i:"ie", u:"oe", e:"e", o:"o", "ā":"aa", "ī":"ieː", "ū":"oeː", "ē":"ee", "ō":"oo"};
+function phonWord(w){
+  w=w.toLowerCase().replace(/[^a-zāīūēō']/g,"");
+  const re=/(ky|gy|ny|hy|by|py|my|ry|sh|ch|ts|[kgsztdnhbpmyrwfjv])?([aiueoāīūēō])|n'?(?![aiueoāīūēōy])|([kstpc])(?=\3|ch)/g;
+  const out=[]; let m;
+  while((m=re.exec(w))){
+    if(m[3]){ out.push({gem:true}); continue; }                       // small tsu: double consonant
+    if(!m[2]){ if(out.length){ const prev=out[out.length-1]; prev.t+= /^[bpm]/.test(w.slice(re.lastIndex)) ? "m" : "n"; } else out.push({t:"n"}); continue; }
+    const c=m[1]?(PH_CONS[m[1]]??m[1]):"", v=m[2];
+    const prev=out[out.length-1];
+    // vowel-only mora after a syllable: long vowels and diphthongs
+    if(!c && prev && !prev.gem && prev.t){
+      const last=prev.v;
+      if(v==="i" && last==="i"){ prev.t=prev.t.replace(/ie$/,"ieː"); prev.v="ii"; continue; }
+      if(v==="i" && (last==="a"||last==="o")){ prev.t+= "i"; prev.v=v; continue; }   // ai, oi
+      if(v==="i" && last==="e"){ prev.t+="e"; prev.v="ee"; continue; }                              // ei → ee
+      if(v===last && (v==="a"||v==="e"||v==="o")){ prev.t+=v; continue; }
+      if(v==="u" && last==="o"){ prev.t+="o"; continue; }                                            // ou → oo
+    }
+    out.push({t:c+PH_VOW[v], v});
+  }
+  // geminate: first sound of the next syllable joins the previous one (mat·te, kit·te)
+  for(let i=0;i<out.length;i++) if(out[i].gem){ const nx=out[i+1], pv=out[i-1]; if(nx&&pv) pv.t+=nx.t.startsWith("tsj")?"t":nx.t[0]; out.splice(i,1); i--; }
+  let syl=out.map(o=>o.t);
+  // devoiced u/i: desu → des, masu → mas, mashita → masj·ta, shite → sjte
+  const j=syl.join("·");
+  return j.replace(/(de|ma)·soe$/,"$1s").replace(/(de|ma)·soe·/g,"$1s·").replace(/·sjie·ta$/,"sj·ta").replace(/^sjie·te$/,"sjte").replace(/·sjie·te$/,"sj·te");
+}
+const phonetic = romaji => romaji.replace(/[“”"!?.,…]/g," ").split(/\s+/).filter(Boolean).map(w=>w.split("-").map(phonWord).filter(Boolean).join("·")).filter(Boolean).join(" ");
+const phonMode = () => S.settings.phon || "nieuw";
+function showPhon(p, isNew=false){ const m=phonMode(); if(m==="uit") return false; if(m==="altijd") return true; return isNew || !!(p.key && S.ph[p.key] && S.ph[p.key].missed); }
+function phonLine(p){ return `<div class="phon" title="ie = fiets · oe = boek · e = bed · ː = lang aanhouden">🗣️ ${esc(phonetic(p.romaji))}</div>`; }
+
 /* ---------- spaced repetition (herhalen over dagen) ----------
    learned → tomorrow → 3 → 7 → 16 → 37 → 85 days; a mistake sends it back to tomorrow */
 const SRS_EASE = 2.3, REVIEW_MAX = 15;
@@ -2247,7 +2284,7 @@ function renderPhrases(){
       const st=strength(p.ja), js=JSON.stringify(p.ja).replace(/"/g,"&quot;");
       return `<div class="prow" onclick="speak(${js})">
         <div class="pm"><div class="jp" style="font-weight:700;font-size:1.1rem">${p.kind==="hear"?"👂 ":""}${esc(p.ja)}</div>
-          ${S.settings.romaji?`<div class="romaji" style="font-size:.9rem">${esc(p.romaji)}</div>`:""}<div style="font-size:.9rem;font-weight:600">${esc(p.nl)}</div></div>
+          ${S.settings.romaji?`<div class="romaji" style="font-size:.9rem">${esc(p.romaji)}</div>`:""}${p.kind!=="hear"&&showPhon(p)?phonLine(p):""}<div style="font-size:.9rem;font-weight:600">${esc(p.nl)}</div></div>
         <div class="pa"><span class="dot s${st}" title="${["","nieuw","bezig","zit erin"][st]}"></span>
           <button onclick="event.stopPropagation();speak(${js},.6)" aria-label="Langzaam">🐢</button>
           ${p.kind!=="hear" && AUDIO[p.ja] ? `<button onclick="event.stopPropagation();openMelody(${js})" aria-label="Vergelijk melodie">🎵</button>`:""}
@@ -2350,7 +2387,7 @@ function renderEx(){
   if(t==="intro"){
     body = `<div class="ex-title">Nieuwe zin ✨</div>
       <div class="speaker-row">${buddy("talking",76)}
-        <div class="bubble">${jpBlock(p)}<div class="nl">${esc(p.nl)}</div>
+        <div class="bubble">${jpBlock(p)}${showPhon(p,true)?phonLine(p):""}<div class="nl">${esc(p.nl)}</div>
           <div class="play-row"><button class="play" onclick="say()">🔊 Luister</button><button class="play slow" onclick="say(.6)">🐢 Langzaam</button></div>
         </div></div>
       ${lesson.noMic?"":micArea("Zeg het na")}`;
@@ -2358,7 +2395,7 @@ function renderEx(){
   else if(t==="echo"){
     body = `<div class="ex-title">Nog een keer 🗣️ <small style="color:var(--muted);font-size:.85rem">nu zonder Japans schrift</small></div>
       <div class="speaker-row">${buddy("talking",76)}
-        <div class="bubble"><div class="big-jp" style="font-family:Nunito">${esc(p.romaji)}</div><div class="nl">${esc(p.nl)}</div>
+        <div class="bubble"><div class="big-jp" style="font-family:Nunito">${esc(p.romaji)}</div>${showPhon(p,true)?phonLine(p):""}<div class="nl">${esc(p.nl)}</div>
           <div class="play-row"><button class="play" onclick="say()">🔊 Luister</button><button class="play slow" onclick="say(.6)">🐢 Langzaam</button></div>
         </div></div>
       ${lesson.noMic?"":micArea("Zeg het na")}`;
@@ -2368,7 +2405,7 @@ function renderEx(){
       <div style="display:flex;gap:12px;justify-content:center;align-items:center">
         <button class="big-play" onclick="say()" aria-label="Luister">🔊</button><button class="play slow" onclick="say(.6)">🐢</button></div>
       <div class="card" style="margin-top:12px;text-align:center"><div class="nl" style="margin:0">“${esc(p.nl)}”</div>
-        ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}</div>`:`<button class="hint" onclick="lesson.hint=true;renderEx()">👀 Toon tekst</button>`}</div>
+        ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}${showPhon(p,true)?phonLine(p):""}</div>`:`<button class="hint" onclick="lesson.hint=true;renderEx()">👀 Toon tekst</button>`}</div>
       ${lesson.noMic?"":micArea("Zeg het na")}`;
   }
   else if(t==="speak"){
@@ -2376,6 +2413,7 @@ function renderEx(){
       <div class="speaker-row">${buddy("curious",76)}
         <div class="bubble"><div class="prompt-nl">“${esc(p.nl)}”</div>
           ${ex.scaffold&&!lesson.hint?`<div class="romaji" style="margin-top:6px">Begint met: <b>${esc(skeleton(p.romaji))}</b></div>`:""}
+          ${lesson.hint&&showPhon(p)?phonLine(p):""}
           ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}<div class="play-row"><button class="play" onclick="say()">🔊</button><button class="play slow" onclick="say(.6)">🐢</button></div></div>`
                        :`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
         </div></div>
@@ -2411,7 +2449,7 @@ function renderEx(){
         <div class="jp" style="font-weight:700;font-size:1.3rem">${esc(sl.ja)}</div><div class="romaji">${esc(sl.romaji)} · ${esc(sl.nl)}</div>
         <button class="play" style="margin-top:8px" onclick="speak(curEx().p.slot.ja)">🔊</button></div>
       <div class="prompt-nl" style="margin-top:14px;font-size:1.2rem">Zeg: “${esc(p.nl)}”</div>
-      ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}</div>`:`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
+      ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}${showPhon(p)?phonLine(p):""}</div>`:`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Hint</button>`}
       ${micArea("Tik en spreek")}`;
   }
   else if(t==="hearIntro"){
@@ -2507,7 +2545,8 @@ function actionBar(t){
       ${lesson.melody&&lesson.melody.busy?`<p style="margin:0 0 8px;font-weight:700">🎙️ Zeg de zin nog een keer…</p>`:""}
       <div class="fb">${buddy(good?"happy":"worried",56)}<div><h4>${title}</h4>
         ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") :
-          `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
+          `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>
+           ${phonMode()!=="uit"&&ex.p.romaji?`<p style="margin-top:4px">Zo spreek je het uit: <b>${esc(phonetic(ex.p.romaji))}</b></p>`:""}`}
         <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
       <div class="btnrow">
         ${!good&&speakish?`<button class="btn secondary" onclick="retry()">Opnieuw</button>`:""}
@@ -2708,6 +2747,8 @@ function renderSettings(){
 </div></div>
     <div class="setting"><h3>Stem</h3><p>${hasRecordings()?`Natuurlijke opgenomen stemmen (${Object.keys(AUDIO).length} zinnen), of de stem van je telefoon.`:"Nog geen opgenomen stemmen in deze versie; de app gebruikt de stem van je telefoon."}</p>
       ${seg("voice",[["natural","🎙️ Natuurlijk"],["phone","📱 Telefoonstem"]],s.voice||"natural")}</div>
+    <div class="setting"><h3>Uitspraakhulp 🗣️</h3><p>Hoe je het als Nederlander uitspreekt, bijv. <b>iie → ieː·e</b>, <b>desu → des</b>. ie = fiets, oe = boek, e = bed, ː = lang aanhouden.</p>
+      ${seg("phon",[["altijd","Altijd"],["nieuw","Bij nieuw en na een fout"],["uit","Uit"]],phonMode())}</div>
     <div class="setting"><h3>Tekst tonen</h3><p>Wil je meer op je gehoor leren? Zet de tekst uit.</p>
       ${seg("romaji",[[true,"Romaji aan"],[false,"Romaji uit"]],s.romaji)}<div style="height:8px"></div>
       ${seg("kana",[[true,"Japans schrift aan"],[false,"Japans schrift uit"]],s.kana)}</div>
