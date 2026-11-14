@@ -72,6 +72,21 @@
 #flash.flashing{animation:flash .55s ease-out}@keyframes flash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
 .spark{animation:spark 1.4s ease-out both;transform-box:fill-box;transform-origin:center}
 @keyframes spark{0%{opacity:0;transform:scale(.2) rotate(0)}30%{opacity:1;transform:scale(1.3) rotate(45deg)}100%{opacity:0;transform:scale(.6) rotate(90deg)}}
+.mv-walk{animation:mvX linear infinite}
+@keyframes mvX{0%{transform:translateX(0)}45%{transform:translateX(var(--dx))}50%{transform:translateX(var(--dx))}95%{transform:translateX(0)}100%{transform:translateX(0)}}
+.mv-face{animation:mvFace linear infinite;transform-box:fill-box;transform-origin:center}
+@keyframes mvFace{0%,47%{transform:scaleX(var(--f0))}48%,97%{transform:scaleX(calc(var(--f0) * -1))}98%,100%{transform:scaleX(var(--f0))}}
+.mv-step{animation:mvStep .5s ease-in-out infinite}@keyframes mvStep{50%{transform:translateY(-1.3px)}}
+.mv-hop{animation:mvHop .8s ease-out infinite}@keyframes mvHop{0%,100%{transform:translateY(0)}35%{transform:translateY(-6px)}70%{transform:translateY(0)}}
+.mv-swim{animation:mvSwim ease-in-out infinite}
+@keyframes mvSwim{0%{transform:translate(0,0)}25%{transform:translate(calc(var(--dx) * .5),1.5px)}50%{transform:translate(var(--dx),0)}75%{transform:translate(calc(var(--dx) * .5),-1.5px)}100%{transform:translate(0,0)}}
+.mv-bob{animation:mvBob 2.4s ease-in-out infinite}@keyframes mvBob{50%{transform:translateY(1px) rotate(-3deg)}}
+.mv-fly{animation:mvFly ease-in-out infinite}
+@keyframes mvFly{0%{transform:translate(0,0)}20%{transform:translate(-34px,-16px)}40%{transform:translate(-64px,6px)}60%{transform:translate(-30px,22px)}80%{transform:translate(12px,-6px)}100%{transform:translate(0,0)}}
+.mv-flap{animation:mvFlap .28s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes mvFlap{50%{transform:scaleX(.55)}}
+.mv-glide{animation:mvGlide linear infinite}@keyframes mvGlide{0%{transform:translate(-60px,6px)}50%{transform:translate(150px,-4px)}100%{transform:translate(360px,6px)}}
+.mv-perch{animation:mvPerch ease-in-out infinite}@keyframes mvPerch{0%,78%,100%{transform:translateY(0)}84%{transform:translateY(-5px)}90%{transform:translateY(0)}95%{transform:translateY(-2px)}}
+@media (prefers-reduced-motion: reduce){ [class^="mv-"]{animation:none!important} }
 .ripple{animation:ripple 3.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
 @keyframes ripple{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 .snowflake{animation:snow linear infinite}@keyframes snow{to{transform:translate(-20px,275px)}}
@@ -1601,7 +1616,7 @@ const TREE_DAYS = 25;          // days of reaching your daily goal for full bloo
 const DAY_CAP = 1.5;           // a big day counts at most 1.5 days (no binge-growing)
 const ANIMAL_SETS = [
   [{id:"koi",name:"Koi",emoji:"🐟",hatch:.08},{id:"mejiro",name:"Mejiro (vogeltje)",emoji:"🐦",hatch:.3},{id:"neko",name:"Neko",emoji:"🐱",hatch:.55}],
-  [{id:"kame",name:"Kame (schildpad)",emoji:"🐢",hatch:.08},{id:"tsuru",name:"Tsuru (kraanvogel)",emoji:"🕊️",hatch:.3},{id:"tanuki",name:"Tanuki",emoji:"🦝",hatch:.55}],
+  [{id:"kame",name:"Kame (schildpad)",emoji:"🐢",hatch:.08},{id:"hakucho",name:"Hakuchō (zwaan)",emoji:"🦢",hatch:.3},{id:"tanuki",name:"Tanuki",emoji:"🦝",hatch:.55}],
 ];
 function newTree(n){ return {n, seed:(Math.random()*1e9)|0, start:today(), xp:{}, set:(n-1)%ANIMAL_SETS.length}; }
 function ensureGarden(){
@@ -1732,7 +1747,8 @@ function petalsSVG(n=8, seed=7){
 /* ---- animals: drawn around (0,0) = where they stand, ~40px tall at scale 1 ---- */
 const INK="#3D3A44";
 function animalSVG(id, x, y, s, flip=false){
-  if(FLUENT[id]) return `<ellipse cx="${x}" cy="${y}" rx="${(FLUENT_SIZE[id]*s*.3).toFixed(1)}" ry="${(FLUENT_SIZE[id]*s*.07).toFixed(1)}" fill="url(#shadow)"/>${fluent(id, x, y, FLUENT_SIZE[id]*(.55+.45*s), {flip})}`;
+  if(FLUENT[id]){ const sz=FLUENT_SIZE[id]*(.55+.45*s), inPond=id==="koi";
+    return `${inPond?"":`<ellipse cx="${x}" cy="${y}" rx="${(sz*.3).toFixed(1)}" ry="${(sz*.07).toFixed(1)}" fill="url(#shadow)"/>`}${fluent(id, x, y+(inPond?sz*.35:0), sz)}`; }
   const k=`stroke="${INK}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"`;
   const T=`transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(flip?-s:s).toFixed(2)} ${s.toFixed(2)})"`;
   const eye=(cx,cy)=>`<circle cx="${cx}" cy="${cy}" r="1.6" fill="${INK}"/>`;
@@ -1761,7 +1777,7 @@ function animalSVG(id, x, y, s, flip=false){
 // where each animal lives in the 300x260 scene
 function animalSpot(id, perch){
   return ({koi:[66,240,false], kame:[62,234,false], mejiro: perch?[perch.x,perch.y-1,false]:[236,231,false],
-           tsuru:[42,222,false], neko:[214,224,true], tanuki:[218,224,false]})[id];
+           tsuru:[42,222,false], hakucho:[48,243,false], neko:[214,224,true], tanuki:[218,224,false]})[id];
 }
 /* ---------- living scenery: time of day, sky, mountains, fence, gravel, decorations ---------- */
 /* ---------- real seasons (northern hemisphere, like Japan and the Netherlands) ---------- */
@@ -1778,14 +1794,14 @@ function timeOfDay(h=new Date().getHours()){ return h<6||h>=21 ? "night" : h<10 
 const SKY = { morning:["#FCE3D6","#FBF4EC"], day:["#D6E8F5","#FBF8F4"], evening:["#E7CBE3","#F8DCC8"], night:["#262845","#47486A"] };
 // decorations you earn by finishing units (in order)
 const DECOS = [
-  {id:"toro",   name:"Stenen lantaarn", emoji:"🏮"},
-  {id:"stones", name:"Stapstenen",      emoji:"🪨"},
+  {id:"toro",   name:"Kasteel in de verte", emoji:"🏯"},
+  {id:"stones", name:"Rotsen",          emoji:"🪨"},
   {id:"torii",  name:"Torii-poort",     emoji:"⛩️"},
-  {id:"bridge", name:"Houten brug",     emoji:"🌉"},
+  {id:"bridge", name:"Lotus in de vijver", emoji:"🪷"},
   {id:"maple",  name:"Esdoorn (momiji)",emoji:"🍁"},
   {id:"pine",   name:"Bonsai-den",      emoji:"🌲"},
   {id:"lamps",  name:"Papieren lampionnen", emoji:"🏮"},
-  {id:"bench",  name:"Bankje",          emoji:"🪑"},
+  {id:"bench",  name:"Bonsai in pot",   emoji:"🪴"},
   {id:"bamboo", name:"Bamboe",          emoji:"🎋"},
   {id:"deer",   name:"Hertje",          emoji:"🦌"},
   {id:"fuji",   name:"Sneeuw op de berg", emoji:"🗻"},
@@ -1870,8 +1886,7 @@ function pondSVG(){
 }
 function decoSVG(id, tod){
   const ink=INK, glow = tod==="evening"||tod==="night";
-  const FD={torii:[32,206], deer:[118,218], pine:[15,227], bamboo:[294,210]};
-  if(FD[id]) return fluent(id, FD[id][0], FD[id][1]);
+  if(id!=="lamps" && FLUENT[id] && DECO_ANCHOR[id]) return fluent(id, DECO_ANCHOR[id][0], DECO_ANCHOR[id][1]+(id==="bridge"?3:0));
   switch(id){
     case "toro": return `<g transform="translate(266 236)">
       ${glow?`<circle cx="0" cy="-30" r="22" fill="url(#glow)"/>`:""}
@@ -1927,11 +1942,11 @@ function seasonParticles(){
 }
 function lifeSVG(tod){   // butterflies by day, fireflies at night
   if(tod==="night"){ const r=rng(3); let s=""; for(let i=0;i<7;i++) s+=`<circle class="firefly" cx="${(40+r()*220).toFixed(0)}" cy="${(150+r()*70).toFixed(0)}" r="1.6" fill="#FFF3B0" style="animation-delay:-${(r()*3).toFixed(1)}s"/>`; return s; }
-  return `<g class="flutter"><g transform="translate(200 175)"><ellipse cx="-2.5" cy="0" rx="2.8" ry="2" fill="#CFC6EA"/><ellipse cx="2.5" cy="0" rx="2.8" ry="2" fill="#F7C1CC"/><rect x="-.4" y="-1.5" width=".8" height="3" fill="${INK}"/></g></g>`;
+  return moving("cho", fluent("cho", 200, 180, 10), 3);
 }
 
 // movable decorations: where each one stands by default (bottom-centre of the drawing)
-const DECO_ANCHOR = {toro:[266,237], stones:[153,256], torii:[32,206], bridge:[62,244], maple:[286,214], pine:[15,227], bench:[206,223], bamboo:[294,210], deer:[118,218]};
+const DECO_ANCHOR = {toro:[262,206], stones:[244,242], torii:[32,206], bridge:[86,238], maple:[286,214], pine:[15,227], bench:[206,224], bamboo:[294,210], deer:[118,218]};
 const persp = y => .7 + (y-200)/60*.45;          // further back = a bit smaller
 function decoPos(id){ const [ax,ay]=DECO_ANCHOR[id], p=(S.place||{})[id]; return p ? [p.x,p.y] : [ax,ay]; }
 function decoTransform(id){ const [ax,ay]=DECO_ANCHOR[id], [x,y]=decoPos(id), k=persp(y)/persp(ay);
@@ -1942,12 +1957,13 @@ function placedDeco(id, tod, highlight, edit){
     ${edit?`<ellipse cx="${ax}" cy="${ay}" rx="14" ry="5" fill="rgba(255,255,255,.35)" stroke="#E9A9A0" stroke-width="1.5" stroke-dasharray="3 2"/>`:""}</g>`;
 }
 /* ---------- Microsoft Fluent Emoji (MIT) for animals and decorations; the tree and the companions stay hand-drawn ---------- */
-const FLUENT = { suzume:"1f426", cho:"1f98b", kaeru:"1f438", hato:"1f54a", karasu:"1f426-200d-2b1b", usagi:"1f407", risu:"1f43f", fukuro:"1f989",
-  shiba:"1f415", saru:"1f412", kinkoi:"1f41f", ryu:"1f409",
-  mejiro:"1f426", neko:"1f408", kame:"1f422", tanuki:"1f99d",
-  torii:"26e9", deer:"1f98c", pine:"1f332", bamboo:"1f38b", lamp:"1f3ee", fuji:"1f5fb" };
-const FLUENT_SIZE = { suzume:17, cho:16, kaeru:15, hato:20, karasu:20, usagi:22, risu:19, fukuro:22, shiba:26, saru:24, kitsune:26, kinkoi:20, ryu:60,
-  mejiro:18, neko:26, kame:22, tanuki:26, torii:44, deer:32, pine:34, bamboo:40 };
+const FLUENT = { suzume:"1f426", cho:"1f98b", tentomushi:"1f41e", kaeru:"1f438", hato:"1f54a", karasu:"1f426-200d-2b1b", usagi:"1f407", risu:"1f43f", fukuro:"1f989",
+  shiba:"1f415", kamo:"1f986", saru:"1f412", anaguma:"1f9a1", kinkoi:"1f41f", ryu:"1f409", hoo:"1f99a", shirohebi:"1f40d",
+  koi:"1f41f", mejiro:"1f426", neko:"1f408", kame:"1f422", hakucho:"1f9a2", tanuki:"1f99d",
+  toro:"1f3ef", stones:"1faa8", torii:"26e9", bridge:"1fab7", maple:"1f333", pine:"1f332", lamp:"1f3ee", bench:"1fab4", bamboo:"1f38b", deer:"1f98c", fuji:"1f5fb" };
+const FLUENT_SIZE = { suzume:17, cho:15, tentomushi:12, kaeru:15, hato:20, karasu:20, usagi:22, risu:19, fukuro:22, shiba:26, kamo:20, saru:24, anaguma:26, kinkoi:20, ryu:60, hoo:34, shirohebi:24,
+  koi:18, mejiro:18, neko:26, kame:22, hakucho:24, tanuki:26,
+  toro:30, stones:22, torii:44, bridge:16, maple:38, pine:34, bench:24, bamboo:40, deer:32 };
 // small picture of a decoration or garden animal for the collection cards (Fluent where it exists, otherwise the garden drawing)
 function decoIcon(id){
   const fid = id==="lamps" ? "lamp" : id;
@@ -1959,21 +1975,41 @@ function animalIcon(a){
   if(FLUENT[a.id]) return fluentImg(a.id, 36);
   return `<svg viewBox="${a.id==="koi"?"-24 -12 50 22":"-24 -50 48 54"}" width="44" height="40">${artDefs()}${animalSVG(a.id,0,0,1)}</svg>`;
 }
+// how each creature moves: [kind, distance, seconds]; sprites look left, except the ones in FACE_RIGHT
+const MOTION = { shiba:["walk",-34,12], neko:["walk",-22,15], tanuki:["walk",26,16], anaguma:["walk",30,18], saru:["walk",-18,17], hato:["walk",-20,11], kame:["walk",-14,26], shirohebi:["walk",-26,22],
+  suzume:["hop",-22,9], usagi:["hop",-30,10], kaeru:["hop",-8,7], karasu:["hop",-16,12],
+  koi:["swim",-20,11], kinkoi:["swim",-22,9], kamo:["swim",-24,14], hakucho:["swim",-18,16],
+  cho:["fly",0,14], tentomushi:["fly",0,12], ryu:["glide",0,34], hoo:["walk",-24,20],
+  mejiro:["perch",0,5], risu:["perch",0,4], fukuro:["perch",0,6] };
+const FACE_RIGHT = { usagi:1 };
+function moving(id, markup, delay=0){
+  const m=MOTION[id]; if(!m) return markup;
+  const [kind,dx,dur]=m, f0 = FACE_RIGHT[id] ? -1 : 1;
+  const st=`--dx:${dx}px;--f0:${dx>0?-f0:f0};animation-duration:${dur}s;animation-delay:-${delay}s`;
+  if(kind==="perch") return `<g class="mv-perch" style="animation-duration:${dur}s;animation-delay:-${delay}s">${markup}</g>`;
+  if(kind==="fly") return `<g class="mv-fly" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g class="mv-flap">${markup}</g></g>`;
+  if(kind==="glide") return `<g class="mv-glide" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g style="transform:scaleX(-1);transform-box:fill-box;transform-origin:center">${markup}</g></g>`;
+  return `<g class="mv-${kind==="swim"?"swim":"walk"}" style="${st}"><g class="mv-face" style="${st}"><g class="mv-${kind==="hop"?"hop":kind==="swim"?"bob":"step"}">${markup}</g></g></g>`;
+}
+
 // recolours where the emoji differs from the real animal (Fluent's bird is red)
-const FLUENT_TINT = { mejiro:"hue-rotate(95deg) saturate(.75) brightness(1.1)", suzume:"sepia(.85) saturate(1.1) hue-rotate(-15deg) brightness(.95)" };
+const FLUENT_TINT = { mejiro:"hue-rotate(95deg) saturate(.75) brightness(1.1)", suzume:"sepia(.85) saturate(1.1) hue-rotate(-15deg) brightness(.95)",
+  koi:"hue-rotate(185deg) saturate(1.1) brightness(1.15)", kinkoi:"sepia(1) saturate(3.5) hue-rotate(-8deg) brightness(1.08)",
+  hoo:"sepia(.55) saturate(2.2) hue-rotate(-12deg) brightness(1.08)", shirohebi:"grayscale(1) brightness(1.65) contrast(.9)" };
+const seasonTint = id => id==="maple" ? ({autumn:"hue-rotate(-75deg) saturate(1.3)", winter:"grayscale(.7) brightness(1.25)", spring:"brightness(1.08)", summer:""})[season()] : "";
 // an image standing with its feet on (x,y); soft pastel look so it matches the drawn garden
 function fluent(id, x, y, size, {flip=false, filter=""}={}){
-  const sz=size||FLUENT_SIZE[id]||24, f=`saturate(.85) ${FLUENT_TINT[id]||""} ${filter}`;
+  const sz=size||FLUENT_SIZE[id]||24, f=`saturate(.85) ${FLUENT_TINT[id]||""} ${seasonTint(id)} ${filter}`;
   return `<image href="emoji/${FLUENT[id]}.webp" x="${(x-sz/2).toFixed(1)}" y="${(y-sz).toFixed(1)}" width="${sz}" height="${sz}" style="filter:${f}"${flip?` transform="translate(${(2*x).toFixed(1)} 0) scale(-1 1)"`:""}/>`;
 }
-const fluentImg = (id, px=40, filter="") => `<img src="emoji/${FLUENT[id]}.webp" width="${px}" height="${px}" style="filter:saturate(.85) ${FLUENT_TINT[id]||""} ${filter}" alt="">`;
+const fluentImg = (id, px=40, filter="") => `<img src="emoji/${FLUENT[id]}.webp" width="${px}" height="${px}" style="filter:saturate(.85) ${FLUENT_TINT[id]||""} ${seasonTint(id)} ${filter}" alt="">`;
 
 /* ---------- garden visitors & the animal book (図鑑 zukan) ---------- */
 // rarity: 1 gewoon, 2 bijzonder, 3 zeldzaam, 4 legendarisch
 const VISITORS = [
   {id:"suzume",  nl:"Mus",                 ja:"スズメ",      kana:"すずめ",       romaji:"suzume",       r:1, place:"ground", fact:"De mus zie je overal in Japan, ook midden in Tokio."},
   {id:"cho",     nl:"Vlinder",             ja:"蝶",          kana:"ちょう",       romaji:"chō",          r:1, place:"air", seasons:["spring","summer"], tods:["morning","day"], fact:"In Japanse kunst staan vlinders voor verandering."},
-  {id:"tonbo",   nl:"Libel",               ja:"トンボ",      kana:"とんぼ",       romaji:"tonbo",        r:1, place:"pond", seasons:["summer","autumn"], tods:["morning","day","evening"], fact:"Rode libellen (赤とんぼ) horen bij de Japanse herfst."},
+  {id:"tentomushi", nl:"Lieveheersbeestje", ja:"てんとう虫", kana:"てんとうむし", romaji:"tentōmushi",   r:1, place:"air", seasons:["spring","summer","autumn"], tods:["morning","day"], fact:"Tentōmushi betekent 'zonnegod-insect': het kruipt omhoog en vliegt naar de zon."},
   {id:"kaeru",   nl:"Kikker",              ja:"カエル",      kana:"かえる",       romaji:"kaeru",        r:1, place:"pad", seasons:["spring","summer"], fact:"Kaeru betekent ook 'terugkeren': een geluksbrenger voor reizigers!"},
   {id:"hato",    nl:"Duif",                ja:"ハト",        kana:"はと",         romaji:"hato",         r:1, place:"ground", tods:["morning","day"], fact:"Bij tempels en heiligdommen lopen vaak duiven rond."},
   {id:"karasu",  nl:"Kraai",               ja:"カラス",      kana:"からす",       romaji:"karasu",       r:1, place:"fence", tods:["morning","evening"], fact:"Japanse kraaien zijn groot en slim; ze roepen 'kaa kaa'."},
@@ -1981,13 +2017,13 @@ const VISITORS = [
   {id:"risu",    nl:"Eekhoorn",            ja:"リス",        kana:"りす",         romaji:"risu",         r:2, place:"tree", seasons:["autumn","spring"], tods:["morning","day"], fact:"In de herfst verstoppen eekhoorns overal nootjes."},
   {id:"fukuro",  nl:"Uil",                 ja:"フクロウ",    kana:"ふくろう",     romaji:"fukurō",       r:2, place:"tree", tods:["night","evening"], fact:"Fukurō kan ook gelezen worden als 'zonder zorgen': een geluksdier."},
   {id:"shiba",   nl:"Shiba-hondje",        ja:"柴犬",        kana:"しばいぬ",     romaji:"shiba-inu",    r:2, place:"ground", tods:["morning","day","evening"], fact:"Het shiba-hondje is een van de oudste Japanse hondenrassen."},
-  {id:"sagi",    nl:"Reiger",              ja:"サギ",        kana:"さぎ",         romaji:"sagi",         r:2, place:"pond", seasons:["spring","summer","autumn"], tods:["morning","day"], fact:"De witte reiger staat model voor het kasteel van Himeji ('Witte Reiger')."},
+  {id:"kamo",    nl:"Eend",                ja:"カモ",        kana:"かも",         romaji:"kamo",         r:2, place:"pond", fact:"In bijna elke tempelvijver in Japan zwemmen eenden."},
   {id:"saru",    nl:"Sneeuwaap",           ja:"猿",          kana:"さる",         romaji:"saru",         r:3, place:"ground", seasons:["winter"], fact:"In Nagano nemen apen in de winter een warm bad in een onsen."},
-  {id:"kitsune", nl:"Vos",                 ja:"狐",          kana:"きつね",       romaji:"kitsune",      r:3, place:"ground", seasons:["autumn","winter"], tods:["evening","night"], fact:"Vossen zijn de boodschappers van Inari; je ziet ze bij rode torii-poorten."},
+  {id:"anaguma", nl:"Das",                 ja:"アナグマ",    kana:"あなぐま",     romaji:"anaguma",      r:3, place:"ground", seasons:["autumn","winter","spring"], tods:["evening","night"], fact:"Anaguma betekent 'holen-beer': dassen graven lange gangen onder de grond."},
   {id:"kinkoi",  nl:"Gouden karper",       ja:"金の鯉",      kana:"きんのこい",   romaji:"kin no koi",   r:3, place:"pond", fact:"Een karper die tegen de stroom op zwemt, wordt volgens de legende een draak."},
-  {id:"kyubi",   nl:"Negenstaartige vos",  ja:"九尾の狐",    kana:"きゅうびのきつね", romaji:"kyūbi no kitsune", r:4, place:"ground", tods:["night"], fact:"Een vos die duizend jaar oud wordt, krijgt negen staarten en magische krachten."},
+  {id:"hoo",     nl:"Feniks (hōō)",        ja:"鳳凰",        kana:"ほうおう",     romaji:"hōō",          r:4, place:"ground", fact:"Op het tienyenmuntje staat de Feniks-hal van de Byōdō-in, met twee hōō op het dak."},
   {id:"ryu",     nl:"Draak",               ja:"龍",          kana:"りゅう",       romaji:"ryū",          r:4, place:"sky", fact:"Japanse draken wonen in water en wolken en brengen regen en geluk."},
-  {id:"maneki",  nl:"Maneki-neko",         ja:"招き猫",      kana:"まねきねこ",   romaji:"maneki-neko",  r:4, place:"ground", fact:"De wenkende kat brengt geluk; met de linkerpoot lokt ze mensen, met de rechter geld."},
+  {id:"shirohebi", nl:"Witte slang",       ja:"白蛇",        kana:"しろへび",     romaji:"shirohebi",    r:4, place:"ground", fact:"Een witte slang geldt in Japan als boodschapper van de godin Benzaiten en brengt geluk."},
 ];
 const RARITY = {1:{nl:"Gewoon", stars:"", chance:.5}, 2:{nl:"Bijzonder", stars:"⭐", chance:.22}, 3:{nl:"Zeldzaam", stars:"⭐⭐", chance:.07}, 4:{nl:"Legendarisch", stars:"🌟", chance:.015}};
 function hashStr(t){ let h=2166136261; for(const c of t) h=Math.imul(h^c.charCodeAt(0),16777619); return h>>>0; }
@@ -2016,21 +2052,22 @@ function spotVisitor(id){
   toast(`${isNew?"✨ Nieuw in je dierenboek: ":""}${v.ja} (${v.romaji}) · ${v.nl}${RARITY[v.r].stars?" "+RARITY[v.r].stars:""}`);
   if(isNew && (view==="home"||view==="garden")) setTimeout(render, 1200);
 }
-const VISIT_SPOT = { ground:[[112,250],[192,252],[30,224],[212,226]], pond:[[52,236]], pad:[[86,236]], fence:[[78,186],[238,186]], tree:[[186,150]], air:[[214,150]], sky:[[96,26]] };
+const VISIT_SPOT = { ground:[[118,252],[200,252],[60,224],[214,226]], pond:[[60,240],[44,244]], pad:[[86,236]], fence:[[78,186],[238,186]], tree:[[186,150]], air:[[214,150],[96,170]], sky:[[40,26]] };
 function visitorsLayer(perch){
   const list=visibleVisitors(); let s="", used={};
   list.forEach(v=>{ const spots=VISIT_SPOT[v.place]; const k=(used[v.place]=(used[v.place]||0)+1)-1; let [x,y]=spots[k%spots.length];
     if(v.place==="tree" && perch){ x=perch.x+16; y=perch.y+2; }
     const fresh=!(S.zukan&&S.zukan[v.id]);
-    s+=`<g class="visitor ${v.place==="air"?"flutter":v.place==="sky"?"drift":"bob"}" onclick="spotVisitor('${v.id}')" style="cursor:pointer">
-      ${fresh?`<circle cx="${x}" cy="${y-12}" r="16" fill="#FFF3B0" opacity=".35" class="twinkle"/>`:""}${visitorSVG(v.id,x,y,v.place==="sky"?.45:1)}</g>`; });
+    s+=`<g class="visitor" onclick="spotVisitor('${v.id}')" style="cursor:pointer">
+      ${moving(v.id, `${fresh?`<circle cx="${x}" cy="${y-12}" r="16" fill="#FFF3B0" opacity=".35" class="twinkle"/>`:""}${visitorSVG(v.id,x,y,v.place==="sky"?.45:1)}`, (hashStr(v.id)%9))}</g>`; });
   return s;
 }
 function visitorSVG(id, x, y, sc=1){
   if(FLUENT[id]){
     const sz=FLUENT_SIZE[id]*sc, gold=id==="kinkoi"?"sepia(1) saturate(3.5) hue-rotate(-8deg) brightness(1.08)":"";
     const shadow = ["cho","ryu","kinkoi"].includes(id) ? "" : `<ellipse cx="${x}" cy="${y}" rx="${(sz*.32).toFixed(1)}" ry="${(sz*.08).toFixed(1)}" fill="url(#shadow)"/>`;
-    return `${id==="kinkoi"?`<circle cx="${x}" cy="${y-sz*.4}" r="${sz*.7}" fill="url(#glow)"/>`:""}${shadow}${fluent(id, x, y+(id==="kinkoi"?sz*.35:0), sz, {filter:gold})}`;
+    const legendary = id==="hoo"||id==="shirohebi" ? `<circle cx="${x}" cy="${y-sz*.45}" r="${sz*.8}" fill="url(#glow)"/>` : "";
+    return `${id==="kinkoi"?`<circle cx="${x}" cy="${y-sz*.4}" r="${sz*.7}" fill="url(#glow)"/>`:""}${legendary}${shadow}${fluent(id, x, y+(["kinkoi","koi"].includes(id)?sz*.35:0), sz)}`;
   }
   const k=`stroke="${INK}" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"`, E=(cx,cy,r=1.3)=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${INK}"/>`;
   const T=`transform="translate(${x} ${y}) scale(${sc})"`, sea=season();
@@ -2094,8 +2131,7 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
   for(const a of set){
     const ag=animalGrowth(a,g); if(ag<0) continue;
     const [x,y,flip]=animalSpot(a.id, out.perch);
-    const cls = a.id==="koi"||a.id==="kame" ? "swim" : "bob";
-    animals += `<g class="${highlight===a.id?"hatch ":""}${cls}">${animalSVG(a.id,x,y,.5+.5*ag,flip)}</g>`;
+    animals += `<g class="${highlight===a.id?"hatch":""}">${moving(a.id, animalSVG(a.id,x,y,.5+.5*ag,flip), hashStr(a.id)%7)}</g>`;
   }
   return `<svg viewBox="0 0 300 260" class="scene-svg ${edit?"editing":""}" ${edit?'id="gscene"':""} aria-label="Je sakura-boom in de zen-tuin">
     ${sky ? skySVG(tod) + D("lamps") + fenceSVG() : `<defs><radialGradient id="glow"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></radialGradient></defs>`}
