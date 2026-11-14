@@ -1907,7 +1907,39 @@ const DIO_LIGHT = {   // [sky top, horizon, light colour, gravel, shade, mountai
   evening: ["#8088C4","#F6B88E","#FFBE7E","#DDC0A8","#56466E","#A08CC4","#F3C6AE"],
   night:   ["#1F2448","#4A4C7C","#C6CCFF","#7B7A9A","#1C1B33","#3E4272","#4B4E7E"],
 };
-const dioOn = () => (S.settings.gstyle||"diorama")==="diorama";
+const dioOn = () => ["diorama","3d"].includes(S.settings.gstyle||"3d");
+const g3dOn = () => (S.settings.gstyle||"3d")==="3d" && window.__g3dOK!==false;
+let G3D=null;
+function g3dDesc(g, tree){   // what the 3D garden should show, from the same data as the 2D scene
+  const tod=timeOfDay(), out={}, set=ANIMAL_SETS[tree.set||0];
+  const tm=treeSVG(g, tree.seed, out, {halo:false});
+  const U=25, X=x=>(x-150)/U, Z=y=>-3.7+(y-206)/54*8, treeZ=Z(226);
+  const filt=id=>`saturate(.9) ${FLUENT_TINT[id]||""} ${seasonTint(id)}`;
+  const at=(x,y,place)=> y>=206 ? {x:X(x), z:Z(y), y:0} : place==="fence" ? {x:X(x), z:-4.15, y:(206-y)/U+.25} : {x:X(x), z:treeZ+.15, y:(226-y)/U};
+  const figures=[];
+  for(const a of set){ const ag=animalGrowth(a,g); if(ag<0) continue; const [x,y,flip]=animalSpot(a.id, out.perch);
+    figures.push({id:a.id, code:FLUENT[a.id], ...at(x,y,y<206?"tree":"ground"), size:(FLUENT_SIZE[a.id]||24)*(.5+.5*ag), flip, motion:MOTION[a.id], faceRight:FACE_RIGHT[a.id], filter:filt(a.id), phase:hashStr(a.id)%7}); }
+  const used={};
+  for(const v of visibleVisitors()){ const spots=VISIT_SPOT[v.place]; const k=(used[v.place]=(used[v.place]||0)+1)-1; let [x,y]=spots[k%spots.length];
+    if(v.place==="tree" && out.perch){ x=out.perch.x+16; y=out.perch.y+2; }
+    const pos = v.place==="sky" ? {x:-2.5, z:-5, y:5.6} : at(x,y,v.place);
+    figures.push({id:v.id, code:FLUENT[v.id], ...pos, size:(FLUENT_SIZE[v.id]||20)*(v.place==="sky"?1.4:1), motion:MOTION[v.id], faceRight:FACE_RIGHT[v.id], filter:filt(v.id), tap:v.id, phase:hashStr(v.id)%9}); }
+  const have=earnedIds(), decos=[];
+  for(const d of DECOS){ if(!have.has(d.id) || d.id==="fuji") continue;
+    const [x,y]=DECO_ANCHOR[d.id] ? decoPos(d.id) : [150,206];
+    const far = d.id==="toro";
+    decos.push({id:d.id, code:FLUENT[d.id], x:X(x)*(far?1.6:1), z:far?-11:Z(Math.max(206,y)), size:(FLUENT_SIZE[d.id]||24)*(far?2.6:1.15), filter:filt(d.id)}); }
+  return { tod, season:season(), fuji:have.has("fuji"), decos, figures, rig:RIG,
+    treeKey:[tree.seed, Math.round(g*100), season(), tod].join("|"),
+    treeSVG:`<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="888" viewBox="0 0 300 260">${artDefs()}${tm}</svg>` };
+}
+function mount3D(){
+  const host=document.querySelector(".g3d-host"); if(!host || !window.__g3dDesc) return;
+  const desc=window.__g3dDesc();
+  (G3D ? Promise.resolve(G3D) : import("./garden3d.js").then(m=>{ if(!m.supported()) throw new Error("geen WebGL"); return G3D=m; }))
+    .then(m=>m.show(host, desc, id=>spotVisitor(id)))
+    .catch(e=>{ console.warn("3D-tuin niet beschikbaar:", e); window.__g3dOK=false; render(); });
+}
 const DIO_CACHE = {};
 function dioKey(tod){ const e=earnedIds(); return [tod, season(), e.has("fuji")?1:0, e.has("lamps")?1:0].join("|"); }
 function dioRng(seed){ let s=seed; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; }
@@ -2352,6 +2384,7 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
     const [x,y,flip]=animalSpot(a.id, out.perch);
     animals += `<g class="${highlight===a.id?"hatch":""}">${moving(a.id, animalSVG(a.id,x,y,.5+.5*ag,flip), hashStr(a.id)%7)}</g>`;
   }
+  if(sky && !edit && !evolve && g3dOn()){ window.__g3dDesc = () => g3dDesc(g, tree); return `<div class="scene-svg g3d-host" style="aspect-ratio:300/260;position:relative;overflow:hidden;background:#C8D8E8"></div>`; }
   const dio = sky && dioOn() ? dioBake(tod) : null;
   if(dio) return `<svg viewBox="0 0 300 260" class="scene-svg dio ${edit?"editing":""}" ${edit?'id="gscene"':""} aria-label="Je sakura-boom in de zen-tuin">
     ${skySVG(tod).match(/<defs>[\s\S]*?<\/defs>/)[0]}${artDefs()}
@@ -2426,6 +2459,7 @@ function render(){
   else if(view==="lesson") renderEx();
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
+  mount3D();
   window.scrollTo?.(0, view==="learn" ? (window._learnScroll||0) : 0);
 }
 
@@ -3366,7 +3400,7 @@ function renderSettings(){
     <div class="setting" style="border:2px dashed var(--peach)"><h3>🧪 Testen (tijdelijk)</h3><p>Laat je boom vooruit groeien om de diertjes en de tuin te bekijken. Boom ${S.tree?S.tree.n:1} staat op ${Math.round(treeGrowth()*100)}%.</p>
       <div class="seg"><button onclick="testGrow(.1)">+10%</button><button onclick="testGrow(.3)">+30%</button><button onclick="testGrow(1)">Volle bloei</button><button onclick="testReset()">Terug naar zaadje</button></div>
       <button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem;margin-top:10px" onclick="showAllAnimals()">🐾 Bekijk alle dieren</button></div>
-    <div class="setting"><h3>Tuinstijl</h3>${seg("gstyle",[["diorama","🏞️ Diorama (nieuw)"],["pastel","🎨 Pastel"]],s.gstyle||"diorama")}</div>
+    <div class="setting"><h3>Tuinstijl</h3>${seg("gstyle",[["3d","🌄 3D (nieuw)"],["diorama","🏞️ Diorama"],["pastel","🎨 Pastel"]],s.gstyle||"3d")}</div>
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>

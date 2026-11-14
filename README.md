@@ -22,3 +22,5 @@ Elke APK wordt ondertekend met jouw eigen sleutel. Die staat als geheim in GitHu
 
 ## Illustraties
 De dieren, bezoekers en een deel van de decoraties zijn **Microsoft Fluent Emoji** (MIT-licentie, zie `emoji/LICENSE.txt`). De sakura-boom, de tuin en de begeleiders Neko en Panda zijn zelf getekend in SVG.
+
+De 3D-tuin draait op **three.js** (MIT-licentie). Alle 3D-vormen en texturen (grind, rotsen, water, bos, bergen) worden in de app zelf gemaakt.

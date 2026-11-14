@@ -2,9 +2,9 @@
   "name": "japantalk",
   "version": "1.0.0",
   "private": true,
-  "description": "Japans leren praten – Android-app (Capacitor)",
+  "description": "Japans leren praten \u2013 Android-app (Capacitor)",
   "scripts": {
-    "www": "rm -rf www && mkdir -p www/fonts && cp index.html www/ && for w in 400 600 700 800; do cp node_modules/@fontsource/nunito/files/nunito-latin-$w-normal.woff2 www/fonts/nunito-$w.woff2; done && if [ -d audio ]; then cp -r audio www/; fi && cp -r emoji www/"
+    "www": "rm -rf www && mkdir -p www/fonts && cp index.html www/ && for w in 400 600 700 800; do cp node_modules/@fontsource/nunito/files/nunito-latin-$w-normal.woff2 www/fonts/nunito-$w.woff2; done && if [ -d audio ]; then cp -r audio www/; fi && cp -r emoji www/ && cp garden3d.js www/ && mkdir -p www/lib && cp node_modules/three/build/three.module.js node_modules/three/build/three.core.js www/lib/"
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "7.0.1",
@@ -14,7 +14,8 @@
     "@capacitor/core": "^7.6.10",
     "@capacitor/filesystem": "^7.1.9",
     "@capawesome-team/capacitor-file-opener": "^7.0.1",
-    "@fontsource/nunito": "^5.3.0"
+    "@fontsource/nunito": "^5.3.0",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
