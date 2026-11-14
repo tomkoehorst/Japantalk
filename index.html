@@ -1929,7 +1929,7 @@ function g3dDesc(g, tree){   // what the 3D garden should show, from the same da
     const [x,y]=DECO_ANCHOR[d.id] ? decoPos(d.id) : [150,206];
     const far = d.id==="toro";
     decos.push({id:d.id, code:FLUENT[d.id], x:X(x)*(far?1.6:1), z:far?-11:Z(Math.max(206,y)), size:(FLUENT_SIZE[d.id]||24)*(far?2.6:1.15), filter:filt(d.id)}); }
-  return { tod, season:season(), fuji:have.has("fuji"), decos, figures, rig:RIG,
+  return { tod, g, season:season(), fuji:have.has("fuji"), decos, figures, rig:RIG,
     treeKey:[tree.seed, Math.round(g*100), season(), tod].join("|"),
     treeSVG:`<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="888" viewBox="0 0 300 260">${artDefs()}${tm}</svg>` };
 }

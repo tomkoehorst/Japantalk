@@ -300,8 +300,8 @@ async function makeFigure(f, desc){   // f: {id, code, x, z, y, size, motion, ta
 async function makeTree(desc){
   const c=document.createElement("canvas"); c.width=1024; c.height=Math.round(1024*260/300);
   const img=await loadImg("data:image/svg+xml;charset=utf-8,"+encodeURIComponent(desc.treeSVG));
-  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-  const t=new THREE.CanvasTexture(c); const mat=spriteMat(t); mat.emissiveIntensity=(R.emis??.32)*1.15; mat.alphaTest=.04; mat.transparent=true; mat.depthWrite=true;
+  const cx=c.getContext("2d"); cx.filter="saturate(1.35) contrast(1.05)"; cx.drawImage(img,0,0,c.width,c.height); cx.globalAlpha=.6; cx.drawImage(img,0,0,c.width,c.height);   // fuller blossom
+  const t=new THREE.CanvasTexture(c); const mat=spriteMat(t); mat.emissiveIntensity=(R.emis??.32)*.8; mat.alphaTest=.04; mat.transparent=true; mat.depthWrite=true;
   const m=plane(300/U, 260/U, mat); m.position.set(0, (226-130)/U - .05, R.D.tree[1]);
   return m;
 }
@@ -350,7 +350,10 @@ function loop(){
 /* ---------- public ---------- */
 export async function show(host, desc, onTap){
   if(!R) init();
-  R.host=host; R.onTap=onTap; if(R.canvas.parentNode!==host) host.appendChild(R.canvas);
+  R.host=host; R.onTap=onTap;
+  { const k=Math.min(1, Math.max(0,(desc.g??1)/.55)), e=k*k*(3-2*k);   // close-up while the tree is small
+    R.camera.position.set(0, 2.6+e*3.8, 7.2+e*8); R.camera.lookAt(0, .5+e*2, -1.6+e*.4); R.camera.updateMatrixWorld();
+    R.post.blur.uniforms.focus.value=R.camera.position.distanceTo(new THREE.Vector3(0,.5+e*2,-2.2)); } if(R.canvas.parentNode!==host) host.appendChild(R.canvas);
   const ek=[desc.tod,desc.season,desc.fuji,desc.decos.map(d=>d.id).join(",")].join("|");
   if(ek!==R.envKey){ if(R.env) R.scene.remove(R.env); R.env=buildEnv(desc); R.scene.add(R.env); R.envKey=ek; R.dynKey=""; R.post.final.uniforms.grade.value.set(...TOD[desc.tod].grade); R.post.final.uniforms.exposure.value=TOD[desc.tod].exp; }
   const dk=JSON.stringify([desc.treeKey, desc.figures.map(f=>[f.id,f.x,f.z,f.size]), desc.decos]);
@@ -359,6 +362,10 @@ export async function show(host, desc, onTap){
   const night=desc.tod==="night";
   for(const d of desc.decos){ if(!buildDeco3D(d.id, d.x, d.z, night, dyn) && d.code) dyn.add(await makeFigure({id:d.id, code:d.code, x:d.x, z:d.z, y:0, size:d.size, motion:null, filter:d.filter}, desc)); }
   dyn.add(await makeTree(desc));
+  if((desc.g??1)<.08){   // freshly planted: a little mound of soil with the seed
+    const soil=new THREE.Mesh(new THREE.SphereGeometry(.32,24,12,0,TAU,0,Math.PI/2), new THREE.MeshStandardMaterial({color:"#7A5A44", roughness:1}));
+    soil.scale.set(1,.35,.8); soil.position.set(0,.1,R.D.tree[1]); soil.castShadow=soil.receiveShadow=true; dyn.add(soil);
+    const seed=new THREE.Mesh(new THREE.SphereGeometry(.07,16,10), new THREE.MeshStandardMaterial({color:"#C08A5A", roughness:.6})); seed.scale.set(1,.7,.8); seed.position.set(.04,.22,R.D.tree[1]+.05); seed.castShadow=true; dyn.add(seed); }
   for(const f of desc.figures) dyn.add(await makeFigure(f, desc));
   if(R.dyn) R.scene.remove(R.dyn); R.dyn=dyn; R.scene.add(dyn);
 }
