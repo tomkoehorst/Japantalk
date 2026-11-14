@@ -58,8 +58,22 @@ function init(){
   const camera=new THREE.PerspectiveCamera(36, 300/260, .1, 200);
   camera.position.set(0, 6.4, 15.2); camera.lookAt(0, 2.5, -1.2);
   R={canvas, renderer, scene, camera, env:null, envKey:"", dyn:null, dynKey:"", host:null, t0:performance.now(), last:0,
-     movers:[], tappables:[], onTap:null, post:makePost(renderer), water:null, motes:null, lanterns:[]};
-  canvas.addEventListener("click", ev=>{
+     movers:[], tappables:[], decoObjs:[], onTap:null, onMove:null, edit:false, drag:null, post:makePost(renderer), water:null, motes:null, lanterns:[]};
+  const ndc=ev=>{ const r=canvas.getBoundingClientRect(); return new THREE.Vector2((ev.clientX-r.left)/r.width*2-1, -((ev.clientY-r.top)/r.height*2-1)); };
+  const groundAt=ev=>{ const ray=new THREE.Raycaster(); ray.setFromCamera(ndc(ev), camera); const p=new THREE.Vector3(); return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0), p) ? p : null; };
+  canvas.addEventListener("pointerdown", ev=>{
+    if(!R.edit) return; const ray=new THREE.Raycaster(); ray.setFromCamera(ndc(ev), camera);
+    const hit=ray.intersectObjects(R.decoObjs.map(d=>d.obj), true)[0]; if(!hit) return;
+    let o=hit.object; while(o && !o.userData.deco) o=o.parent; if(!o) return;
+    const p=groundAt(ev); R.drag={obj:o, id:o.userData.deco, off:p?new THREE.Vector3(o.position.x-p.x,0,o.position.z-p.z):new THREE.Vector3()};
+    o.position.y=.18; canvas.setPointerCapture(ev.pointerId); ev.preventDefault(); });
+  canvas.addEventListener("pointermove", ev=>{ if(!R.drag) return; const p=groundAt(ev); if(!p) return;
+    R.drag.obj.position.x=Math.max(-5.7,Math.min(5.7,p.x+R.drag.off.x)); R.drag.obj.position.z=Math.max(-3.6,Math.min(4.0,p.z+R.drag.off.z)); });
+  const drop=()=>{ if(!R.drag) return; const o=R.drag.obj; o.position.y=0;
+    const x=Math.round(150+o.position.x*U), y=Math.round(206+(o.position.z+3.7)*54/8);
+    if(R.onMove) R.onMove(R.drag.id, Math.max(8,Math.min(292,x)), Math.max(207,Math.min(258,y))); R.drag=null; };
+  canvas.addEventListener("pointerup", drop); canvas.addEventListener("pointercancel", drop);
+  canvas.addEventListener("click", ev=>{ if(R.edit) return;
     const r=canvas.getBoundingClientRect(), p=new THREE.Vector2((ev.clientX-r.left)/r.width*2-1, -((ev.clientY-r.top)/r.height*2-1));
     const ray=new THREE.Raycaster(); ray.setFromCamera(p, camera);
     const hit=ray.intersectObjects(R.tappables, false)[0];
@@ -234,9 +248,9 @@ function buildDeco3D(id, x, z, night, group){
     const g=new THREE.Group(); for(const s of [-1,1]){ const p=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,2.1,12),red); p.position.set(s*.75,1.05,0); g.add(p); }
     const k=new THREE.Mesh(new THREE.BoxGeometry(1.9,.12,.18),red); k.position.y=1.55; g.add(k);
     const t=new THREE.Mesh(new THREE.BoxGeometry(2.3,.16,.26),blk); t.position.y=2.12; g.add(t); const t2=new THREE.Mesh(new THREE.BoxGeometry(2.1,.1,.22),red); t2.position.y=1.98; g.add(t2);
-    g.traverse(o=>{ if(o.isMesh){ o.castShadow=o.receiveShadow=true; } }); g.position.set(x,0,z); g.scale.setScalar(.85); group.add(g); return true; }
+    g.traverse(o=>{ if(o.isMesh){ o.castShadow=o.receiveShadow=true; } }); g.scale.setScalar(.85); group.add(g); return true; }
   if(id==="bamboo"){ const mat=new THREE.MeshStandardMaterial({color:"#8DC07A", roughness:.5}), leafM=new THREE.MeshStandardMaterial({color:"#79B26E", roughness:.8});
-    for(let i=0;i<7;i++){ const h=2.4+hash(i,1,4)*1.6; const c=new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,h,8),mat); c.position.set(x+(hash(i,2,4)-.5)*.9, h/2, z+(hash(i,3,4)-.5)*.5); c.castShadow=true; group.add(c);
+    for(let i=0;i<7;i++){ const h=2.4+hash(i,1,4)*1.6; const c=new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,h,8),mat); c.position.set((hash(i,2,4)-.5)*.9, h/2, (hash(i,3,4)-.5)*.5); c.castShadow=true; group.add(c);
       const l=new THREE.Mesh(new THREE.IcosahedronGeometry(.32,1),leafM); l.scale.set(1.2,.5,1); l.position.set(c.position.x+.15,h-.1,c.position.z); l.castShadow=true; group.add(l); }
     return true; }
   if(id==="lamps"){ const rope=new THREE.MeshStandardMaterial({color:"#6B5A4A"}), paper=new THREE.MeshStandardMaterial({color:"#F2A07C", emissive:night?"#FF9A50":"#000000", emissiveIntensity:night?2.2:0, roughness:.6});
@@ -348,19 +362,25 @@ function loop(){
 }
 
 /* ---------- public ---------- */
-export async function show(host, desc, onTap){
+export async function show(host, desc, onTap, onMove){
   if(!R) init();
-  R.host=host; R.onTap=onTap;
+  R.host=host; R.onTap=onTap; R.onMove=onMove; R.edit=!!desc.edit; R.canvas.style.touchAction=R.edit?"none":"manipulation";
   { const k=Math.min(1, Math.max(0,(desc.g??1)/.55)), e=k*k*(3-2*k);   // close-up while the tree is small
     R.camera.position.set(0, 2.6+e*3.8, 7.2+e*8); R.camera.lookAt(0, .5+e*2, -1.6+e*.4); R.camera.updateMatrixWorld();
     R.post.blur.uniforms.focus.value=R.camera.position.distanceTo(new THREE.Vector3(0,.5+e*2,-2.2)); } if(R.canvas.parentNode!==host) host.appendChild(R.canvas);
   const ek=[desc.tod,desc.season,desc.fuji,desc.decos.map(d=>d.id).join(",")].join("|");
   if(ek!==R.envKey){ if(R.env) R.scene.remove(R.env); R.env=buildEnv(desc); R.scene.add(R.env); R.envKey=ek; R.dynKey=""; R.post.final.uniforms.grade.value.set(...TOD[desc.tod].grade); R.post.final.uniforms.exposure.value=TOD[desc.tod].exp; }
-  const dk=JSON.stringify([desc.treeKey, desc.figures.map(f=>[f.id,f.x,f.z,f.size]), desc.decos]);
+  const dk=JSON.stringify([desc.treeKey, desc.figures.map(f=>[f.id,f.x,f.z,f.size]), desc.decos, R.edit]);
   if(dk===R.dynKey) return; R.dynKey=dk;
-  const dyn=new THREE.Group(); R.movers=[]; R.tappables=[]; R.emis={morning:.3, day:.32, evening:.22, night:.1}[desc.tod];
+  const dyn=new THREE.Group(); R.movers=[]; R.tappables=[]; R.decoObjs=[]; R.emis={morning:.3, day:.32, evening:.22, night:.1}[desc.tod];
   const night=desc.tod==="night";
-  for(const d of desc.decos){ if(!buildDeco3D(d.id, d.x, d.z, night, dyn) && d.code) dyn.add(await makeFigure({id:d.id, code:d.code, x:d.x, z:d.z, y:0, size:d.size, motion:null, filter:d.filter}, desc)); }
+  for(const d of desc.decos){
+    const sub=new THREE.Group();
+    if(!buildDeco3D(d.id, d.x, d.z, night, sub)){ if(!d.code) continue; const fig=await makeFigure({id:d.id, code:d.code, x:0, z:0, y:0, size:d.size, motion:null, filter:d.filter}, desc); R.movers.pop(); sub.add(fig); }
+    if(d.id!=="lamps") sub.position.set(d.x,d.y||0,d.z);
+    if(d.drag){ sub.userData.deco=d.id; R.decoObjs.push({id:d.id, obj:sub});
+      if(R.edit){ const ring=new THREE.Mesh(new THREE.RingGeometry(.42,.5,40), new THREE.MeshBasicMaterial({color:"#FFFFFF", transparent:true, opacity:.85, depthWrite:false})); ring.rotation.x=-Math.PI/2; ring.position.y=.03; sub.add(ring); } }
+    dyn.add(sub); }
   dyn.add(await makeTree(desc));
   if((desc.g??1)<.08){   // freshly planted: a little mound of soil with the seed
     const soil=new THREE.Mesh(new THREE.SphereGeometry(.32,24,12,0,TAU,0,Math.PI/2), new THREE.MeshStandardMaterial({color:"#7A5A44", roughness:1}));
@@ -370,3 +390,4 @@ export async function show(host, desc, onTap){
   if(R.dyn) R.scene.remove(R.dyn); R.dyn=dyn; R.scene.add(dyn);
 }
 export function supported(){ try{ const c=document.createElement("canvas"); return !!(c.getContext("webgl2")||c.getContext("webgl")); }catch(e){ return false; } }
+export function _debug(){ return {R, THREE}; }

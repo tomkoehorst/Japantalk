@@ -1928,7 +1928,7 @@ function g3dDesc(g, tree){   // what the 3D garden should show, from the same da
   for(const d of DECOS){ if(!have.has(d.id) || d.id==="fuji") continue;
     const [x,y]=DECO_ANCHOR[d.id] ? decoPos(d.id) : [150,206];
     const far = d.id==="toro";
-    decos.push({id:d.id, code:FLUENT[d.id], x:X(x)*(far?1.6:1), z:far?-11:Z(Math.max(206,y)), size:(FLUENT_SIZE[d.id]||24)*(far?2.6:1.15), filter:filt(d.id)}); }
+    decos.push({id:d.id, code:FLUENT[d.id], x:far?3.5:X(x), y:far?3.1:0, z:far?-16:Z(Math.max(206,y)), size:(FLUENT_SIZE[d.id]||24)*(far?4:1.15), filter:filt(d.id), drag:!!DECO_ANCHOR[d.id] && !far}); }
   return { tod, g, season:season(), fuji:have.has("fuji"), decos, figures, rig:RIG,
     treeKey:[tree.seed, Math.round(g*100), season(), tod].join("|"),
     treeSVG:`<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="888" viewBox="0 0 300 260">${artDefs()}${tm}</svg>` };
@@ -1937,7 +1937,7 @@ function mount3D(){
   const host=document.querySelector(".g3d-host"); if(!host || !window.__g3dDesc) return;
   const desc=window.__g3dDesc();
   (G3D ? Promise.resolve(G3D) : import("./garden3d.js").then(m=>{ if(!m.supported()) throw new Error("geen WebGL"); return G3D=m; }))
-    .then(m=>m.show(host, desc, id=>spotVisitor(id)))
+    .then(m=>m.show(host, desc, id=>spotVisitor(id), (id,x,y)=>{ S.place=S.place||{}; S.place[id]={x,y}; save(); }))
     .catch(e=>{ console.warn("3D-tuin niet beschikbaar:", e); window.__g3dOK=false; render(); });
 }
 const DIO_CACHE = {};
@@ -2384,7 +2384,7 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
     const [x,y,flip]=animalSpot(a.id, out.perch);
     animals += `<g class="${highlight===a.id?"hatch":""}">${moving(a.id, animalSVG(a.id,x,y,.5+.5*ag,flip), hashStr(a.id)%7)}</g>`;
   }
-  if(sky && !edit && !evolve && g3dOn()){ window.__g3dDesc = () => g3dDesc(g, tree); return `<div class="scene-svg g3d-host" style="aspect-ratio:300/260;position:relative;overflow:hidden;background:#C8D8E8"></div>`; }
+  if(sky && !evolve && g3dOn()){ window.__g3dDesc = () => ({...g3dDesc(g, tree), edit}); return `<div class="scene-svg g3d-host" style="aspect-ratio:300/260;position:relative;overflow:hidden;background:#C8D8E8"></div>`; }
   const dio = sky && dioOn() ? dioBake(tod) : null;
   if(dio) return `<svg viewBox="0 0 300 260" class="scene-svg dio ${edit?"editing":""}" ${edit?'id="gscene"':""} aria-label="Je sakura-boom in de zen-tuin">
     ${skySVG(tod).match(/<defs>[\s\S]*?<\/defs>/)[0]}${artDefs()}
@@ -2868,7 +2868,7 @@ function renderGarden(){
     ${n?`<div class="garden-wrap">${gardenSVG()}</div>`:
       `<p style="margin:6px 22px 0;color:var(--muted);font-weight:600">Boom ${S.tree.n} staat op ${Math.round(g*100)}%. In volle bloei komt hij hier te staan, met zijn diertjes. Nog ±${daysLeft(g)} dagen goed oefenen.</p>`}
   </div>${tabbar()}`;
-  if(gardenEdit) attachGardenDrag();
+  if(gardenEdit && !g3dOn()) attachGardenDrag();
 }
 // TEMPORARY test helpers (settings → Testen)
 function testGrow(frac){
