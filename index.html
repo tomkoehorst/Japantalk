@@ -76,8 +76,18 @@
 @keyframes mvX{0%{transform:translateX(0)}45%{transform:translateX(var(--dx))}50%{transform:translateX(var(--dx))}95%{transform:translateX(0)}100%{transform:translateX(0)}}
 .mv-face{animation:mvFace linear infinite;transform-box:fill-box;transform-origin:center}
 @keyframes mvFace{0%,47%{transform:scaleX(var(--f0))}48%,97%{transform:scaleX(calc(var(--f0) * -1))}98%,100%{transform:scaleX(var(--f0))}}
-.leg{transform-box:fill-box;animation:legSwing .5s ease-in-out infinite alternate}.leg-b{animation-delay:-.5s}.leg-slow{animation-duration:1.1s}.leg-slow.leg-b{animation-delay:-1.1s}
-@keyframes legSwing{from{transform:rotate(-17deg)}to{transform:rotate(17deg)}}
+.pt{transform-box:fill-box;--a:17deg;animation:legSwing .5s ease-in-out infinite alternate}.pt-b{animation-delay:-.5s}.pt-small{--a:8deg}
+.pt-slow{animation-duration:1.1s}.pt-slow.pt-b{animation-delay:-1.1s}
+@keyframes legSwing{from{transform:rotate(calc(var(--a) * -1))}to{transform:rotate(var(--a))}}
+.mv-hop .pt-a,.mv-hop .pt-h{animation:legHop .8s ease-out infinite}.mv-hop .pt-b{animation:legHop .8s ease-out infinite}.mv-hop .pt-f{animation:legHopF .8s ease-out infinite}.pt-f,.pt-h{animation:none}
+@keyframes legHop{0%,70%,100%{transform:rotate(0)}12%{transform:rotate(12deg)}35%{transform:rotate(-28deg)}}
+@keyframes legHopF{0%,70%,100%{transform:rotate(0)}12%{transform:rotate(-8deg)}35%{transform:rotate(22deg)}}
+.mv-perch .pt,.mv-fly .pt-a,.mv-fly .pt-b{animation:none}
+.pt-fin{animation:fin .55s ease-in-out infinite alternate}@keyframes fin{from{transform:skewY(-20deg)}to{transform:skewY(20deg)}}
+.pt-wing{animation:wing .25s ease-in-out infinite alternate}@keyframes wing{from{transform:scaleY(1)}to{transform:scaleY(.55)}}
+.pt-dip{animation:dip 7s ease-in-out infinite}@keyframes dip{0%,62%,100%{transform:skewX(0)}70%,80%{transform:skewX(-22deg) scaleY(.9)}74%{transform:skewX(-18deg) scaleY(.92)}}
+.pt-sway{animation:sway 1.6s ease-in-out infinite alternate}@keyframes sway{from{transform:skewX(-14deg)}to{transform:skewX(10deg)}}
+.mv-climb{animation:mvClimb ease-in-out infinite}@keyframes mvClimb{0%,100%{transform:translateY(0)}45%,55%{transform:translateY(var(--dx))}}
 .mv-slither{animation:mvSlither .9s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}@keyframes mvSlither{0%,100%{transform:skewX(9deg) scaleY(.96)}50%{transform:skewX(-9deg) scaleY(1.04)}}
 .mv-step{animation:mvStep .5s ease-in-out infinite}@keyframes mvStep{50%{transform:translateY(-1.3px)}}
 .mv-hop{animation:mvHop .8s ease-out infinite}@keyframes mvHop{0%,100%{transform:translateY(0)}35%{transform:translateY(-6px)}70%{transform:translateY(0)}}
@@ -89,7 +99,7 @@
 .mv-flap{animation:mvFlap .28s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes mvFlap{50%{transform:scaleX(.55)}}
 .mv-glide{animation:mvGlide linear infinite}@keyframes mvGlide{0%{transform:translate(-60px,6px)}50%{transform:translate(150px,-4px)}100%{transform:translate(360px,6px)}}
 .mv-perch{animation:mvPerch ease-in-out infinite}@keyframes mvPerch{0%,78%,100%{transform:translateY(0)}84%{transform:translateY(-5px)}90%{transform:translateY(0)}95%{transform:translateY(-2px)}}
-@media (prefers-reduced-motion: reduce){ [class^="mv-"],.leg{animation:none!important} }
+@media (prefers-reduced-motion: reduce){ [class^="mv-"],.pt{animation:none!important} }
 .ripple{animation:ripple 3.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
 @keyframes ripple{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 .snowflake{animation:snow linear infinite}@keyframes snow{to{transform:translate(-20px,275px)}}
@@ -1619,7 +1629,7 @@ const TREE_DAYS = 25;          // days of reaching your daily goal for full bloo
 const DAY_CAP = 1.5;           // a big day counts at most 1.5 days (no binge-growing)
 const ANIMAL_SETS = [
   [{id:"koi",name:"Koi",emoji:"🐟",hatch:.08},{id:"mejiro",name:"Mejiro (vogeltje)",emoji:"🐦",hatch:.3},{id:"neko",name:"Neko",emoji:"🐱",hatch:.55}],
-  [{id:"kame",name:"Kame (schildpad)",emoji:"🐢",hatch:.08},{id:"hakucho",name:"Hakuchō (zwaan)",emoji:"🦢",hatch:.3},{id:"tanuki",name:"Tanuki",emoji:"🦝",hatch:.55}],
+  [{id:"kame",name:"Kame (schildpad)",emoji:"🐢",hatch:.08},{id:"hakucho",name:"Hakuchō (zwaan)",emoji:"🦢",hatch:.3},{id:"niwatori",name:"Niwatori (haan)",emoji:"🐓",hatch:.55}],
 ];
 function newTree(n){ return {n, seed:(Math.random()*1e9)|0, start:today(), xp:{}, set:(n-1)%ANIMAL_SETS.length}; }
 function ensureGarden(){
@@ -1780,7 +1790,7 @@ function animalSVG(id, x, y, s, flip=false){
 // where each animal lives in the 300x260 scene
 function animalSpot(id, perch){
   return ({koi:[66,240,false], kame:[62,234,false], mejiro: perch?[perch.x,perch.y-1,false]:[236,231,false],
-           tsuru:[42,222,false], hakucho:[48,243,false], neko:[214,224,true], tanuki:[218,224,false]})[id];
+           tsuru:[42,222,false], hakucho:[48,243,false], neko:[214,224,true], tanuki:[218,224,false], niwatori:[218,226,false]})[id];
 }
 /* ---------- living scenery: time of day, sky, mountains, fence, gravel, decorations ---------- */
 /* ---------- real seasons (northern hemisphere, like Japan and the Netherlands) ---------- */
@@ -1960,12 +1970,12 @@ function placedDeco(id, tod, highlight, edit){
     ${edit?`<ellipse cx="${ax}" cy="${ay}" rx="14" ry="5" fill="rgba(255,255,255,.35)" stroke="#E9A9A0" stroke-width="1.5" stroke-dasharray="3 2"/>`:""}</g>`;
 }
 /* ---------- Microsoft Fluent Emoji (MIT) for animals and decorations; the tree and the companions stay hand-drawn ---------- */
-const FLUENT = { suzume:"1f426", cho:"1f98b", tentomushi:"1f41e", kaeru:"1f438", hato:"1f54a", karasu:"1f426-200d-2b1b", usagi:"1f407", risu:"1f43f", fukuro:"1f989",
+const FLUENT = { suzume:"1f426", cho:"1f98b", tentomushi:"1f41e", hato:"1f54a", karasu:"1f426-200d-2b1b", usagi:"1f407", risu:"1f43f", fukuro:"1f989",
   shiba:"1f415", kamo:"1f986", saru:"1f412", anaguma:"1f9a1", kinkoi:"1f41f", ryu:"1f409", hoo:"1f99a", shirohebi:"1f40d",
-  koi:"1f41f", mejiro:"1f426", neko:"1f408", kame:"1f422", hakucho:"1f9a2", tanuki:"1f99d",
+  koi:"1f41f", mejiro:"1f426", neko:"1f408", kame:"1f422", hakucho:"1f9a2", niwatori:"1f413", yamori:"1f98e", kawauso:"1f9a6",
   toro:"1f3ef", stones:"1faa8", torii:"26e9", bridge:"1fab7", maple:"1f333", pine:"1f332", lamp:"1f3ee", bench:"1fab4", bamboo:"1f38b", deer:"1f98c", fuji:"1f5fb" };
-const FLUENT_SIZE = { suzume:17, cho:15, tentomushi:12, kaeru:15, hato:20, karasu:20, usagi:22, risu:19, fukuro:22, shiba:26, kamo:20, saru:24, anaguma:26, kinkoi:20, ryu:60, hoo:34, shirohebi:24,
-  koi:18, mejiro:18, neko:26, kame:22, hakucho:24, tanuki:26,
+const FLUENT_SIZE = { suzume:17, cho:15, tentomushi:12, hato:20, karasu:20, usagi:22, risu:19, fukuro:22, shiba:26, kamo:20, saru:24, anaguma:26, kinkoi:20, ryu:60, hoo:34, shirohebi:24,
+  koi:18, mejiro:18, neko:26, kame:22, hakucho:24, niwatori:25, yamori:16, kawauso:22,
   toro:30, stones:22, torii:44, bridge:16, maple:38, pine:34, bench:24, bamboo:40, deer:32 };
 // small picture of a decoration or garden animal for the collection cards (Fluent where it exists, otherwise the garden drawing)
 function decoIcon(id){
@@ -1979,8 +1989,8 @@ function animalIcon(a){
   return `<svg viewBox="${a.id==="koi"?"-24 -12 50 22":"-24 -50 48 54"}" width="44" height="40">${artDefs()}${animalSVG(a.id,0,0,1)}</svg>`;
 }
 // how each creature moves: [kind, distance, seconds]; sprites look left, except the ones in FACE_RIGHT
-const MOTION = { shiba:["walk",-34,12], neko:["walk",-22,15], tanuki:["hop",26,20], anaguma:["walk",30,18], saru:["hop",-18,17], hato:["hop",-20,11], kame:["walk",-14,26], shirohebi:["walk",-26,22],
-  suzume:["hop",-22,9], usagi:["hop",-30,10], kaeru:["hop",-8,7], karasu:["hop",-16,12],
+const MOTION = { shiba:["walk",-34,12], neko:["walk",-22,15], niwatori:["walk",26,16], yamori:["climb",-14,9], kawauso:["swim",-16,18], anaguma:["walk",30,18], saru:["walk",-18,17], hato:["hover",0,11], kame:["walk",-14,26], shirohebi:["walk",-26,22],
+  suzume:["hop",-22,9], usagi:["hop",-30,10], karasu:["hop",-16,12],
   koi:["swim",-20,11], kinkoi:["swim",-22,9], kamo:["swim",-24,14], hakucho:["swim",-18,16],
   cho:["fly",0,14], tentomushi:["fly",0,12], ryu:["glide",0,34], hoo:["walk",-24,20],
   mejiro:["perch",0,5], risu:["perch",0,4], fukuro:["perch",0,6] };
@@ -1991,6 +2001,8 @@ function moving(id, markup, delay=0){
   const st=`--dx:${dx}px;--f0:${dx>0?-f0:f0};animation-duration:${dur}s;animation-delay:-${delay}s`;
   if(kind==="perch") return `<g class="mv-perch" style="animation-duration:${dur}s;animation-delay:-${delay}s">${markup}</g>`;
   if(kind==="fly") return `<g class="mv-fly" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g class="mv-flap">${markup}</g></g>`;
+  if(kind==="hover") return `<g class="mv-fly" style="animation-duration:${dur}s;animation-delay:-${delay}s">${markup}</g>`;
+  if(kind==="climb") return `<g class="mv-climb" style="--dx:${dx}px;animation-duration:${dur}s;animation-delay:-${delay}s"><g class="mv-slither" style="animation-duration:.6s">${markup}</g></g>`;
   if(kind==="glide") return `<g class="mv-glide" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g style="transform:scaleX(-1);transform-box:fill-box;transform-origin:center">${markup}</g></g>`;
   return `<g class="mv-${kind==="swim"?"swim":"walk"}" style="${st}"><g class="mv-face" style="${st}"><g class="mv-${kind==="hop"?"hop":kind==="swim"?"bob":id==="shirohebi"?"slither":"step"}">${markup}</g></g></g>`;
 }
@@ -2001,26 +2013,41 @@ const FLUENT_TINT = { mejiro:"hue-rotate(95deg) saturate(.75) brightness(1.1)", 
   hoo:"sepia(.55) saturate(2.2) hue-rotate(-12deg) brightness(1.08)", shirohebi:"grayscale(1) brightness(1.65) contrast(.9)" };
 const seasonTint = id => id==="maple" ? ({autumn:"hue-rotate(-75deg) saturate(1.3)", winter:"grayscale(.7) brightness(1.25)", spring:"brightness(1.08)", summer:""})[season()] : "";
 // legs cut out of the 3D picture so they can swing one by one: [x0,x1,top,pivotX] in the 256px image; legs in pairs a/b step in turn
+// moving parts cut out of the 3D picture (coordinates in the 256px image), keyed by picture.
+// leg: [x0,x1,top,pivotX,pair] swings from the hip, pairs a/b step in turn; part: {r:[x0,y0,x1,y1], p:[px,py], c:class, h:hole inset at the top}
+const L = (x0,x1,top,px,c) => ({r:[x0,top-2,x1,256], p:[px,top], c, h:11});
 const RIG = {
-  shiba:     {legs:[[38,98,180,70,"a"],[99,138,180,118,"b"],[141,180,192,164,"b"],[182,236,192,210,"a"]]},
-  neko:      {legs:[[76,105,190,92,"a"],[106,141,192,122,"b"],[143,178,196,165,"b"],[178,218,196,200,"a"]]},
-  anaguma:   {legs:[[46,94,212,74,"a"],[95,131,212,113,"b"],[148,184,212,167,"b"],[184,228,212,206,"a"]]},
-  kame:      {legs:[[34,108,218,74,"a"],[154,228,218,190,"b"]], slow:1},
-  hoo:       {legs:[[100,141,203,130,"a"],[141,174,203,154,"b"]]},
+  "1f415": [L(38,98,180,70,"a"),L(99,138,180,118,"b"),L(141,180,192,164,"b"),L(182,236,192,210,"a")],          // hond
+  "1f408": [L(76,105,190,92,"a"),L(106,141,192,122,"b"),L(143,178,196,165,"b"),L(178,218,196,200,"a")],         // kat
+  "1f9a1": [L(46,94,212,74,"a"),L(95,131,212,113,"b"),L(148,184,212,167,"b"),L(184,228,212,206,"a")],          // das
+  "1f422": [L(34,108,218,74,"a slow"),L(154,228,218,190,"b slow")],                                             // schildpad
+  "1f99a": [L(100,141,203,130,"a"),L(141,174,203,154,"b")],                                                   // pauw
+  "1f426": [L(48,104,198,92,"a"),L(105,158,205,127,"b")],                                                     // vogeltje
+  "1f426-200d-2b1b": [L(54,101,198,88,"a"),L(101,150,198,128,"b")],                                           // kraai
+  "1f413": [L(76,123,205,107,"a"),L(123,164,205,139,"b")],                                                    // haan
+  "1f407": [L(54,111,214,92,"f"),L(112,214,214,165,"h")],                                                     // konijn: voor- en achterpoten
+  "1f412": [L(12,74,165,60,"a small"),L(78,206,203,150,"b small")],                                          // aap: arm en achterpoot
+  "1f41f": [{r:[198,80,252,228], p:[198,152], c:"fin", h:0}],                                                // vis: staart
+  "1f54a": [{r:[96,0,250,84], p:[160,84], c:"wing", h:0}],                                                 // duif: vleugels
+  "1f9a2": [{r:[6,18,84,140], p:[62,140], c:"dip", h:0}],                                                    // zwaan: hals
+  "1f986": [{r:[6,6,126,104], p:[86,104], c:"dip", h:0}],                                                     // eend: kop
+  "1f98e": [{r:[38,82,79,126], p:[79,110], c:"a", h:0},{r:[122,82,154,122], p:[122,112], c:"b", h:0},
+            {r:[150,108,186,154], p:[154,146], c:"a", h:0},{r:[70,164,106,212], p:[106,174], c:"b", h:0}],              // gekko
+  "1f9a6": [{r:[166,36,242,120], p:[198,120], c:"sway", h:0}],                                               // otter: staart
 };
-const rigDefs = () => Object.entries(RIG).map(([id,r])=>{
-  const R=([x0,x1,t])=>`M${x0/256} ${(t+9)/256}H${x1/256}V1H${x0/256}Z`;
-  return `<clipPath id="rb-${id}" clipPathUnits="objectBoundingBox"><path clip-rule="evenodd" d="M0 0H1V1H0Z ${r.legs.map(R).join(" ")}"/></clipPath>`+
-    r.legs.map((l,i)=>`<clipPath id="rl-${id}-${i}" clipPathUnits="objectBoundingBox"><path d="M${l[0]/256} ${(l[2]-2)/256}H${l[1]/256}V1H${l[0]/256}Z"/></clipPath>`).join("");
+const rigDefs = () => Object.entries(RIG).map(([k,parts])=>{
+  const R=([x0,y0,x1,y1],h=0)=>`M${x0/256} ${(y0+h)/256}H${x1/256}V${y1/256}H${x0/256}Z`;
+  return `<clipPath id="rb-${k}" clipPathUnits="objectBoundingBox"><path clip-rule="evenodd" d="M0 0H1V1H0Z ${parts.map(q=>R(q.r,q.h)).join(" ")}"/></clipPath>`+
+    parts.map((q,i)=>`<clipPath id="rl-${k}-${i}" clipPathUnits="objectBoundingBox"><path d="${R(q.r)}"/></clipPath>`).join("");
 }).join("");
 // an image standing with its feet on (x,y); soft pastel look so it matches the drawn garden
 function fluent(id, x, y, size, {flip=false, filter=""}={}){
   const sz=size||FLUENT_SIZE[id]||24, f=`saturate(.85) ${FLUENT_TINT[id]||""} ${seasonTint(id)} ${filter}`;
   const img = (extra="") => `<image href="emoji/${FLUENT[id]}.webp" x="${(x-sz/2).toFixed(1)}" y="${(y-sz).toFixed(1)}" width="${sz}" height="${sz}" style="filter:${f}"${extra}/>`;
   const fl = flip ? ` transform="translate(${(2*x).toFixed(1)} 0) scale(-1 1)"` : "";
-  const r = RIG[id];
-  if(!r) return img(fl);
-  return `<g${fl}>${r.legs.map((l,i)=>`<g class="leg leg-${l[4]}${r.slow?" leg-slow":""}" style="transform-origin:${(l[3]/2.56).toFixed(1)}% ${(l[2]/2.56).toFixed(1)}%">${img(` clip-path="url(#rl-${id}-${i})"`)}</g>`).join("")}${img(` clip-path="url(#rb-${id})"`)}</g>`;
+  const k = FLUENT[id], parts = RIG[k];
+  if(!parts) return img(fl);
+  return `<g${fl}>${parts.map((q,i)=>`<g class="pt ${q.c.split(" ").map(c=>"pt-"+c).join(" ")}" style="transform-origin:${(q.p[0]/2.56).toFixed(1)}% ${(q.p[1]/2.56).toFixed(1)}%">${img(` clip-path="url(#rl-${k}-${i})"`)}</g>`).join("")}${img(` clip-path="url(#rb-${k})"`)}</g>`;
 }
 const fluentImg = (id, px=40, filter="") => `<img src="emoji/${FLUENT[id]}.webp" width="${px}" height="${px}" style="filter:saturate(.85) ${FLUENT_TINT[id]||""} ${seasonTint(id)} ${filter}" alt="">`;
 
@@ -2030,7 +2057,7 @@ const VISITORS = [
   {id:"suzume",  nl:"Mus",                 ja:"スズメ",      kana:"すずめ",       romaji:"suzume",       r:1, place:"ground", fact:"De mus zie je overal in Japan, ook midden in Tokio."},
   {id:"cho",     nl:"Vlinder",             ja:"蝶",          kana:"ちょう",       romaji:"chō",          r:1, place:"air", seasons:["spring","summer"], tods:["morning","day"], fact:"In Japanse kunst staan vlinders voor verandering."},
   {id:"tentomushi", nl:"Lieveheersbeestje", ja:"てんとう虫", kana:"てんとうむし", romaji:"tentōmushi",   r:1, place:"air", seasons:["spring","summer","autumn"], tods:["morning","day"], fact:"Tentōmushi betekent 'zonnegod-insect': het kruipt omhoog en vliegt naar de zon."},
-  {id:"kaeru",   nl:"Kikker",              ja:"カエル",      kana:"かえる",       romaji:"kaeru",        r:1, place:"pad", seasons:["spring","summer"], fact:"Kaeru betekent ook 'terugkeren': een geluksbrenger voor reizigers!"},
+  {id:"yamori",  nl:"Gekko",               ja:"ヤモリ",      kana:"やもり",       romaji:"yamori",       r:1, place:"fence", seasons:["spring","summer","autumn"], tods:["day","evening"], fact:"Yamori betekent 'huisbeschermer': een gekko op je muur brengt geluk."},
   {id:"hato",    nl:"Duif",                ja:"ハト",        kana:"はと",         romaji:"hato",         r:1, place:"ground", tods:["morning","day"], fact:"Bij tempels en heiligdommen lopen vaak duiven rond."},
   {id:"karasu",  nl:"Kraai",               ja:"カラス",      kana:"からす",       romaji:"karasu",       r:1, place:"fence", tods:["morning","evening"], fact:"Japanse kraaien zijn groot en slim; ze roepen 'kaa kaa'."},
   {id:"usagi",   nl:"Konijn",              ja:"ウサギ",      kana:"うさぎ",       romaji:"usagi",        r:2, place:"ground", fact:"Japanners zien geen man in de maan, maar een konijn dat mochi maakt."},
@@ -2041,6 +2068,7 @@ const VISITORS = [
   {id:"saru",    nl:"Sneeuwaap",           ja:"猿",          kana:"さる",         romaji:"saru",         r:3, place:"ground", seasons:["winter"], fact:"In Nagano nemen apen in de winter een warm bad in een onsen."},
   {id:"anaguma", nl:"Das",                 ja:"アナグマ",    kana:"あなぐま",     romaji:"anaguma",      r:3, place:"ground", seasons:["autumn","winter","spring"], tods:["evening","night"], fact:"Anaguma betekent 'holen-beer': dassen graven lange gangen onder de grond."},
   {id:"kinkoi",  nl:"Gouden karper",       ja:"金の鯉",      kana:"きんのこい",   romaji:"kin no koi",   r:3, place:"pond", fact:"Een karper die tegen de stroom op zwemt, wordt volgens de legende een draak."},
+  {id:"kawauso", nl:"Otter",               ja:"カワウソ",    kana:"かわうそ",     romaji:"kawauso",      r:3, place:"pond", fact:"In Japanse sprookjes kan de kawauso, net als de tanuki en de vos, van gedaante veranderen."},
   {id:"hoo",     nl:"Feniks (hōō)",        ja:"鳳凰",        kana:"ほうおう",     romaji:"hōō",          r:4, place:"ground", fact:"Op het tienyenmuntje staat de Feniks-hal van de Byōdō-in, met twee hōō op het dak."},
   {id:"ryu",     nl:"Draak",               ja:"龍",          kana:"りゅう",       romaji:"ryū",          r:4, place:"sky", fact:"Japanse draken wonen in water en wolken en brengen regen en geluk."},
   {id:"shirohebi", nl:"Witte slang",       ja:"白蛇",        kana:"しろへび",     romaji:"shirohebi",    r:4, place:"ground", fact:"Een witte slang geldt in Japan als boodschapper van de godin Benzaiten en brengt geluk."},
