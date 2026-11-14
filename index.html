@@ -1923,8 +1923,8 @@ function g3dDesc(g, tree){   // what the 3D garden should show, from the same da
   const used={};
   for(const v of visibleVisitors()){ const spots=VISIT_SPOT[v.place]; const k=(used[v.place]=(used[v.place]||0)+1)-1; let [x,y]=spots[k%spots.length];
     if(v.place==="tree" && out.perch){ x=out.perch.x+16; y=out.perch.y+2; }
-    const pos = v.place==="sky" ? {x:-2.5, z:-5, y:5.6} : v.id==="yamori" ? {x:X(232)-.05, z:Z(236)+.78, y:.03} : at(x,y,v.place);
-    figures.push({id:v.id, code:FLUENT[v.id], ...pos, size:(FLUENT_SIZE[v.id]||20)*(v.place==="sky"?1.4:v.id==="yamori"?1.4:1), motion:v.id==="yamori"?["crawl",0,1]:MOTION[v.id], faceRight:FACE_RIGHT[v.id], filter:filt(v.id), tap:v.id, phase:hashStr(v.id)%9}); }
+    const pos = v.place==="sky" ? {x:-2.5, z:-5, y:5.6} : at(x,y,v.place);
+    figures.push({id:v.id, code:FLUENT[v.id], ...pos, size:(FLUENT_SIZE[v.id]||20)*(v.place==="sky"?1.4:1), motion:MOTION[v.id], faceRight:FACE_RIGHT[v.id], filter:filt(v.id), tap:v.id, phase:hashStr(v.id)%9}); }
   const have=earnedIds(), decos=[];
   for(const d of DECOS){ if(!have.has(d.id) || d.id==="fuji") continue;
     const [x,y]=DECO_ANCHOR[d.id] ? decoPos(d.id) : [150,206];
@@ -2176,10 +2176,10 @@ function placedDeco(id, tod, highlight, edit){
 /* ---------- Microsoft Fluent Emoji (MIT) for animals and decorations; the tree and the companions stay hand-drawn ---------- */
 const FLUENT = { suzume:"1f426", cho:"1f98b", tentomushi:"1f41e", hato:"1f54a", karasu:"1f426-200d-2b1b", usagi:"1f407", risu:"1f43f", fukuro:"1f989",
   shiba:"1f415", kamo:"1f986", saru:"1f412", anaguma:"1f9a1", kinkoi:"1f41f", ryu:"1f409", hoo:"1f99a", shirohebi:"1f40d",
-  koi:"1f41f", mejiro:"1f426", neko:"1f408", kame:"1f422", hakucho:"1f9a2", niwatori:"1f413", yamori:"1f98e", kawauso:"1f9a6",
+  koi:"1f41f", mejiro:"1f426", neko:"1f408", kame:"1f422", hakucho:"1f9a2", niwatori:"1f413", kawauso:"1f9a6",
   toro:"1f3ef", stones:"1faa8", torii:"26e9", bridge:"1fab7", maple:"1f333", pine:"1f332", lamp:"1f3ee", bench:"1fab4", bamboo:"1f38b", deer:"1f98c", fuji:"1f5fb" };
 const FLUENT_SIZE = { suzume:17, cho:15, tentomushi:12, hato:20, karasu:20, usagi:22, risu:19, fukuro:22, shiba:26, kamo:20, saru:24, anaguma:26, kinkoi:20, ryu:60, hoo:34, shirohebi:24,
-  koi:18, mejiro:18, neko:26, kame:22, hakucho:24, niwatori:25, yamori:16, kawauso:22,
+  koi:18, mejiro:18, neko:26, kame:22, hakucho:24, niwatori:25, kawauso:22,
   toro:30, stones:22, torii:44, bridge:16, maple:38, pine:34, bench:24, bamboo:40, deer:32 };
 // small picture of a decoration or garden animal for the collection cards (Fluent where it exists, otherwise the garden drawing)
 function decoIcon(id){
@@ -2193,7 +2193,7 @@ function animalIcon(a){
   return `<svg viewBox="${a.id==="koi"?"-24 -12 50 22":"-24 -50 48 54"}" width="44" height="40">${artDefs()}${animalSVG(a.id,0,0,1)}</svg>`;
 }
 // how each creature moves: [kind, distance, seconds]; sprites look left, except the ones in FACE_RIGHT
-const MOTION = { shiba:["walk",-34,12], neko:["walk",-22,15], niwatori:["walk",26,16], yamori:["climb",-14,9], kawauso:["swim",-16,18], anaguma:["walk",30,18], saru:["walk",-18,17], hato:["hover",0,11], kame:["walk",-14,26], shirohebi:["walk",-26,22],
+const MOTION = { shiba:["walk",-34,12], neko:["walk",-22,15], niwatori:["walk",26,16], kawauso:["swim",-16,18], anaguma:["walk",30,18], saru:["walk",-18,17], hato:["hover",0,11], kame:["walk",-14,26], shirohebi:["walk",-26,22],
   suzume:["hop",-22,9], usagi:["hop",-30,10], karasu:["hop",-16,12],
   koi:["swim",-20,11], kinkoi:["swim",-22,9], kamo:["swim",-24,14], hakucho:["swim",-18,16],
   cho:["fly",0,14], tentomushi:["fly",0,12], ryu:["glide",0,34], hoo:["walk",-24,20],
@@ -2235,8 +2235,6 @@ const RIG = {
   "1f54a": [{r:[96,0,250,84], p:[160,84], c:"wing", h:0}],                                                 // duif: vleugels
   "1f9a2": [{r:[6,18,84,140], p:[62,140], c:"dip", h:0}],                                                    // zwaan: hals
   "1f986": [{r:[6,6,126,104], p:[86,104], c:"dip", h:0}],                                                     // eend: kop
-  "1f98e": [{r:[38,82,79,126], p:[79,110], c:"a", h:0},{r:[122,82,154,122], p:[122,112], c:"b", h:0},
-            {r:[150,108,186,154], p:[154,146], c:"a", h:0},{r:[70,164,106,212], p:[106,174], c:"b", h:0}],              // gekko
   "1f9a6": [{r:[166,36,242,120], p:[198,120], c:"sway", h:0}],                                               // otter: staart
 };
 const rigDefs = () => Object.entries(RIG).map(([k,parts])=>{
@@ -2261,7 +2259,6 @@ const VISITORS = [
   {id:"suzume",  nl:"Mus",                 ja:"スズメ",      kana:"すずめ",       romaji:"suzume",       r:1, place:"ground", fact:"De mus zie je overal in Japan, ook midden in Tokio."},
   {id:"cho",     nl:"Vlinder",             ja:"蝶",          kana:"ちょう",       romaji:"chō",          r:1, place:"air", seasons:["spring","summer"], tods:["morning","day"], fact:"In Japanse kunst staan vlinders voor verandering."},
   {id:"tentomushi", nl:"Lieveheersbeestje", ja:"てんとう虫", kana:"てんとうむし", romaji:"tentōmushi",   r:1, place:"air", seasons:["spring","summer","autumn"], tods:["morning","day"], fact:"Tentōmushi betekent 'zonnegod-insect': het kruipt omhoog en vliegt naar de zon."},
-  {id:"yamori",  nl:"Gekko",               ja:"ヤモリ",      kana:"やもり",       romaji:"yamori",       r:1, place:"fence", seasons:["spring","summer","autumn"], tods:["day","evening"], fact:"Yamori betekent 'huisbeschermer': een gekko op je muur brengt geluk."},
   {id:"hato",    nl:"Duif",                ja:"ハト",        kana:"はと",         romaji:"hato",         r:1, place:"ground", tods:["morning","day"], fact:"Bij tempels en heiligdommen lopen vaak duiven rond."},
   {id:"karasu",  nl:"Kraai",               ja:"カラス",      kana:"からす",       romaji:"karasu",       r:1, place:"fence", tods:["morning","evening"], fact:"Japanse kraaien zijn groot en slim; ze roepen 'kaa kaa'."},
   {id:"usagi",   nl:"Konijn",              ja:"ウサギ",      kana:"うさぎ",       romaji:"usagi",        r:2, place:"ground", fact:"Japanners zien geen man in de maan, maar een konijn dat mochi maakt."},
