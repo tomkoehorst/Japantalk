@@ -104,6 +104,7 @@
 @keyframes ripple{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 .snowflake{animation:snow linear infinite}@keyframes snow{to{transform:translate(-20px,275px)}}
 .drift{animation:drift 40s ease-in-out infinite alternate}@keyframes drift{to{transform:translateX(40px)}}
+.mote{animation:mote linear infinite}@keyframes mote{0%{transform:translate(0,0);opacity:0}15%{opacity:.8}50%{transform:translate(8px,-14px)}85%{opacity:.7}100%{transform:translate(-4px,-30px);opacity:0}}
 .twinkle{animation:tw 3s ease-in-out infinite}@keyframes tw{50%{opacity:.2}}
 .firefly{animation:ff 3s ease-in-out infinite}@keyframes ff{0%,100%{opacity:.1;transform:translate(0,0)}50%{opacity:1;transform:translate(6px,-6px)}}
 .flutter{animation:fl 16s ease-in-out infinite}@keyframes fl{25%{transform:translate(-60px,-22px)}50%{transform:translate(-120px,4px)}75%{transform:translate(-50px,16px)}}
@@ -1897,6 +1898,176 @@ function pondSVG(){
     <g transform="translate(88 235.5)"><path d="M0 0 c-2 -1 -2.4 -3.4 -.4 -4.2 l.4 .6 .4 -.6 c2 .8 1.6 3.2 -.4 4.2z" fill="url(#petalG)"/>
       <path d="M0 0 c-3 -.2 -4.2 -2 -3.2 -3.2 c1.4 .4 2.6 1.6 3.2 3.2z" fill="#F9CFD7"/><path d="M0 0 c3 -.2 4.2 -2 3.2 -3.2 c-1.4 .4 -2.6 1.6 -3.2 3.2z" fill="#F9CFD7"/></g>`;
 }
+/* ---------- diorama look (HD-2D-like): a painted 3D world, baked once to a picture ----------
+   The surroundings are drawn as SVG with lighting filters, then rendered to a bitmap, so that
+   only the animals move per frame. Tree, companions and animals stay live on top. */
+const DIO_LIGHT = {   // [sky top, horizon, light colour, gravel, shade, mountain, haze]
+  morning: ["#BCD3EC","#FBDCCB","#FFE2C2","#E2D3C2","#5E5A82","#B9B3DD","#F6E2DA"],
+  day:     ["#A9CAEA","#F2ECDD","#FFEFC8","#E0D4C0","#5B5A80","#AFB6DE","#EEF0F0"],
+  evening: ["#8088C4","#F6B88E","#FFBE7E","#DDC0A8","#56466E","#A08CC4","#F3C6AE"],
+  night:   ["#1F2448","#4A4C7C","#C6CCFF","#7B7A9A","#1C1B33","#3E4272","#4B4E7E"],
+};
+const dioOn = () => (S.settings.gstyle||"diorama")==="diorama";
+const DIO_CACHE = {};
+function dioKey(tod){ const e=earnedIds(); return [tod, season(), e.has("fuji")?1:0, e.has("lamps")?1:0].join("|"); }
+function dioRng(seed){ let s=seed; return ()=>{ s=(s*16807)%2147483647; return (s-1)/2147483646; }; }
+function dioSun(tod){ return tod==="morning"?[52,70]:tod==="evening"?[252,78]:tod==="night"?[244,48]:[236,40]; }
+
+function dioBackSVG(tod){
+  const [skyT,skyH,light,grav,shade,mount,haze]=DIO_LIGHT[tod], sea=season(), night=tod==="night", e=earnedIds();
+  const [L0,L1]=LEAF[sea], [sx,sy]=dioSun(tod), r=dioRng(11);
+  const leafC = sea==="winter" ? ["#C9D2CC","#AEB9B2"] : [L0,L1];
+  const dark = night ? .55 : 1;
+  let s=`<defs>
+    <linearGradient id="dSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${skyT}"/><stop offset=".75" stop-color="${skyH}"/></linearGradient>
+    <radialGradient id="dSun" cx="${sx/300}" cy="${sy/260}" r=".6"><stop offset="0" stop-color="${light}" stop-opacity="${night?.35:.95}"/><stop offset=".25" stop-color="${light}" stop-opacity="${night?.12:.35}"/><stop offset="1" stop-color="${light}" stop-opacity="0"/></radialGradient>
+    <linearGradient id="dGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mixHex(grav,haze,.35)}"/><stop offset=".4" stop-color="${grav}"/><stop offset="1" stop-color="${mixHex(grav,shade,.18)}"/></linearGradient>
+    <linearGradient id="dWater" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${night?"#3B4A78":"#A9CBE6"}"/><stop offset=".55" stop-color="${night?"#26335E":"#6F9FC6"}"/><stop offset="1" stop-color="${night?"#1D2A50":"#4F82AE"}"/></linearGradient>
+    <radialGradient id="dStone" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="${mixHex("#F4F0EA",shade,night?.55:0)}"/><stop offset=".55" stop-color="${mixHex("#C9C1B8",shade,night?.5:0)}"/><stop offset="1" stop-color="${mixHex("#8C8379",shade,night?.5:.1)}"/></radialGradient>
+    <radialGradient id="dMoss" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="${mixHex(sea==="winter"?"#E6ECEA":"#BFE0B6",shade,night?.55:0)}"/><stop offset="1" stop-color="${mixHex(sea==="winter"?"#C2CCCB":"#7DB08A",shade,night?.55:.05)}"/></radialGradient>
+    <radialGradient id="dAO"><stop offset="0" stop-color="${shade}" stop-opacity=".45"/><stop offset="1" stop-color="${shade}" stop-opacity="0"/></radialGradient>
+    <radialGradient id="dPool"><stop offset="0" stop-color="${light}" stop-opacity="${night?.25:.55}"/><stop offset="1" stop-color="${light}" stop-opacity="0"/></radialGradient>
+    <filter id="dB1" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
+    <filter id="dB05" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation=".55"/></filter>
+    <filter id="dB12" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="1.2"/></filter><filter id="dB08" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation=".8"/></filter>
+    <filter id="dB3" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+    <filter id="dGrain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".55 1.3" numOctaves="2" seed="4" result="n"/>
+      <feDiffuseLighting in="n" surfaceScale=".9" lighting-color="#ffffff" result="l"><feDistantLight azimuth="${sx<150?215:325}" elevation="58"/></feDiffuseLighting>
+      <feComposite in="l" in2="SourceGraphic" operator="arithmetic" k1=".5" k2="0" k3=".62" k4="0" result="c"/><feGaussianBlur in="c" stdDeviation=".18"/></filter>
+    <filter id="dLeafy" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".22" numOctaves="2" seed="8" result="n"/>
+      <feDiffuseLighting in="n" surfaceScale="1.6" lighting-color="#ffffff" result="l"><feDistantLight azimuth="${sx<150?215:325}" elevation="45"/></feDiffuseLighting>
+      <feComposite in="l" in2="SourceGraphic" operator="arithmetic" k1=".5" k2="0" k3=".62" k4="0"/></filter>
+    <filter id="dMossTex" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".8 1.6" numOctaves="2" seed="2" result="n"/>
+      <feDiffuseLighting in="n" surfaceScale=".8" lighting-color="#ffffff" result="l"><feDistantLight azimuth="235" elevation="55"/></feDiffuseLighting>
+      <feComposite in="l" in2="SourceGraphic" operator="arithmetic" k1=".4" k2="0" k3=".7" k4="0"/></filter>
+  </defs>`;
+  // sky, sun glow and soft clouds
+  s+=`<rect width="300" height="260" fill="url(#dSky)"/><rect width="300" height="260" fill="url(#dSun)"/>`;
+  if(night){ const q=dioRng(42); for(let i=0;i<40;i++) s+=`<circle cx="${(q()*300).toFixed(1)}" cy="${(q()*130).toFixed(1)}" r="${(.35+q()*.8).toFixed(2)}" fill="#fff" opacity="${(.4+q()*.6).toFixed(2)}"/>`;
+    s+=`<mask id="dMoon"><rect width="300" height="260" fill="#fff"/><circle cx="${sx+6}" cy="${sy-4}" r="11.5" fill="#000"/></mask><circle cx="${sx}" cy="${sy}" r="22" fill="#F6F0D8" opacity=".18" filter="url(#dB3)"/><circle cx="${sx}" cy="${sy}" r="13" fill="#F6F0D8" mask="url(#dMoon)"/>`; }
+  else s+=`<circle cx="${sx}" cy="${sy}" r="14" fill="${mixHex(light,"#ffffff",.5)}" filter="url(#dB1)"/>`;
+  s+=`<g filter="url(#dB3)" opacity="${night?.25:.85}" fill="${night?"#8C90C0":"#ffffff"}">
+      <ellipse cx="66" cy="50" rx="30" ry="8"/><ellipse cx="84" cy="44" rx="16" ry="8"/><ellipse cx="196" cy="74" rx="26" ry="6"/><ellipse cx="214" cy="68" rx="12" ry="6"/><ellipse cx="128" cy="98" rx="36" ry="5"/></g>`;
+  // far mountains: hazy and out of focus
+  s+=`<g filter="url(#dB1)">
+      <path d="M0 170 Q40 140 80 160 Q120 118 165 150 L205 98 L248 152 Q275 140 300 152 V200 H0z" fill="${mixHex(mount,haze,.35)}"/>
+      ${e.has("fuji")?`<path d="M205 98 L192 114 L199 112 L205 117 L211 112 L218 114z" fill="#fff" opacity=".95"/>`:""}
+      <path d="M0 182 Q50 160 110 176 Q170 150 230 172 Q270 162 300 170 V205 H0z" fill="${mixHex(mount,shade,.12)}" opacity=".85"/>
+      <rect y="150" width="300" height="50" fill="${haze}" opacity=".35"/></g>`;
+  // forest behind the fence: lit canopies, slightly out of focus
+  let canopy=""; for(let i=0;i<26;i++){ const x=-6+i*12.5+r()*6, y=170+r()*12, rr=10+r()*7, c=r()<.5?leafC[0]:leafC[1];
+    canopy+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(1)}" fill="${mixHex(c,shade,night?.6:.15)}"/>`; }
+  s+=`<g filter="url(#dB12)"><g filter="url(#dLeafy)">${canopy}<rect y="184" width="300" height="24" fill="${mixHex(leafC[1],shade,night?.65:.3)}"/></g>
+      <rect y="160" width="300" height="48" fill="${haze}" opacity="${night?.1:.18}"/></g>`;
+  // bamboo fence with round shading and a cast shadow
+  let fence=`<rect x="0" y="206" width="300" height="5" fill="${shade}" opacity=".18" filter="url(#dB1)"/>`;
+  fence+=`<defs><linearGradient id="dPole" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${mixHex("#C7B48A",shade,night?.55:.1)}"/><stop offset=".4" stop-color="${mixHex("#F1E4C2",shade,night?.55:0)}"/><stop offset="1" stop-color="${mixHex("#B09B70",shade,night?.55:.2)}"/></linearGradient></defs>`;
+  fence+=`<rect x="0" y="190" width="300" height="3" fill="url(#dPole)"/><rect x="0" y="199" width="300" height="3" fill="url(#dPole)"/>`;
+  for(let x=3;x<300;x+=8.5) fence+=`<rect x="${x.toFixed(1)}" y="${186+((x*7)%3)}" width="5" height="${22-((x*7)%3)}" rx="2.2" fill="url(#dPole)"/><rect x="${x.toFixed(1)}" y="196" width="5" height=".8" fill="${shade}" opacity=".25"/>`;
+  if(sea==="winter") fence+=`<path d="M0 187 Q75 183 150 187 T300 186 V190 H0z" fill="#fff"/>`;
+  s+=`<g filter="url(#dB08)">${fence}</g>`;
+  // ground: textured gravel in perspective, raked grooves that widen towards you
+  s+=`<rect x="0" y="206" width="300" height="54" fill="url(#dGround)" filter="url(#dGrain)"/>`;
+  let rake=""; for(let i=0;i<13;i++){ const y=208+Math.pow(i,1.32)*2.3; if(y>262) break; const a=.6+(y-206)/54*2.2, w=.5+(y-206)/54*.9;
+    const d=`M-10 ${y.toFixed(1)} q20 ${-a} 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0`;
+    rake+=`<path d="${d}" transform="translate(0 ${(w*.8).toFixed(2)})" stroke="${shade}" stroke-opacity=".16" stroke-width="${(w*1.2).toFixed(2)}" fill="none"/><path d="${d}" stroke="#fff" stroke-opacity="${night?.08:.32}" stroke-width="${(w*.7).toFixed(2)}" fill="none"/>`; }
+  s+=rake+`<defs><linearGradient id="dBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${shade}" stop-opacity="${night?.35:.32}"/><stop offset="1" stop-color="${shade}" stop-opacity="0"/></linearGradient></defs><rect x="0" y="206" width="300" height="16" fill="url(#dBand)"/>`;
+  // dappled light and shade from trees outside the picture
+  const q=dioRng(5); let dap=""; for(let i=0;i<9;i++){ const x=q()*300, y=212+q()*44; if(Math.abs(x-150)<64 && y<240) continue;
+    dap+=`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(10+q()*18).toFixed(1)}" ry="${(2.5+q()*3).toFixed(1)}" fill="${q()<.55?shade:light}" opacity="${night?.12:.2}"/>`; }
+  s+=`<g filter="url(#dB3)">${dap}</g>`;
+  s+=`<ellipse cx="${sx<150?95:205}" cy="232" rx="120" ry="26" fill="url(#dPool)"/>`;
+  s+=`<ellipse cx="${sx<150?172:128}" cy="230" rx="58" ry="9" fill="${shade}" opacity="${night?.18:.22}" filter="url(#dB3)"/>`;
+  // mossy island around the tree, raked rings and stones with ambient occlusion
+  s+=`<ellipse cx="150" cy="227" rx="66" ry="16" fill="none" stroke="${shade}" stroke-opacity=".18" stroke-width="1.4"/><ellipse cx="150" cy="226" rx="66" ry="16" fill="none" stroke="#fff" stroke-opacity="${night?.12:.5}" stroke-width=".9"/>
+    <ellipse cx="150" cy="227" rx="57" ry="13" fill="none" stroke="${shade}" stroke-opacity=".18" stroke-width="1.3"/><ellipse cx="150" cy="226" rx="57" ry="13" fill="none" stroke="#fff" stroke-opacity="${night?.12:.5}" stroke-width=".9"/>
+    <ellipse cx="151" cy="229" rx="50" ry="11.5" fill="url(#dAO)"/>
+    <g filter="url(#dMossTex)"><ellipse cx="150" cy="226" rx="47" ry="10.5" fill="url(#dMoss)"/></g>
+    <ellipse cx="140" cy="223" rx="22" ry="3.5" fill="#fff" opacity="${night?.05:.22}" filter="url(#dB1)"/>`;
+  const stone=(x,y,rx,ry)=>`<ellipse cx="${x+1.5}" cy="${y+ry*.7}" rx="${rx*1.35}" ry="${ry*.75}" fill="url(#dAO)"/><ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="url(#dStone)"/><ellipse cx="${x-rx*.3}" cy="${y-ry*.45}" rx="${rx*.35}" ry="${ry*.18}" fill="#fff" opacity="${night?.15:.6}" filter="url(#dB05)"/>`;
+  s+=`<ellipse cx="232" cy="239" rx="24" ry="8.5" fill="none" stroke="${shade}" stroke-opacity=".18" stroke-width="1.3"/><ellipse cx="232" cy="238" rx="24" ry="8.5" fill="none" stroke="#fff" stroke-opacity="${night?.12:.5}" stroke-width=".9"/>`
+    +stone(232,235,13,7)+`<path d="M225 231 q5 -3 10 -1.6 q-3 2.6 -10 1.6z" fill="${mixHex("#9CC4A0",shade,night?.5:0)}"/>`+stone(247,239.5,7,4);
+  // pond: deep water, sky reflection, stones on the rim
+  s+=`<ellipse cx="62" cy="244" rx="50" ry="14" fill="url(#dAO)"/>
+    <ellipse cx="62" cy="241" rx="45" ry="12.5" fill="${mixHex("#B8AFA4",shade,night?.5:0)}"/>
+    <ellipse cx="62" cy="240.5" rx="41" ry="10.5" fill="url(#dWater)"/>
+    <ellipse cx="62" cy="236.5" rx="38" ry="5" fill="${skyH}" opacity="${night?.15:.35}" filter="url(#dB1)"/>
+    <path d="M24 239 q16 -6 36 -4" stroke="#fff" stroke-width="1.1" fill="none" opacity="${night?.25:.8}" stroke-linecap="round" filter="url(#dB05)"/>
+    <path d="M70 237 q8 -1.5 16 0" stroke="#fff" stroke-width=".8" fill="none" opacity="${night?.2:.6}" stroke-linecap="round"/>`;
+  for(let i=0;i<15;i++){ const a=Math.PI*(.02+i*.068), x=62+Math.cos(a)*44, y=241+Math.sin(a)*12.5; s+=stone(+x.toFixed(1), +y.toFixed(1), 4+((i*7)%3), 2.7); }
+  s+=`<path d="M86 238.5 a7 2.8 0 1 1 1.2 -2.6 l-3.8 1.6z" fill="#9CCB8E" stroke="#6E9A6A" stroke-width=".5"/><path d="M40 245 a5 2 0 1 1 1 -1.9 l-3 1.1z" fill="#B5DCA6" stroke="#6E9A6A" stroke-width=".5"/>`;
+  // grass tufts with shading
+  if(sea!=="winter") for(const [x,y] of [[112,222],[188,221],[100,251],[204,255],[20,214],[280,212],[176,233]]){
+    const g=sea==="autumn"?"#C9B48A":mixHex(leafC[1],shade,night?.5:.1);
+    s+=`<path d="M${x} ${y} q-1.5 -4 -4.5 -7 M${x} ${y} q-.5 -5 1 -9.5 M${x} ${y} q1.5 -3.5 5 -6" stroke="${g}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`; }
+  if(sea==="winter") s+=`<rect x="0" y="206" width="300" height="54" fill="#FBFBFD" opacity="${night?.25:.55}" filter="url(#dGrain)"/>`;
+  // lantern light pools at night
+  if(night && e.has("lamps")) s+=[60,150,240].map(x=>`<ellipse cx="${x}" cy="214" rx="34" ry="7" fill="#FFD9A0" opacity=".25" filter="url(#dB3)"/>`).join("");
+  return s;
+}
+
+function dioFrontSVG(tod){   // out-of-focus foreground, light shafts and vignette (transparent picture)
+  const [skyT,skyH,light,grav,shade]=DIO_LIGHT[tod], sea=season(), night=tod==="night", [sx,sy]=dioSun(tod);
+  const [L0,L1]=LEAF[sea], g0=mixHex(sea==="winter"?"#9FAE9C":L1,shade,night?.72:.5), g1=mixHex(sea==="winter"?"#C9D3CA":L0,shade,night?.62:.32);
+  let s=`<defs><filter id="fB" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2"/></filter>
+    <filter id="fB6" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+    <radialGradient id="fVig" cx=".5" cy=".55" r=".75"><stop offset=".5" stop-color="${shade}" stop-opacity="0"/><stop offset="1" stop-color="${shade}" stop-opacity="${night?.6:.42}"/></radialGradient>
+    <linearGradient id="fRay" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${light}" stop-opacity="${night?.1:.4}"/><stop offset="1" stop-color="${light}" stop-opacity="0"/></linearGradient></defs>`;
+  // light shafts from the sun
+  if(!night){ let rays=""; for(const [a,w] of [[-8,10],[4,16],[15,8],[24,14],[34,7]]){ const dir=sx<150?1:-1, ang=(dir>0?20:-20)+a*dir*.8, rad=ang*Math.PI/180;
+      const L=320, x2=sx+Math.sin(rad)*L, y2=sy+Math.cos(rad)*L;
+      rays+=`<path d="M${sx} ${sy} L${(x2-w).toFixed(1)} ${y2.toFixed(1)} L${(x2+w).toFixed(1)} ${y2.toFixed(1)}Z" fill="url(#fRay)"/>`; }
+    s+=`<g filter="url(#fB6)" opacity=".75">${rays}</g>`; }
+  // blurred grass and leaves close to the camera
+  const r=dioRng(23); let fg="";
+  for(let i=0;i<46;i++){ const left=i%2===0, x=left? r()*80-14 : 232+r()*80, h=18+r()*34, bend=(left?1:-1)*(4+r()*8);
+    fg+=`<path d="M${x.toFixed(1)} 266 q${(bend*.3).toFixed(1)} ${(-h*.6).toFixed(1)} ${bend.toFixed(1)} ${(-h).toFixed(1)} q${(-bend*.2).toFixed(1)} ${(h*.55).toFixed(1)} ${(-bend*.5+3).toFixed(1)} ${h.toFixed(1)}z" fill="${r()<.5?g0:g1}"/>`; }
+  for(let i=0;i<10;i++){ const x=80+r()*140; fg+=`<ellipse cx="${x.toFixed(1)}" cy="${(262+r()*4).toFixed(1)}" rx="${(10+r()*14).toFixed(1)}" ry="${(3+r()*3).toFixed(1)}" fill="${g0}"/>`; }
+  if(sea==="spring"||sea==="summer") for(let i=0;i<6;i++){ const x=r()<.5? r()*60 : 240+r()*60; fg+=`<circle cx="${x.toFixed(1)}" cy="${(240+r()*14).toFixed(1)}" r="${(2+r()*2).toFixed(1)}" fill="${r()<.5?"#F7C1CC":"#FFF0B8"}" opacity=".9"/>`; }
+  if(sea==="autumn") for(let i=0;i<7;i++){ const x=r()<.5? r()*60 : 240+r()*60; fg+=`<ellipse cx="${x.toFixed(1)}" cy="${(242+r()*14).toFixed(1)}" rx="3.5" ry="2" fill="${r()<.5?"#E9A08A":"#F0C070"}"/>`; }
+  s+=`<g filter="url(#fB)">${fg}</g>`;
+  // overhanging leaves in the top corners, far out of focus
+  let top=""; for(let i=0;i<9;i++){ const left=i<5, x=left? -10+r()*50 : 255+r()*55, y=-8+r()*24; top+=`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(10+r()*10).toFixed(1)}" ry="${(5+r()*5).toFixed(1)}" fill="${r()<.5?g0:g1}" transform="rotate(${(r()*60-30).toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`; }
+  s+=`<g filter="url(#fB6)" opacity="${night?.8:.7}">${top}</g>`;
+  // colour of the light over everything, and a soft vignette
+  s+=`<rect width="300" height="260" fill="${tod==="evening"?"#FFB07A":tod==="morning"?"#FFD6C0":night?"#3A3A7A":"#FFF1D0"}" opacity="${tod==="day"?.06:.12}"/>`;
+  s+=`<rect width="300" height="260" fill="url(#fVig)"/>`;
+  return s;
+}
+
+function dioBake(tod){
+  const key=dioKey(tod); if(DIO_CACHE[key]) return DIO_CACHE[key].b ? DIO_CACHE[key] : null;
+  DIO_CACHE[key]={};
+  const make=(inner,w,h,type)=>new Promise(res=>{
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 300 260">${inner}</svg>`;
+    const img=new Image();
+    img.onload=()=>{ try{ const c=document.createElement("canvas"); c.width=w; c.height=h; c.getContext("2d").drawImage(img,0,0,w,h);
+      c.toBlob(b=>res(b?URL.createObjectURL(b):null), type, .9); }catch(e){ res(null); } };
+    img.onerror=()=>res(null);
+    img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  });
+  Promise.all([make(dioBackSVG(tod),1200,1040,"image/jpeg"), make(dioFrontSVG(tod),900,780,"image/png")]).then(([b,f])=>{
+    if(!b||!f){ DIO_CACHE[key]={failed:true}; return; }
+    DIO_CACHE[key]={b,f};
+    if(view==="home" && !document.querySelector(".scene-svg.editing")) render();
+  });
+  return null;
+}
+function dioGrade(tod){   // the light of the moment also falls on the tree and the animals
+  const g={morning:["#FFD2BC",.1], day:null, evening:["#E8906A",.16], night:["#1E2150",.42]}[tod];
+  if(!g) return "";
+  let s=`<rect width="300" height="260" fill="${g[0]}" opacity="${g[1]}" style="pointer-events:none"/>`;
+  if(tod==="night" && earnedIds().has("lamps"))
+    s+=[[30,49],[79,61],[129,71],[229,62],[274,47]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="12" fill="url(#glow)" opacity=".7" style="pointer-events:none"/>`).join("");
+  return s;
+}
+function dioMotes(tod){   // floating dust and pollen in the light (live, cheap)
+  const r=dioRng(77), night=tod==="night"; let s="";
+  for(let i=0;i<12;i++){ const x=20+r()*260, y=60+r()*170;
+    s+=`<circle class="mote" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(.5+r()*.8).toFixed(2)}" fill="${night?"#E9ECFF":"#FFF6DC"}" opacity="${(.45+r()*.4).toFixed(2)}" style="animation-duration:${(9+r()*9).toFixed(1)}s;animation-delay:-${(r()*12).toFixed(1)}s"/>`; }
+  return s+`<ellipse class="ripple" cx="48" cy="242" rx="5" ry="1.4" fill="none" stroke="#fff" stroke-width=".7" opacity=".6"/><ellipse class="ripple" cx="78" cy="244" rx="5" ry="1.4" fill="none" stroke="#fff" stroke-width=".7" style="animation-delay:-1.6s"/>`;
+}
+
 function decoSVG(id, tod){
   const ink=INK, glow = tod==="evening"||tod==="night";
   if(id!=="lamps" && FLUENT[id] && DECO_ANCHOR[id]) return fluent(id, DECO_ANCHOR[id][0], DECO_ANCHOR[id][1]+(id==="bridge"?3:0));
@@ -2181,6 +2352,22 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
     const [x,y,flip]=animalSpot(a.id, out.perch);
     animals += `<g class="${highlight===a.id?"hatch":""}">${moving(a.id, animalSVG(a.id,x,y,.5+.5*ag,flip), hashStr(a.id)%7)}</g>`;
   }
+  const dio = sky && dioOn() ? dioBake(tod) : null;
+  if(dio) return `<svg viewBox="0 0 300 260" class="scene-svg dio ${edit?"editing":""}" ${edit?'id="gscene"':""} aria-label="Je sakura-boom in de zen-tuin">
+    ${skySVG(tod).match(/<defs>[\s\S]*?<\/defs>/)[0]}${artDefs()}
+    <image href="${dio.b}" width="300" height="260" preserveAspectRatio="none"/>
+    ${D("lamps")}${dioMotes(tod)}
+    ${back}
+    <g id="${evolve?"treeLayer":""}">${treeMarkup}</g>
+    ${front}
+    ${animals}
+    ${visitorsLayer(out.perch)}
+    ${petals && g>=.8 ? petalsSVG(Math.round((g-.75)*30), tree.seed) : ""}
+    ${dioGrade(tod)}
+    ${lifeSVG(tod) + seasonParticles()}
+    <image href="${dio.f}" width="300" height="260" preserveAspectRatio="none" style="pointer-events:none"/>
+    ${evolve?`<g id="sparkLayer"></g><rect id="flash" width="300" height="260" fill="#fff" opacity="0"/>`:""}
+  </svg>`;
   return `<svg viewBox="0 0 300 260" class="scene-svg ${edit?"editing":""}" ${edit?'id="gscene"':""} aria-label="Je sakura-boom in de zen-tuin">
     ${sky ? skySVG(tod) + D("lamps") + fenceSVG() : `<defs><radialGradient id="glow"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></radialGradient></defs>`}
     ${artDefs()}${groundSVG()}${pondSVG()}
@@ -3179,6 +3366,7 @@ function renderSettings(){
     <div class="setting" style="border:2px dashed var(--peach)"><h3>🧪 Testen (tijdelijk)</h3><p>Laat je boom vooruit groeien om de diertjes en de tuin te bekijken. Boom ${S.tree?S.tree.n:1} staat op ${Math.round(treeGrowth()*100)}%.</p>
       <div class="seg"><button onclick="testGrow(.1)">+10%</button><button onclick="testGrow(.3)">+30%</button><button onclick="testGrow(1)">Volle bloei</button><button onclick="testReset()">Terug naar zaadje</button></div>
       <button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem;margin-top:10px" onclick="showAllAnimals()">🐾 Bekijk alle dieren</button></div>
+    <div class="setting"><h3>Tuinstijl</h3>${seg("gstyle",[["diorama","🏞️ Diorama (nieuw)"],["pastel","🎨 Pastel"]],s.gstyle||"diorama")}</div>
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
