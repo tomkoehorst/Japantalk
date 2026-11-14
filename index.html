@@ -72,6 +72,8 @@
 #flash.flashing{animation:flash .55s ease-out}@keyframes flash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
 .spark{animation:spark 1.4s ease-out both;transform-box:fill-box;transform-origin:center}
 @keyframes spark{0%{opacity:0;transform:scale(.2) rotate(0)}30%{opacity:1;transform:scale(1.3) rotate(45deg)}100%{opacity:0;transform:scale(.6) rotate(90deg)}}
+.ripple{animation:ripple 3.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes ripple{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 .snowflake{animation:snow linear infinite}@keyframes snow{to{transform:translate(-20px,275px)}}
 .drift{animation:drift 40s ease-in-out infinite alternate}@keyframes drift{to{transform:translateX(40px)}}
 .twinkle{animation:tw 3s ease-in-out infinite}@keyframes tw{50%{opacity:.2}}
@@ -1621,7 +1623,7 @@ function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
       <ellipse cx="${156+s*3}" cy="${224-h+3}" rx="${3+s*4}" ry="${2+s*2}" fill="${L0}" transform="rotate(25 ${156+s*3} ${224-h+3})"/>`:""}
       <ellipse cx="150" cy="225" rx="10" ry="3" fill="#9C7B6B" opacity=".5"/>`;
   }
-  const br=treeShape(seed); let wood="", woodOut="", leaves="", blossoms="", snow="";
+  const br=treeShape(seed); let wood="", woodOut="", leaves="", blossoms="", snow="", flare="";
   for(const b of br){
     const p = clamp01((g-b.t0)/b.span); if(p<=0) continue;
     const ex=b.x+(b.ex-b.x)*p, ey=b.y+(b.ey-b.y)*p;
@@ -1630,13 +1632,22 @@ function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
     const d=`M${b.x.toFixed(1)} ${b.y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`;
     woodOut += `<path d="${d}" stroke="#6F5549" stroke-width="${(w+2.2).toFixed(1)}" fill="none" stroke-linecap="round"/>`;
     wood += `<path d="${d}" stroke="#9C7B6B" stroke-width="${w.toFixed(1)}" fill="none" stroke-linecap="round"/>`;
-    if(b.depth<2) wood += `<path d="${d}" stroke="#B8977E" stroke-width="${(w*.25).toFixed(1)}" fill="none" stroke-linecap="round" transform="translate(-${(w*.22).toFixed(1)} 0)" opacity=".7"/>`;
+    if(b.depth<3){   // volume: a shadow side and a light side
+      wood += `<path d="${d}" stroke="#7E6253" stroke-width="${(w*.32).toFixed(1)}" fill="none" stroke-linecap="round" transform="translate(${(w*.28).toFixed(1)} 0)" opacity=".55"/>`;
+      wood += `<path d="${d}" stroke="#C4A48D" stroke-width="${(w*.22).toFixed(1)}" fill="none" stroke-linecap="round" transform="translate(-${(w*.25).toFixed(1)} 0)" opacity=".75"/>`;
+    }
+    if(b.depth===0 && p>.4){   // root flare and a few bark marks
+      const fw=w*.5;
+      flare = `<path d="M${(150-fw*2.6).toFixed(1)} 226.5 Q${(150-fw*1.1).toFixed(1)} 223 ${(150-fw*.95).toFixed(1)} 211 L${(150+fw*.95).toFixed(1)} 211 Q${(150+fw*1.1).toFixed(1)} 223 ${(150+fw*2.6).toFixed(1)} 226.5 Z" fill="#9C7B6B" stroke="#6F5549" stroke-width="1.6" stroke-linejoin="round"/>`;
+      for(const t of [.25,.45,.62]) if(t<p){ const bx=b.x+(ex-b.x)*t, by=b.y+(ey-b.y)*t;
+        wood += `<path d="M${(bx-w*.15).toFixed(1)} ${by.toFixed(1)} q${(w*.12).toFixed(1)} -2.5 ${(w*.02).toFixed(1)} -5" stroke="#6F5549" stroke-width=".9" fill="none" stroke-linecap="round" opacity=".55"/>`; }
+    }
     if(b.depth===2 && p===1 && !out.perch) out.perch={x:b.ex,y:b.ey};
     if(sea==="winter" && b.depth<=3 && p>.5) snow += `<ellipse cx="${((b.x+ex)/2).toFixed(1)}" cy="${(((b.y+ey)/2)-w*.55).toFixed(1)}" rx="${(Math.max(2.5,w*.9)+2).toFixed(1)}" ry="${Math.max(1.4,w*.32).toFixed(1)}" fill="#fff" opacity=".95"/>`;
     if(b.depth<3){   // young twigs get a few leaves until the canopy takes over
       const lp = clamp01((g-b.t0-b.span*.5)/.08) * (1-clamp01((g-(b.t0+b.span*1.7))/.15));
       if(lp>0){ const s2=6*lp;
-        leaves += `<circle cx="${(ex-s2*.5).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s2.toFixed(1)}" fill="${L0}"/><circle cx="${(ex+s2*.5).toFixed(1)}" cy="${(ey-s2*.5).toFixed(1)}" r="${(s2*.8).toFixed(1)}" fill="${L1}"/>`; }
+        leaves += leafCluster(ex, ey, s2, b.rot); }
     }
     if(b.depth>=3){
       const lp = clamp01((g-b.t0-b.span*.5)/.1);
@@ -1644,20 +1655,26 @@ function treeSVG(g, seed, out={}, {halo:withHalo=true}={}){
       const R = (b.depth===5?6:b.depth===4?7:8);
       if(lp>0 && bp<1){
         const s=R*lp*(1-bp*.6);
-        leaves += `<g opacity="${(1-bp).toFixed(2)}"><circle cx="${(ex-s*.6).toFixed(1)}" cy="${ey.toFixed(1)}" r="${s.toFixed(1)}" fill="${L0}"/><circle cx="${(ex+s*.5).toFixed(1)}" cy="${(ey-s*.4).toFixed(1)}" r="${(s*.85).toFixed(1)}" fill="${L1}"/></g>`;
+        leaves += `<g opacity="${(1-bp).toFixed(2)}">${leafCluster(ex, ey, s, b.rot)}</g>`;
       }
-      if(bp>0){
-        const s=R*1.25*bp, c=["#F4B6C2","#F9CFD7","#F7C1CC"];
-        for(let k=0;k<4;k++){
-          const ang=b.rot+k*1.6, rr=s*.6;
-          blossoms += `<circle cx="${(ex+Math.cos(ang)*rr).toFixed(1)}" cy="${(ey+Math.sin(ang)*rr).toFixed(1)}" r="${(s*.75).toFixed(1)}" fill="${c[k%3]}"/>`;
+      if(bp>0){   // a soft pink cloud with real five-petal sakura flowers on top
+        const s=R*1.25*bp;
+        blossoms += `<circle cx="${ex.toFixed(1)}" cy="${(ey+s*.15).toFixed(1)}" r="${(s*1.05).toFixed(1)}" fill="url(#blobG)" opacity=".9"/>`;
+        for(let k=0;k<3;k++){
+          const ang=b.rot+k*2.1, rr=s*.55, fx=ex+Math.cos(ang)*rr, fy=ey+Math.sin(ang)*rr*.8, fs=s*(1.15-k*.12);
+          blossoms += `<use href="#sakura" x="${(fx-fs/2).toFixed(1)}" y="${(fy-fs/2).toFixed(1)}" width="${fs.toFixed(1)}" height="${fs.toFixed(1)}" transform="rotate(${((b.rot*57+k*37)%72).toFixed(0)} ${fx.toFixed(1)} ${fy.toFixed(1)})"/>`;
         }
-        blossoms += `<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="${(s*.3).toFixed(1)}" fill="#FCE8EC"/>`;
       }
     }
   }
   const halo = `<ellipse cx="150" cy="${(224-g*120).toFixed(0)}" rx="${(40+g*90).toFixed(0)}" ry="${(30+g*80).toFixed(0)}" fill="url(#halo)"/>`;
-  return (withHalo?halo:"")+woodOut+wood+snow+leaves+blossoms;
+  return (withHalo?halo:"")+woodOut+flare+wood+snow+leaves+blossoms;
+}
+// a leaf cluster: a darker underside and two lit blobs, so it has some depth
+function leafCluster(x, y, s, rot){
+  return `<circle cx="${(x+s*.15).toFixed(1)}" cy="${(y+s*.35).toFixed(1)}" r="${(s*.95).toFixed(1)}" fill="url(#leafB)"/>`
+    + `<circle cx="${(x-s*.5).toFixed(1)}" cy="${y.toFixed(1)}" r="${(s*.9).toFixed(1)}" fill="url(#leafA)"/>`
+    + `<circle cx="${(x+s*.45).toFixed(1)}" cy="${(y-s*.4).toFixed(1)}" r="${(s*.78).toFixed(1)}" fill="url(#leafA)"/>`;
 }
 // what grew between two moments: new branches, longer branches, new leaves and blossoms (with positions for sparkles)
 function treeDiff(g0, g1, seed){
@@ -1682,7 +1699,7 @@ function petalsSVG(n=8, seed=7){
   const r=rng(seed); let s="";
   for(let i=0;i<n;i++){
     const x=40+r()*220, d=(4+r()*5).toFixed(1), del=(r()*6).toFixed(1);
-    s+=`<ellipse class="petal" cx="${x.toFixed(0)}" cy="40" rx="3" ry="2" fill="#F7C1CC" style="animation-duration:${d}s;animation-delay:-${del}s"/>`;
+    s+=`<path class="petal" d="M${x.toFixed(0)} 40 c-2.2 -1.4 -2.6 -4.2 -.6 -5.2 l.6 .7 .6 -.7 c2 1 1.6 3.8 -.6 5.2z" fill="#F7C1CC" style="animation-duration:${d}s;animation-delay:-${del}s"/>`;
   }
   return s;
 }
@@ -1784,14 +1801,21 @@ function groundSVG(){
   for(let y=213;y<260;y+=7) s+=`<path d="M0 ${y} q25 -3 50 0 t50 0 t50 0 t50 0 t50 0 t50 0" stroke="var(--rake)" stroke-width="1.1" fill="none"/>`;
   s+=`<ellipse cx="150" cy="226" rx="62" ry="15" fill="var(--gravel)"/><ellipse cx="150" cy="226" rx="62" ry="15" fill="none" stroke="var(--rake)" stroke-width="1.1"/>
       <ellipse cx="150" cy="226" rx="54" ry="12.5" fill="none" stroke="var(--rake)" stroke-width="1.1"/>
-      <ellipse cx="150" cy="226" rx="46" ry="10" fill="var(--sage)"/><ellipse cx="138" cy="224" rx="18" ry="4" fill="#A6CBB5"/>
+      <ellipse cx="150" cy="226" rx="46" ry="10" fill="url(#moss)"/><ellipse cx="136" cy="223.5" rx="16" ry="3.4" fill="#D3E8DB" opacity=".7"/>
+      ${[[118,226],[128,230],[172,229],[182,225],[160,232]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="4" ry="1.6" fill="#8DB89F" opacity=".7"/>`).join("")}
+      <ellipse cx="152" cy="227" rx="36" ry="6" fill="url(#shadow)"/>
       <ellipse cx="232" cy="238" rx="22" ry="8" fill="none" stroke="var(--rake)" stroke-width="1.1"/>
-      <ellipse cx="232" cy="236" rx="13" ry="7" fill="#C9C3BD"/><ellipse cx="226" cy="233" rx="5" ry="2" fill="#DAD5CF"/><ellipse cx="246" cy="240" rx="7" ry="4" fill="#D8D2CC"/>`;
+      <ellipse cx="233" cy="240" rx="15" ry="4" fill="url(#shadow)"/>
+      <ellipse cx="232" cy="236" rx="13" ry="7" fill="url(#stone)"/><path d="M222 233 q6 -5 14 -3" stroke="#fff" stroke-width="1.2" fill="none" opacity=".6" stroke-linecap="round"/>
+      <path d="M226 231.5 q4 -2.5 9 -1.6 q-3 2.6 -9 1.6z" fill="#A6CBB5"/>
+      <ellipse cx="246" cy="240" rx="7" ry="4" fill="url(#stone)"/>`;
+  const rs=rng(19); for(let i=0;i<110;i++){ const x=rs()*300, y=208+rs()*52; if(Math.abs(x-150)<60 && Math.abs(y-226)<14) continue;
+    s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(.35+rs()*.5).toFixed(2)}" fill="${rs()<.5?"#D2C8BC":"#FFFFFF"}" opacity=".8"/>`; }
   const r=rng(7);   // grass tufts and little flowers
   const sea=season();
   for(const [x,y] of [[112,222],[186,221],[100,250],[200,254],[20,214],[280,212],[176,232]]){
     if(sea==="winter") continue;
-    s+=`<path d="M${x} ${y} l-3 -6 M${x} ${y} l0 -8 M${x} ${y} l3 -6" stroke="${sea==="autumn"?"#C9B48A":"#8FBF8A"}" stroke-width="1.4" stroke-linecap="round"/>`;
+    s+=`<path d="M${x} ${y} q-1.5 -4 -4.5 -7 M${x} ${y} q-.5 -5 1 -9.5 M${x} ${y} q1.5 -3.5 5 -6" stroke="${sea==="autumn"?"#C9B48A":"#8FBF8A"}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
     if(sea==="spring" ? true : sea==="summer" ? r()<.5 : false) s+=`<circle cx="${x+4}" cy="${y-5}" r="1.7" fill="${r()<.5?"#F7C1CC":"#F4E6B0"}"/>`;
     if(sea==="autumn") s+=`<ellipse cx="${x+5}" cy="${y-1}" rx="2.4" ry="1.3" fill="${r()<.5?"#F3B49F":"#F4C870"}" transform="rotate(30 ${x+5} ${y-1})"/>`;
   }
@@ -1802,23 +1826,48 @@ function groundSVG(){
   return s;
 }
 function pondSVG(){
-  return `<ellipse cx="62" cy="240" rx="42" ry="11" fill="var(--blue)"/><ellipse cx="62" cy="238" rx="36" ry="8" fill="#D6E8F5" opacity=".5"/>
-    <ellipse cx="86" cy="237" rx="7" ry="2.6" fill="#A8CFA0"/><circle cx="84" cy="236" r="1.5" fill="#F7C1CC"/>`;
+  const rim=[...Array(14)].map((_,i)=>{ const a=Math.PI*(.05+i*.065), x=62+Math.cos(a)*44, y=241+Math.sin(a)*12.5;
+    return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(4+((i*7)%3)).toFixed(1)}" ry="2.6" fill="url(#stone)"/>`; }).join("");
+  return `<ellipse cx="62" cy="243" rx="47" ry="13" fill="url(#shadow)"/>
+    <ellipse cx="62" cy="241" rx="45" ry="12.5" fill="#D9D3CC"/>
+    <ellipse cx="62" cy="240.5" rx="41" ry="10.5" fill="url(#water)"/>
+    <ellipse cx="64" cy="243" rx="30" ry="5.5" fill="#86B0CE" opacity=".45"/>
+    <path d="M30 237 q14 -4 26 -2" stroke="#fff" stroke-width="1.2" fill="none" opacity=".7" stroke-linecap="round"/>
+    <path d="M70 236 q8 -1.5 14 0" stroke="#fff" stroke-width=".9" fill="none" opacity=".55" stroke-linecap="round"/>
+    <ellipse class="ripple" cx="48" cy="242" rx="5" ry="1.4" fill="none" stroke="#fff" stroke-width=".8"/>
+    <ellipse class="ripple" cx="78" cy="244" rx="5" ry="1.4" fill="none" stroke="#fff" stroke-width=".8" style="animation-delay:-1.6s"/>
+    ${rim}
+    <path d="M86 238.5 a7 2.8 0 1 1 1.2 -2.6 l-3.8 1.6z" fill="#9CCB8E" stroke="#7FA77A" stroke-width=".6"/>
+    <path d="M40 245 a5 2 0 1 1 1 -1.9 l-3 1.1z" fill="#B5DCA6" stroke="#7FA77A" stroke-width=".5"/>
+    <g transform="translate(88 235.5)"><path d="M0 0 c-2 -1 -2.4 -3.4 -.4 -4.2 l.4 .6 .4 -.6 c2 .8 1.6 3.2 -.4 4.2z" fill="url(#petalG)"/>
+      <path d="M0 0 c-3 -.2 -4.2 -2 -3.2 -3.2 c1.4 .4 2.6 1.6 3.2 3.2z" fill="#F9CFD7"/><path d="M0 0 c3 -.2 4.2 -2 3.2 -3.2 c-1.4 .4 -2.6 1.6 -3.2 3.2z" fill="#F9CFD7"/></g>`;
 }
 function decoSVG(id, tod){
   const ink=INK, glow = tod==="evening"||tod==="night";
   switch(id){
     case "toro": return `<g transform="translate(266 236)">
-      ${glow?`<circle cx="0" cy="-30" r="20" fill="url(#glow)"/>`:""}
-      <rect x="-9" y="-4" width="18" height="5" rx="1" fill="#BDB6AE" stroke="${ink}" stroke-width="1"/><rect x="-3" y="-20" width="6" height="16" fill="#C9C3BD" stroke="${ink}" stroke-width="1"/>
-      <rect x="-8" y="-24" width="16" height="4" fill="#BDB6AE" stroke="${ink}" stroke-width="1"/>
-      <rect x="-6" y="-35" width="12" height="11" fill="${glow?"#FFE9A8":"#DAD5CF"}" stroke="${ink}" stroke-width="1"/><rect x="-2" y="-32" width="4" height="6" fill="${glow?"#F4C870":"#BDB6AE"}"/>
-      <path d="M-12 -35 Q0 -44 12 -35 Z" fill="#BDB6AE" stroke="${ink}" stroke-width="1"/><circle cx="0" cy="-43" r="2.4" fill="#BDB6AE" stroke="${ink}" stroke-width="1"/></g>`;
+      ${glow?`<circle cx="0" cy="-30" r="22" fill="url(#glow)"/>`:""}
+      <rect x="-10" y="-4" width="20" height="5.5" rx="1.5" fill="url(#stone)" stroke="${ink}" stroke-width=".9"/>
+      <path d="M-3.4 -4 L-2.6 -20 L2.6 -20 L3.4 -4Z" fill="url(#stone)" stroke="${ink}" stroke-width=".9"/>
+      <rect x="-8.5" y="-24.5" width="17" height="4.5" rx="1.2" fill="url(#stone)" stroke="${ink}" stroke-width=".9"/>
+      <rect x="-6.5" y="-35.5" width="13" height="11" rx="1" fill="${glow?"#FFE9A8":"#E2DDD7"}" stroke="${ink}" stroke-width=".9"/>
+      <rect x="-2.6" y="-33" width="5.2" height="6.5" rx=".6" fill="${glow?"#F4C870":"#BDB6AE"}"/>
+      <path d="M-13 -35.5 Q-6 -37 0 -45 Q6 -37 13 -35.5 Q0 -33.5 -13 -35.5Z" fill="url(#stone)" stroke="${ink}" stroke-width=".9" stroke-linejoin="round"/>
+      <circle cx="0" cy="-46" r="2.4" fill="url(#stone)" stroke="${ink}" stroke-width=".9"/>
+      <path d="M-11 -36 q4 -1.2 7 -3.5" stroke="#fff" stroke-width=".9" fill="none" opacity=".6"/>
+      <path d="M-9 -2 q3 -1.6 7 -.8" stroke="#A6CBB5" stroke-width="1.6" fill="none" stroke-linecap="round" opacity=".8"/></g>`;
     case "stones": return `<g fill="#D3CDC6" stroke="#BDB6AE" stroke-width=".8"><ellipse cx="160" cy="256" rx="9" ry="3.2"/><ellipse cx="146" cy="249" rx="8" ry="3"/><ellipse cx="158" cy="242" rx="7" ry="2.6"/><ellipse cx="148" cy="236" rx="6" ry="2.3"/></g>`;
     case "torii": return `<g transform="translate(32 206)"><rect x="-13" y="-34" width="3.5" height="34" fill="#E9A9A0" stroke="${ink}" stroke-width=".8"/><rect x="9.5" y="-34" width="3.5" height="34" fill="#E9A9A0" stroke="${ink}" stroke-width=".8"/>
       <rect x="-15" y="-29" width="30" height="3" fill="#E9A9A0" stroke="${ink}" stroke-width=".8"/><path d="M-20 -38 Q0 -35 20 -38 L19 -34 Q0 -32 -19 -34z" fill="#4A4552"/><rect x="-1.2" y="-34" width="2.4" height="5" fill="#E9A9A0"/></g>`;
-    case "bridge": return `<g><path d="M28 242 Q62 220 96 242" stroke="#B88F6E" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <path d="M30 236 Q62 214 94 236" stroke="#C9A88E" stroke-width="1.6" fill="none"/>${[38,50,62,74,86].map(x=>`<line x1="${x}" y1="${(242-((1-((x-62)/34)**2)*22)).toFixed(1)}" x2="${x}" y2="${(236-((1-((x-62)/32)**2)*22)).toFixed(1)}" stroke="#C9A88E" stroke-width="1.4"/>`).join("")}</g>`;
+    case "bridge": {   // arched wooden bridge: deck, rail and posts on the same curve
+      const q=(t,p0,p1,p2)=>(1-t)*(1-t)*p0+2*(1-t)*t*p1+t*t*p2;
+      const deck=t=>[q(t,26,62,98), q(t,243,219,243)], rail=t=>[q(t,28,62,96), q(t,236,212,236)];
+      const posts=[.08,.29,.5,.71,.92].map(t=>{ const [x1,y1]=deck(t), [x2,y2]=rail(t); return `<line x1="${x1.toFixed(1)}" y1="${(y1-1).toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#9C7B6B" stroke-width="1.6" stroke-linecap="round"/>`; }).join("");
+      return `<g><path d="M26 245 Q62 223 98 245" stroke="#3D3A44" stroke-opacity=".12" stroke-width="7" fill="none"/>
+        ${posts}<path d="M28 236 Q62 212 96 236" stroke="#B88F6E" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M26 243 Q62 219 98 243" stroke="#8A6B5C" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+        <path d="M26 242 Q62 218 98 242" stroke="#C9A88E" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M34 238.5 Q62 220 90 238.5" stroke="#E3CDB8" stroke-width=".8" fill="none" opacity=".8"/></g>`; }
     case "maple": return `<g transform="translate(286 214)"><path d="M0 0 v-14" stroke="#9C7B6B" stroke-width="3"/>
       ${(()=>{ const sea=season(), c = sea==="autumn"?["#F3B49F","#E9A9A0","#F6C9A8"] : sea==="spring"?["#C8E3B5","#B5DCA6","#D9EDC9"] : ["#9CCB8E","#8FBF8A","#B5DCA6"];
         return sea==="winter" ? `<path d="M0 -14 l-8 -8 M0 -14 l7 -10 M0 -18 l1 -10" stroke="#9C7B6B" stroke-width="1.6"/><ellipse cx="-4" cy="-22" rx="5" ry="1.6" fill="#fff"/><ellipse cx="4" cy="-25" rx="4" ry="1.4" fill="#fff"/>`
@@ -1862,8 +1911,27 @@ function decoTransform(id){ const [ax,ay]=DECO_ANCHOR[id], [x,y]=decoPos(id), k=
   return `translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k.toFixed(3)}) translate(${-ax} ${-ay})`; }
 function placedDeco(id, tod, highlight, edit){
   const [ax,ay]=DECO_ANCHOR[id];
-  return `<g class="deco ${highlight===id?"hatch":""}" data-id="${id}" transform="${decoTransform(id)}">${decoSVG(id,tod)}
+  return `<g class="deco ${highlight===id?"hatch":""}" data-id="${id}" transform="${decoTransform(id)}"><ellipse cx="${ax}" cy="${ay+1}" rx="13" ry="3.2" fill="url(#shadow)"/>${decoSVG(id,tod)}
     ${edit?`<ellipse cx="${ax}" cy="${ay}" rx="14" ry="5" fill="rgba(255,255,255,.35)" stroke="#E9A9A0" stroke-width="1.5" stroke-dasharray="3 2"/>`:""}</g>`;
+}
+function mixHex(a,b,t){ const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); const x=p(a), y=p(b); return "#"+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,"0")).join(""); }
+function artDefs(){
+  const [L0,L1]=LEAF[season()];
+  return `<defs>
+    <radialGradient id="leafA" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${mixHex(L0,"#ffffff",.45)}"/><stop offset=".6" stop-color="${L0}"/><stop offset="1" stop-color="${mixHex(L0,L1,.6)}"/></radialGradient>
+    <radialGradient id="leafB" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="${mixHex(L1,"#ffffff",.25)}"/><stop offset="1" stop-color="${mixHex(L1,"#3D3A44",.12)}"/></radialGradient>
+    <radialGradient id="petalG" cx=".5" cy=".85" r=".9"><stop offset="0" stop-color="#FFF4F6"/><stop offset=".55" stop-color="#F9CFD7"/><stop offset="1" stop-color="#F2A9B8"/></radialGradient>
+    <radialGradient id="blobG" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="#FDE6EB"/><stop offset="1" stop-color="#F4BFCB"/></radialGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B9D6EC"/><stop offset="1" stop-color="#93BCD9"/></linearGradient>
+    <radialGradient id="stone" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#EEEAE5"/><stop offset=".65" stop-color="#CFC9C2"/><stop offset="1" stop-color="#ADA59D"/></radialGradient>
+    <radialGradient id="shadow"><stop offset="0" stop-color="#3D3A44" stop-opacity=".22"/><stop offset="1" stop-color="#3D3A44" stop-opacity="0"/></radialGradient>
+    <radialGradient id="moss" cx=".4" cy=".3" r=".9"><stop offset="0" stop-color="#C9E2D3"/><stop offset="1" stop-color="#9CC4AE"/></radialGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></radialGradient>
+    <symbol id="sakura" viewBox="-10 -10 20 20" overflow="visible">
+      ${[0,72,144,216,288].map(a=>`<path transform="rotate(${a})" d="M0 0 C-3.6 -2 -4 -7 -1.4 -9 L0 -7.6 L1.4 -9 C4 -7 3.6 -2 0 0Z" fill="url(#petalG)" stroke="#EFA3B4" stroke-width=".35"/>`).join("")}
+      <circle r="1.9" fill="#F6B3C2"/>${[20,92,164,236,308].map(a=>`<circle cx="${(Math.cos(a*Math.PI/180)*2.8).toFixed(2)}" cy="${(Math.sin(a*Math.PI/180)*2.8).toFixed(2)}" r=".55" fill="#D9798F"/>`).join("")}
+    </symbol>
+  </defs>`;
 }
 function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, edit=false, evolve=false}={}){
   const tod=timeOfDay(), set=ANIMAL_SETS[tree.set||0], out={};
@@ -1882,7 +1950,7 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
   }
   return `<svg viewBox="0 0 300 260" class="scene-svg ${edit?"editing":""}" ${edit?'id="gscene"':""} aria-label="Je sakura-boom in de zen-tuin">
     ${sky ? skySVG(tod) + D("lamps") + fenceSVG() : `<defs><radialGradient id="glow"><stop offset="0" stop-color="#FFF3B0" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3B0" stop-opacity="0"/></radialGradient></defs>`}
-    ${groundSVG()}${pondSVG()}
+    ${artDefs()}${groundSVG()}${pondSVG()}
     ${back}
     <g id="${evolve?"treeLayer":""}">${treeMarkup}</g>
     ${front}
