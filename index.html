@@ -1522,6 +1522,9 @@ function buildLesson(L){
   const ps=L.phrases;
   ps.forEach((p,i)=>{
     ex.push({type:"intro",p});
+    const chain=backchain(p);
+    chain.forEach((t,k)=>ex.push({type:"build", p:t, full:p, step:k+1, steps:chain.length+1}));
+    if(chain.length) ex.push({type:"build", p, full:p, step:chain.length+1, steps:chain.length+1, last:true});
     ex.push({type:"echo",p});
     if(i>0){ ex.push({type:"shadow",p:ps[i-1]}); ex.push({type:"listen",p:ps[i-1]}); }
   });
@@ -2490,6 +2493,7 @@ function curEx(){ return lesson.queue[lesson.i]; }
 function effType(ex){
   if(lesson.noMic && (ex.type==="speak"||ex.type==="swap"||ex.type==="respond")) return "choose";
   if(lesson.noMic && (ex.type==="echo"||ex.type==="shadow")) return "listen";
+  if(lesson.noMic && ex.type==="build") return "intro";
   return ex.type;
 }
 
@@ -2504,6 +2508,18 @@ function renderEx(){
           <div class="play-row"><button class="play" onclick="say()">🔊 Luister</button><button class="play slow" onclick="say(.6)">🐢 Langzaam</button></div>
         </div></div>
       ${lesson.noMic?"":micArea("Zeg het na")}`;
+  }
+  else if(t==="build"){
+    const full=ex.full, done=p.romaji, rest=full.romaji.slice(0, Math.max(0, full.romaji.length-done.length)).trim();
+    body = `<div class="ex-title">Bouw de zin op 🧱 <small style="color:var(--muted);font-size:.85rem">stap ${ex.step} van ${ex.steps}</small></div>
+      <div class="speaker-row">${buddy("talking",76)}
+        <div class="bubble"><div class="big-jp jp">${esc(ex.last?full.ja:p.kana)}</div>
+          <div class="romaji" style="font-size:1.15rem"><span style="opacity:.35">${esc(rest)}</span> <b style="color:var(--text)">${esc(done)}</b></div>
+          ${showPhon(full,true)?`<div class="phon">🗣️ ${esc(phonetic(done))}</div>`:""}
+          <div class="nl">${esc(full.nl)}</div>
+          <div class="play-row"><button class="play" onclick="say()">🔊 Luister</button><button class="play slow" onclick="say(.6)">🐢</button></div>
+        </div></div>
+      ${lesson.noMic?"":micArea(ex.last?"Zeg de hele zin":"Zeg dit stukje na")}`;
   }
   else if(t==="echo"){
     body = `<div class="ex-title">Nog een keer 🗣️ <small style="color:var(--muted);font-size:.85rem">nu zonder Japans schrift</small></div>
@@ -2625,12 +2641,62 @@ function renderEx(){
   if(lesson.state==="ask" && !lesson.autoplayed){
     lesson.autoplayed=true;
     const still = () => view==="lesson" && lesson && curEx()===ex;   // user may already have moved on
-    if(t==="intro"||t==="listen"||t==="hearIntro"||t==="echo"||t==="shadow") setTimeout(()=>still()&&say(),250);
+    if(t==="intro"||t==="listen"||t==="hearIntro"||t==="echo"||t==="shadow"||t==="build") setTimeout(()=>still()&&say(),250);
     if(t==="respond") setTimeout(()=>still()&&sayQ(),250);
     if(t==="branch") setTimeout(()=>still()&&branchSay(),250);
     if(t==="dialog"){ const prev=ex.lines[ex.idx-1]; if(prev&&prev.who==="cat") setTimeout(()=>still()&&sayLine(ex.idx-1),250); }
   }
 }
+/* ---------- backchaining: build long sentences from the end (desu ka → nan desu ka → o-namae wa nan desu ka) ---------- */
+const R2K = (()=>{ const t={}, V=["a","i","u","e","o"], rows={"":"あいうえお",k:"かきくけこ",g:"がぎぐげご",s:"さしすせそ",z:"ざじずぜぞ",t:"たちつてと",d:"だぢづでど",n:"なにぬねの",h:"はひふへほ",b:"ばびぶべぼ",p:"ぱぴぷぺぽ",m:"まみむめも",y:"や-ゆ-よ",r:"らりるれろ",w:"わ---を"};
+  for(const c in rows) V.forEach((v,i)=>{ if(rows[c][i]!=="-") t[c+v]=rows[c][i]; });
+  Object.assign(t,{shi:"し",chi:"ち",tsu:"つ",fu:"ふ",ji:"じ"});
+  for(const [c,k] of Object.entries({ky:"き",gy:"ぎ",sh:"し",ch:"ち",j:"じ",ny:"に",hy:"ひ",by:"び",py:"ぴ",my:"み",ry:"り"})) for(const [v,sm] of [["a","ゃ"],["u","ゅ"],["o","ょ"]]) t[c+v]=k+sm;
+  return t; })();
+const PARTICLE = {wa:"は", o:"を", e:"へ"};
+function romajiToHira(word){   // one romaji word → list of possible hiragana spellings (ō can be おう or おお)
+  if(PARTICLE[word]) return [PARTICLE[word]];
+  let outs=[""];
+  const w=word.toLowerCase().replace(/[-']/g,"");
+  for(let i=0;i<w.length;){
+    const ch=w[i];
+    const longV={"ā":["ああ"],"ī":["いい"],"ū":["うう"],"ē":["えい","ええ"],"ō":["おう","おお"]};
+    let hit=null, len=0;
+    for(const L of [3,2,1]){ let piece=w.slice(i,i+L); const last=piece.slice(-1);
+      const base = longV[last] ? piece.slice(0,-1)+"aiueo"["āīūēō".indexOf(last)] : piece;
+      if(R2K[base]){ hit = longV[last] ? longV[last].map(x=>R2K[base]+x.slice(1)) : [R2K[base]]; len=L; break; } }
+    if(hit){ outs=outs.flatMap(o=>hit.map(h=>o+h)); i+=len; continue; }
+    if(ch==="n"){ outs=outs.map(o=>o+"ん"); i++; continue; }
+    if(w[i+1]===ch || (ch==="t" && w[i+1]==="c")){ outs=outs.map(o=>o+"っ"); i++; continue; }
+    return null;
+  }
+  return outs;
+}
+const ATTACH = new Set(["wa","o","ga","ni","de","e","to","mo","no","kara","made","ka","ne","yo"]);
+function backchain(p){
+  const words=p.romaji.replace(/[“”"!?.,…]/g,"").trim().split(/\s+/);
+  if(words.length<3 || norm(p.kana).length<8) return [];     // only for longer sentences
+  const units=[]; for(const w of words){ const lw=w.toLowerCase(), prev=units[units.length-1];
+    if(prev && (ATTACH.has(lw) || (lw==="shimasu" && /onegai$/i.test(prev[prev.length-1])))) prev.push(w); else units.push([w]); }
+  if(units.length<3) return [];
+  const full=toHira(p.kana.replace(/[、。！？!?\s・「」]/g,"")), steps=[];
+  for(let k=units.length-1;k>=1;k--){
+    const tailWords=units.slice(k).flat();
+    let cands=[""]; for(const w of tailWords){ const h=romajiToHira(w); if(!h) return []; cands=cands.flatMap(c=>h.map(x=>c+x)); }
+    const hit=cands.find(c=>full.endsWith(c)); if(!hit) return [];
+    const kanaTail=p.kana.replace(/[、。！？!?\s・「」]/g,"").slice(-hit.length);
+    if(/[はへ]/.test(hit.slice(0,-1)) && /\b(wa|e)\b/.test(tailWords.join(" "))) continue;   // a particle は/へ inside: the voice might misread it
+    steps.push({ja:kanaTail, kana:kanaTail, tts:kanaTail, romaji:tailWords.join(" "), nl:p.nl, alt:[], tail:true, parent:p});
+  }
+  return steps.slice(-3);
+}
+function scoreTail(heard, t){   // the recogniser may write kanji: also accept the end of the full sentence in any of its forms
+  let best=score(heard, t);
+  const forms=[t.parent.ja, t.parent.kana, ...(t.parent.alt||[])].map(norm), need=norm(t.kana).length;
+  for(const h of heard.slice(0, strict().alts)){ const hn=norm(h); if(hn.length>=need*.5 && forms.some(f=>f.endsWith(hn))) best=1; }
+  return best;
+}
+
 // memory aid: first sound of every word ("o-namae wa nan desu ka" → "o-n… wa… na… de… ka…")
 function skeleton(r){ return r.split(/\s+/).map(w=>w.length<=2?w+"…":w.slice(0,w[0]==="o"&&w[1]==="-"?3:2)+"…").join(" "); }
 function micArea(label){
@@ -2652,7 +2718,7 @@ function actionBar(t){
     const good=st==="good";
     const titles = good? ["Heel goed!","Perfect!","すごい！","Top!","Lekker bezig!"] : ["Nog niet helemaal","Bijna!","Oeps!"];
     const title = lesson.fbTitle || (lesson.fbTitle = titles[Math.random()*titles.length|0]);
-    const speakish = ["intro","echo","shadow","speak","dialog","swap","respond"].includes(t) && canRecognize() && !lesson.selfJudged;
+    const speakish = ["intro","echo","shadow","speak","dialog","swap","respond","build"].includes(t) && canRecognize() && !lesson.selfJudged;
     return `<div class="actionbar ${st} pop">
       ${lesson.melody&&lesson.melody.total!==undefined?melodyHtml(lesson.melody):""}
       ${lesson.melody&&lesson.melody.msg?`<p style="margin:0 0 8px;font-weight:700">${esc(lesson.melody.msg)}</p>`:""}
@@ -2722,7 +2788,7 @@ async function toggleMic(){
       curEx().miss=true; lesson.state="ask"; lesson.heard=`${heard[0]} · ${Math.round(best*100)}%: niet duidelijk genoeg, probeer het nog eens (of tik 💡)`;
       chime(false); renderEx(); return;
     }
-    const sc = score(heard, curEx().p), pass=strict().pass; lesson.lastScore = sc;
+    const sc = curEx().p.tail ? scoreTail(heard, curEx().p) : score(heard, curEx().p), pass=strict().pass; lesson.lastScore = sc;
     lesson.heard = `${heard[0]}  ·  ${Math.round(sc*100)}%`;
     lesson.fbNote = sc>=.98 ? `Uitspraak ${Math.round(sc*100)}%: perfect.` : `Uitspraak ${Math.round(sc*100)}%: goed verstaanbaar.`;
     lesson.failNote = sc<pass ? `Ik hoorde “${heard[0]}” (${Math.round(sc*100)}%, nodig: ${Math.round(pass*100)}%).` : "";
@@ -2753,7 +2819,7 @@ function resolve(ok, skipped=false){
     if(ex.p.key){ if(ex.review) reviewResult(ex.p, ok, lesson.lastScore ?? 1); else if(!ok) softLapse(ex.p); }
   }
   // wrong answers come back a few exercises later, until you get them right (max 3 times), like Duolingo
-  if(!ok && !["dialog","branch","tip","hearIntro"].includes(ex.type) && !ex.requeued && (ex.reps||0)<3){
+  if(!ok && !["dialog","branch","tip","hearIntro","build"].includes(ex.type) && !ex.requeued && (ex.reps||0)<3){
     ex.requeued=true;
     const again={type: ["intro","echo"].includes(ex.type)?"shadow":ex.type, p:ex.p, q:ex.q, model:ex.model, reps:(ex.reps||0)+1, old:ex.old, review:ex.review};
     lesson.queue.splice(Math.min(lesson.queue.length, lesson.i+4), 0, again);
