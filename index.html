@@ -103,6 +103,7 @@
 .collect{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 18px 0}
 .citem{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:10px 6px;text-align:center;font-weight:800;font-size:.75rem}
 .citem span{display:block;font-size:1.6rem;margin-bottom:2px}
+.citem b.jp{font-size:.95rem}.visitor{transform-box:fill-box}
 .citem.locked{opacity:.45}.citem.locked span{filter:grayscale(1)}
 .citem small{display:block;color:var(--muted);font-weight:700}
 .sect{margin:18px 22px 0;font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
@@ -1938,6 +1939,96 @@ function placedDeco(id, tod, highlight, edit){
   return `<g class="deco ${highlight===id?"hatch":""}" data-id="${id}" transform="${decoTransform(id)}"><ellipse cx="${ax}" cy="${ay+1}" rx="13" ry="3.2" fill="url(#shadow)"/>${decoSVG(id,tod)}
     ${edit?`<ellipse cx="${ax}" cy="${ay}" rx="14" ry="5" fill="rgba(255,255,255,.35)" stroke="#E9A9A0" stroke-width="1.5" stroke-dasharray="3 2"/>`:""}</g>`;
 }
+/* ---------- garden visitors & the animal book (図鑑 zukan) ---------- */
+// rarity: 1 gewoon, 2 bijzonder, 3 zeldzaam, 4 legendarisch
+const VISITORS = [
+  {id:"suzume",  nl:"Mus",                 ja:"スズメ",      kana:"すずめ",       romaji:"suzume",       r:1, place:"ground", fact:"De mus zie je overal in Japan, ook midden in Tokio."},
+  {id:"cho",     nl:"Vlinder",             ja:"蝶",          kana:"ちょう",       romaji:"chō",          r:1, place:"air", seasons:["spring","summer"], tods:["morning","day"], fact:"In Japanse kunst staan vlinders voor verandering."},
+  {id:"tonbo",   nl:"Libel",               ja:"トンボ",      kana:"とんぼ",       romaji:"tonbo",        r:1, place:"pond", seasons:["summer","autumn"], tods:["morning","day","evening"], fact:"Rode libellen (赤とんぼ) horen bij de Japanse herfst."},
+  {id:"kaeru",   nl:"Kikker",              ja:"カエル",      kana:"かえる",       romaji:"kaeru",        r:1, place:"pad", seasons:["spring","summer"], fact:"Kaeru betekent ook 'terugkeren': een geluksbrenger voor reizigers!"},
+  {id:"hato",    nl:"Duif",                ja:"ハト",        kana:"はと",         romaji:"hato",         r:1, place:"ground", tods:["morning","day"], fact:"Bij tempels en heiligdommen lopen vaak duiven rond."},
+  {id:"karasu",  nl:"Kraai",               ja:"カラス",      kana:"からす",       romaji:"karasu",       r:1, place:"fence", tods:["morning","evening"], fact:"Japanse kraaien zijn groot en slim; ze roepen 'kaa kaa'."},
+  {id:"usagi",   nl:"Konijn",              ja:"ウサギ",      kana:"うさぎ",       romaji:"usagi",        r:2, place:"ground", fact:"Japanners zien geen man in de maan, maar een konijn dat mochi maakt."},
+  {id:"risu",    nl:"Eekhoorn",            ja:"リス",        kana:"りす",         romaji:"risu",         r:2, place:"tree", seasons:["autumn","spring"], tods:["morning","day"], fact:"In de herfst verstoppen eekhoorns overal nootjes."},
+  {id:"fukuro",  nl:"Uil",                 ja:"フクロウ",    kana:"ふくろう",     romaji:"fukurō",       r:2, place:"tree", tods:["night","evening"], fact:"Fukurō kan ook gelezen worden als 'zonder zorgen': een geluksdier."},
+  {id:"shiba",   nl:"Shiba-hondje",        ja:"柴犬",        kana:"しばいぬ",     romaji:"shiba-inu",    r:2, place:"ground", tods:["morning","day","evening"], fact:"Het shiba-hondje is een van de oudste Japanse hondenrassen."},
+  {id:"sagi",    nl:"Reiger",              ja:"サギ",        kana:"さぎ",         romaji:"sagi",         r:2, place:"pond", seasons:["spring","summer","autumn"], tods:["morning","day"], fact:"De witte reiger staat model voor het kasteel van Himeji ('Witte Reiger')."},
+  {id:"saru",    nl:"Sneeuwaap",           ja:"猿",          kana:"さる",         romaji:"saru",         r:3, place:"ground", seasons:["winter"], fact:"In Nagano nemen apen in de winter een warm bad in een onsen."},
+  {id:"kitsune", nl:"Vos",                 ja:"狐",          kana:"きつね",       romaji:"kitsune",      r:3, place:"ground", seasons:["autumn","winter"], tods:["evening","night"], fact:"Vossen zijn de boodschappers van Inari; je ziet ze bij rode torii-poorten."},
+  {id:"kinkoi",  nl:"Gouden karper",       ja:"金の鯉",      kana:"きんのこい",   romaji:"kin no koi",   r:3, place:"pond", fact:"Een karper die tegen de stroom op zwemt, wordt volgens de legende een draak."},
+  {id:"kyubi",   nl:"Negenstaartige vos",  ja:"九尾の狐",    kana:"きゅうびのきつね", romaji:"kyūbi no kitsune", r:4, place:"ground", tods:["night"], fact:"Een vos die duizend jaar oud wordt, krijgt negen staarten en magische krachten."},
+  {id:"ryu",     nl:"Draak",               ja:"龍",          kana:"りゅう",       romaji:"ryū",          r:4, place:"sky", fact:"Japanse draken wonen in water en wolken en brengen regen en geluk."},
+  {id:"maneki",  nl:"Maneki-neko",         ja:"招き猫",      kana:"まねきねこ",   romaji:"maneki-neko",  r:4, place:"ground", fact:"De wenkende kat brengt geluk; met de linkerpoot lokt ze mensen, met de rechter geld."},
+];
+const RARITY = {1:{nl:"Gewoon", stars:"", chance:.5}, 2:{nl:"Bijzonder", stars:"⭐", chance:.22}, 3:{nl:"Zeldzaam", stars:"⭐⭐", chance:.07}, 4:{nl:"Legendarisch", stars:"🌟", chance:.015}};
+function hashStr(t){ let h=2166136261; for(const c of t) h=Math.imul(h^c.charCodeAt(0),16777619); return h>>>0; }
+const fitsNow = v => (!v.seasons || v.seasons.includes(season())) ;
+function todaysVisitors(){
+  const day=today(), r=rng(hashStr(day+"|"+((S.tree&&S.tree.seed)||1)));
+  let list=VISITORS.filter(v=>fitsNow(v) && r()<RARITY[v.r].chance).sort((a,b)=>b.r-a.r).slice(0,3);
+  const bonus=(S.bonusVisit&&S.bonusVisit.day===day)?S.bonusVisit.ids:[];
+  for(const id of bonus){ const v=VISITORS.find(x=>x.id===id); if(v && !list.includes(v)) list.push(v); }
+  return list;
+}
+const visibleVisitors = () => todaysVisitors().filter(v=>!v.tods || v.tods.includes(timeOfDay()));
+function rollBonusVisitor(){   // after a lesson: a chance on an extra guest today
+  const day=today(); S.bonusVisit = (S.bonusVisit&&S.bonusVisit.day===day) ? S.bonusVisit : {day, ids:[]};
+  if(S.bonusVisit.ids.length>=3 || Math.random()>.4) return null;
+  const pool=VISITORS.filter(v=>fitsNow(v) && (!v.tods||v.tods.includes(timeOfDay())) && !todaysVisitors().includes(v));
+  const weights=pool.map(v=>RARITY[v.r].chance), sum=weights.reduce((a,b)=>a+b,0); let x=Math.random()*sum;
+  for(let i=0;i<pool.length;i++){ x-=weights[i]; if(x<=0){ S.bonusVisit.ids.push(pool[i].id); return pool[i]; } }
+  return null;
+}
+function spotVisitor(id){
+  const v=VISITORS.find(x=>x.id===id); if(!v) return;
+  S.zukan=S.zukan||{}; const isNew=!S.zukan[id];
+  S.zukan[id]={first:(S.zukan[id]&&S.zukan[id].first)||today(), n:((S.zukan[id]&&S.zukan[id].n)||0)+1}; save();
+  speak(v.kana); chime(true);
+  toast(`${isNew?"✨ Nieuw in je dierenboek: ":""}${v.ja} (${v.romaji}) · ${v.nl}${RARITY[v.r].stars?" "+RARITY[v.r].stars:""}`);
+  if(isNew && (view==="home"||view==="garden")) setTimeout(render, 1200);
+}
+const VISIT_SPOT = { ground:[[112,250],[192,252],[30,224],[212,226]], pond:[[52,236]], pad:[[86,236]], fence:[[78,186],[238,186]], tree:[[186,150]], air:[[214,150]], sky:[[96,26]] };
+function visitorsLayer(perch){
+  const list=visibleVisitors(); let s="", used={};
+  list.forEach(v=>{ const spots=VISIT_SPOT[v.place]; const k=(used[v.place]=(used[v.place]||0)+1)-1; let [x,y]=spots[k%spots.length];
+    if(v.place==="tree" && perch){ x=perch.x+16; y=perch.y+2; }
+    const fresh=!(S.zukan&&S.zukan[v.id]);
+    s+=`<g class="visitor ${v.place==="air"?"flutter":v.place==="sky"?"drift":"bob"}" onclick="spotVisitor('${v.id}')" style="cursor:pointer">
+      ${fresh?`<circle cx="${x}" cy="${y-12}" r="16" fill="#FFF3B0" opacity=".35" class="twinkle"/>`:""}${visitorSVG(v.id,x,y,v.place==="sky"?.45:1)}</g>`; });
+  return s;
+}
+function visitorSVG(id, x, y, sc=1){
+  const k=`stroke="${INK}" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"`, E=(cx,cy,r=1.3)=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${INK}"/>`;
+  const T=`transform="translate(${x} ${y}) scale(${sc})"`, sea=season();
+  switch(id){
+    case "suzume": return `<g ${T}><ellipse cx="0" cy="-6" rx="7" ry="5.5" fill="#C9A88E" ${k}/><circle cx="-5" cy="-11" r="4" fill="#B8977E" ${k}/><ellipse cx="-5" cy="-9.5" rx="2.5" ry="1.6" fill="#F1E2D3"/>${E(-6,-12,.9)}<path d="M-9 -11 l-3 1 3 1z" fill="#6E5A50"/><path d="M6 -7 l5 -2 -1 3z" fill="#8A6B5C" ${k}/><path d="M-1 -1 v2 M2 -1 v2" ${k}/></g>`;
+    case "cho": return `<g ${T}><path d="M0 -8 C-8 -18 -14 -8 -6 -4 C-12 0 -6 4 0 -4Z" fill="#CFC6EA" ${k}/><path d="M0 -8 C8 -18 14 -8 6 -4 C12 0 6 4 0 -4Z" fill="#F7C1CC" ${k}/><path d="M0 -10 v8" stroke="${INK}" stroke-width="1.6"/><path d="M0 -10 l-2 -3 M0 -10 l2 -3" ${k}/></g>`;
+    case "tonbo": return `<g ${T}><path d="M-14 -9 h26" stroke="#E9A9A0" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="-4" cy="-13" rx="6" ry="2.2" fill="#E6F2FA" stroke="#9CB6CB" stroke-width=".8" transform="rotate(-20 -4 -13)"/><ellipse cx="-4" cy="-5" rx="6" ry="2.2" fill="#E6F2FA" stroke="#9CB6CB" stroke-width=".8" transform="rotate(20 -4 -5)"/><ellipse cx="4" cy="-13" rx="5" ry="2" fill="#E6F2FA" stroke="#9CB6CB" stroke-width=".8" transform="rotate(25 4 -13)"/><ellipse cx="4" cy="-5" rx="5" ry="2" fill="#E6F2FA" stroke="#9CB6CB" stroke-width=".8" transform="rotate(-25 4 -5)"/><circle cx="-14" cy="-9" r="2.2" fill="#E9A9A0" ${k}/></g>`;
+    case "kaeru": return `<g ${T}><ellipse cx="0" cy="-4" rx="7" ry="5" fill="#9CCB8E" ${k}/><circle cx="-3.5" cy="-9" r="2.6" fill="#9CCB8E" ${k}/><circle cx="3.5" cy="-9" r="2.6" fill="#9CCB8E" ${k}/>${E(-3.5,-9,1.1)}${E(3.5,-9,1.1)}<path d="M-2.5 -4.5 q2.5 2 5 0" ${k} fill="none"/><circle cx="-5" cy="-4" r="1.2" fill="#F7C1CC"/><circle cx="5" cy="-4" r="1.2" fill="#F7C1CC"/></g>`;
+    case "hato": return `<g ${T}><ellipse cx="0" cy="-7" rx="8" ry="6" fill="#C9C3D6" ${k}/><circle cx="-6" cy="-13" r="4" fill="#B8B2C8" ${k}/><path d="M-8 -11 q3 2 5 0" stroke="#A8CFA0" stroke-width="1.6" fill="none"/>${E(-7,-14,.9)}<path d="M-10 -13 l-2.5 .8 2.5 .8z" fill="#E9A9A0"/><path d="M7 -8 l5 -1 -2 4z" fill="#A9A3BA" ${k}/><path d="M-1 -1 v2 M2 -1 v2" stroke="#E9A9A0" stroke-width="1.3"/></g>`;
+    case "karasu": return `<g ${T}><ellipse cx="0" cy="-7" rx="7" ry="6" fill="#4A4552" ${k}/><circle cx="-6" cy="-12" r="4.2" fill="#4A4552" ${k}/><circle cx="-7" cy="-13" r="1.1" fill="#fff"/><path d="M-10 -12 l-4.5 1.2 4.5 1.6z" fill="#3D3A44"/><path d="M6 -7 l7 2 -6 2z" fill="#3D3A44"/><path d="M-1 -1 v2 M2 -1 v2" ${k}/></g>`;
+    case "usagi": { const fur= sea==="winter"?"#FFFFFF":"#E3D3C3"; return `<g ${T}><ellipse cx="0" cy="-7" rx="9" ry="7" fill="${fur}" ${k}/><ellipse cx="-7" cy="-14" rx="5" ry="4.5" fill="${fur}" ${k}/><ellipse cx="-9" cy="-23" rx="1.8" ry="5.5" fill="${fur}" ${k}/><ellipse cx="-5.5" cy="-23" rx="1.8" ry="5.5" fill="${fur}" ${k}/><ellipse cx="-9" cy="-23" rx=".7" ry="3.5" fill="#F7C1CC"/>${E(-9,-15,1)}<circle cx="-11" cy="-12.5" r="1" fill="#F7C1CC"/><circle cx="9" cy="-8" r="2.4" fill="${fur}" ${k}/></g>`; }
+    case "risu": return `<g ${T}><path d="M6 -2 q12 -6 4 -20 q-4 -4 -6 2 q6 8 -2 14z" fill="#D9A07A" ${k}/><ellipse cx="0" cy="-6" rx="5.5" ry="6" fill="#E3B48F" ${k}/><circle cx="-2" cy="-14" r="4.2" fill="#E3B48F" ${k}/><path d="M-4 -17 l-1 -4 3 2z M0 -17.5 l1 -4 1.5 3z" fill="#E3B48F" ${k}/>${E(-3.5,-14.5,.9)}<ellipse cx="-2" cy="-6" rx="2.6" ry="3.5" fill="#F6E3CF"/><circle cx="-5.5" cy="-8" r="1.8" fill="#9C7B6B"/></g>`;
+    case "fukuro": return `<g ${T}><ellipse cx="0" cy="-10" rx="8" ry="10" fill="#B8977E" ${k}/><ellipse cx="0" cy="-7" rx="5" ry="6" fill="#E3D3C3"/><circle cx="-3.5" cy="-14" r="3.6" fill="#fff" ${k}/><circle cx="3.5" cy="-14" r="3.6" fill="#fff" ${k}/>${E(-3.5,-14,1.6)}${E(3.5,-14,1.6)}<path d="M-1 -11 l1 2 1 -2z" fill="#F4C870"/><path d="M-7 -19 l-1 -5 4 3z M7 -19 l1 -5 -4 3z" fill="#B8977E" ${k}/><path d="M-3 0 v1.5 M3 0 v1.5" stroke="#F4C870" stroke-width="1.6"/></g>`;
+    case "shiba": return `<g ${T}><path d="M9 -10 q7 -4 3 -9" stroke="${INK}" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M9 -10 q7 -4 3 -9" stroke="#E8B486" stroke-width="2.4" fill="none" stroke-linecap="round"/><ellipse cx="2" cy="-7" rx="9" ry="6.5" fill="#E8B486" ${k}/><path d="M-4 -1 v1.5 M6 -1 v1.5" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>
+      <circle cx="-7" cy="-15" r="6.5" fill="#E8B486" ${k}/><path d="M-12 -19 l-1 -6 4 3z M-3 -20 l2 -5 1 5z" fill="#E8B486" ${k}/><ellipse cx="-8" cy="-12" rx="4" ry="3" fill="#FBF3EA"/>${E(-9.5,-16,1)}${E(-4.5,-16,1)}<circle cx="-8" cy="-13" r="1" fill="${INK}"/></g>`;
+    case "sagi": return `<g ${T}><path d="M-2 0 v-11 M2 0 v-11" stroke="#F4C870" stroke-width="1.3"/><ellipse cx="2" cy="-15" rx="9" ry="5" fill="#fff" ${k}/><path d="M-5 -16 q-5 -6 -1 -14" fill="none" stroke="${INK}" stroke-width="3.6" stroke-linecap="round"/><path d="M-5 -16 q-5 -6 -1 -14" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="-6" cy="-31" r="3" fill="#fff" ${k}/>${E(-7,-31.5,.8)}<path d="M-9 -31 l-7 1 7 1z" fill="#F4C870" stroke="${INK}" stroke-width=".7"/></g>`;
+    case "saru": return `<g ${T}><ellipse cx="0" cy="-8" rx="9" ry="8" fill="#C9B6A6" ${k}/><circle cx="0" cy="-19" r="7" fill="#C9B6A6" ${k}/><ellipse cx="0" cy="-18" rx="5" ry="4.5" fill="#F2A9A0"/>${E(-2,-19.5,.9)}${E(2,-19.5,.9)}<path d="M-1.5 -16 q1.5 1 3 0" ${k} fill="none"/><circle cx="-7.5" cy="-19" r="2" fill="#F2A9A0" ${k}/><circle cx="7.5" cy="-19" r="2" fill="#F2A9A0" ${k}/>${sea==="winter"?`<ellipse cx="0" cy="-25.5" rx="5" ry="1.6" fill="#fff"/>`:""}</g>`;
+    case "kitsune": case "kyubi": { const nine=id==="kyubi", col=nine?"#FFF6E6":"#F0A97A";
+      const tails = nine ? [-60,-40,-20,0,20,40,60,80,100].map(a=>`<path d="M8 -6 q14 -10 ${10+Math.cos(a*Math.PI/180)*11} ${-18+Math.sin(a*Math.PI/180)*9}" stroke="${INK}" stroke-width="7.5" fill="none" stroke-linecap="round"/><path d="M8 -6 q14 -10 ${10+Math.cos(a*Math.PI/180)*11} ${-18+Math.sin(a*Math.PI/180)*9}" stroke="${col}" stroke-width="5.6" fill="none" stroke-linecap="round"/><circle cx="${8+10+Math.cos(a*Math.PI/180)*11}" cy="${-6-18+Math.sin(a*Math.PI/180)*9}" r="2.3" fill="#F9CFD7"/>`).join("")
+        : `<path d="M8 -6 q14 -4 12 -16" stroke="${INK}" stroke-width="6.4" fill="none" stroke-linecap="round"/><path d="M8 -6 q14 -4 12 -16" stroke="${col}" stroke-width="4.6" fill="none" stroke-linecap="round"/><circle cx="20" cy="-22" r="2.4" fill="#fff"/>`;
+      return `<g ${T}>${nine?`<circle cx="0" cy="-14" r="22" fill="url(#glow)"/>`:""}${tails}<ellipse cx="1" cy="-7" rx="8" ry="6.5" fill="${col}" ${k}/><path d="M-4 -1 v1.5 M5 -1 v1.5" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-13 -13 L-2 -24 L1 -12 Z" fill="${col}" ${k}/><path d="M-8 -14 L-6 -26 L-1 -16 Z" fill="${col}" ${k}/><path d="M-13 -13 q5 4 13 1 l1 -2" fill="#fff" ${k}/>${E(-6,-16,1)}<circle cx="-13" cy="-13" r="1.2" fill="${INK}"/>${nine?`<path d="M-6 -21 l1 -2 1 2z" fill="#E9A9A0"/>`:""}</g>`; }
+    case "kinkoi": return `<g ${T}><circle cx="0" cy="0" r="14" fill="url(#glow)"/><path d="M12 0 l9 -6 v12 z" fill="#F4C870" ${k}/><ellipse cx="0" cy="0" rx="14" ry="6.5" fill="#F6D47A" ${k}/><ellipse cx="-2" cy="-2" rx="5" ry="3" fill="#FFF0B8"/>${E(-9,-1.5,1.4)}<path d="M-13 1 q-3 2 -1 4" stroke="${INK}" stroke-width="1" fill="none"/></g>`;
+    case "ryu": return `<g ${T}><path d="M-60 0 C-45 -18 -30 18 -15 0 S15 -18 30 0 S50 14 58 2" stroke="${INK}" stroke-width="12" fill="none" stroke-linecap="round"/><path d="M-60 0 C-45 -18 -30 18 -15 0 S15 -18 30 0 S50 14 58 2" stroke="#A8CFA0" stroke-width="9.5" fill="none" stroke-linecap="round"/><path d="M-60 2 C-45 -16 -30 20 -15 2 S15 -16 30 2 S50 16 58 4" stroke="#F4E6B0" stroke-width="3" fill="none" stroke-linecap="round" opacity=".9"/>
+      ${[-45,-25,-5,15,35].map(xx=>`<path d="M${xx} -6 l3 -5 3 5z" fill="#F4C870"/>`).join("")}<circle cx="62" cy="0" r="9" fill="#A8CFA0" ${k}/><path d="M56 -6 q-6 -8 -2 -14 M58 -8 q-2 -9 4 -12" stroke="#F4C870" stroke-width="2" fill="none" stroke-linecap="round"/>${E(65,-2,1.6)}<path d="M66 -6 l6 -6 M62 -6 l2 -8" stroke="#F4C870" stroke-width="1.6"/><path d="M68 3 q8 2 12 -2 M68 4 q6 5 11 4" stroke="#E9A9A0" stroke-width="1.2" fill="none"/><ellipse cx="-30" cy="10" rx="14" ry="5" fill="#fff" opacity=".9"/><ellipse cx="20" cy="12" rx="16" ry="5" fill="#fff" opacity=".9"/></g>`;
+    case "maneki": return `<g ${T}><rect x="-9" y="-2" width="18" height="3" rx="1" fill="#E9A9A0" ${k}/><ellipse cx="0" cy="-10" rx="8" ry="9" fill="#fff" ${k}/><circle cx="0" cy="-23" r="7.5" fill="#fff" ${k}/><path d="M-6 -27 l-1 -6 5 3z M6 -27 l1 -6 -5 3z" fill="#fff" ${k}/>
+      <path d="M-3 -23 q1.5 -1.5 3 0 M1 -23 q1.5 -1.5 3 0" ${k} fill="none" transform="translate(-0.5 0)"/><path d="M-2 -19 q2 1.5 4 0" ${k} fill="none"/><path d="M7 -14 q6 -6 3 -13" stroke="${INK}" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M7 -14 q6 -6 3 -13" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M-5 -16 h10" stroke="#E9A9A0" stroke-width="2"/><circle cx="0" cy="-14" r="2" fill="#F4C870" ${k}/><ellipse cx="-3" cy="-7" rx="3" ry="2.4" fill="#F4C870" ${k}/></g>`;
+  }
+  return "";
+}
+
 function mixHex(a,b,t){ const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); const x=p(a), y=p(b); return "#"+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,"0")).join(""); }
 function artDefs(){
   const [L0,L1]=LEAF[season()];
@@ -1979,6 +2070,7 @@ function sceneSVG(g, tree, {sky=true, petals=true, highlight=null, decos=true, e
     <g id="${evolve?"treeLayer":""}">${treeMarkup}</g>
     ${front}
     ${animals}
+    ${sky ? visitorsLayer(out.perch) : ""}
     ${sky ? lifeSVG(tod) + seasonParticles() : ""}
     ${petals && g>=.8 ? petalsSVG(Math.round((g-.75)*30), tree.seed) : ""}
     ${evolve?`<g id="sparkLayer"></g><rect id="flash" width="300" height="260" fill="#fff" opacity="0"/>`:""}
@@ -2070,6 +2162,8 @@ function renderHome(){
       <div class="bar"><i style="width:${g*100}%;background:#F4B6C2"></i></div>
       <div class="animals">${set.map(a=>{const ag=animalGrowth(a,g);
         return `<span class="animal-chip ${ag>=0?"on":""}">${ag<0?"🥚":a.emoji} ${ag<0?`komt bij ${Math.round(a.hatch*100)}%`:`${esc(a.name)}${ag>=1?" ✓":""}`}</span>`;}).join("")}</div>
+      ${(()=>{ const vs=visibleVisitors(), fresh=vs.filter(v=>!(S.zukan&&S.zukan[v.id])); if(!vs.length) return "";
+        return `<div class="animal-chip on" style="margin-top:8px;display:inline-block">👀 ${vs.length===1?"Er is iemand":"Er zijn "+vs.length+" dieren"} op bezoek${fresh.length?" · tik ze aan in je tuin!":""}</div>`; })()}
       ${(()=>{ const si=SEASON_INFO[season()]; return `<button class="animal-chip on" style="margin-top:8px;display:inline-block" onclick="speak('${si.kana}')">${si.emoji} ${si.nl}: <span class="jp">${si.ja}</span> · ${si.romaji} 🔊</button>`; })()}
       ${(()=>{ const nd=nextDeco(); if(!nd) return ""; let u=0; while(u<UNITS.length && unitDone(u)) u++;
         return u<UNITS.length ? `<div class="animal-chip" style="margin-top:8px;display:inline-block">🎁 Volgende beloning: ${nd.emoji} ${esc(nd.name)} · rond Unit ${u+1} af</div>` : ""; })()}
@@ -2424,6 +2518,12 @@ function renderGarden(){
     <h3 class="sect">Diertjes · ${new Set(animals.map(a=>a.id)).size}/${allAnimals.length}</h3>
     <div class="collect">${allAnimals.map(a=>{const got=animals.some(x=>x.id===a.id);
       return `<div class="citem ${got?"":"locked"}"><span>${got?a.emoji:"🥚"}</span>${esc(a.name.split(" (")[0])}${got?"":"<small>komt nog</small>"}</div>`;}).join("")}</div>
+    <h3 class="sect">図鑑 Dierenboek · ${Object.keys(S.zukan||{}).filter(k=>VISITORS.some(v=>v.id===k)).length}/${VISITORS.length}</h3>
+    <p style="margin:2px 22px 0;color:var(--muted);font-weight:600;font-size:.85rem">Bezoekers verschillen per seizoen en tijdstip. Tik ze aan in je tuin om ze te verzamelen.</p>
+    <div class="collect">${VISITORS.map(v=>{ const got=S.zukan&&S.zukan[v.id];
+      return `<button class="citem ${got?"":"locked"}" onclick="${got?`speak('${v.kana}');toast(${JSON.stringify(v.fact).replace(/"/g,"&quot;")})`:`toast('Nog niet gezien · ${RARITY[v.r].nl}')`}">
+        <svg viewBox="${v.id==="kinkoi"||v.id==="tonbo"?"-26 -20 52 30":v.id==="kyubi"?"-26 -44 58 48":"-24 -36 48 40"}" width="54" height="45" style="${got?"":"filter:grayscale(1) brightness(1.6) opacity(.5)"}">${v.id==="ryu"?`<g transform="scale(.3)">${visitorSVG(v.id,-10,-30)}</g>`:visitorSVG(v.id,0,0)}</svg>
+        ${got?`<b class="jp">${v.ja}</b><small>${v.romaji} · ${v.nl}</small>`:`<b>?</b><small>${RARITY[v.r].nl}</small>`}${RARITY[v.r].stars?`<small>${RARITY[v.r].stars}</small>`:""}</button>`; }).join("")}</div>
     <h3 class="sect">Volgroeide bomen · ${n}</h3>
     ${n?`<div class="garden-wrap">${gardenSVG()}</div>`:
       `<p style="margin:6px 22px 0;color:var(--muted);font-weight:600">Boom ${S.tree.n} staat op ${Math.round(g*100)}%. In volle bloei komt hij hier te staan, met zijn diertjes. Nog ±${daysLeft(g)} dagen goed oefenen.</p>`}
@@ -2851,8 +2951,9 @@ function finish(){
   }
   save();
   const hatched = ANIMAL_SETS[S.tree.set||0].find(a=>g0<a.hatch && g1>=a.hatch);
+  const visitor = rollBonusVisitor(); save();
   const newDeco = unitsDone()>decoBefore && DECOS[decoBefore] ? DECOS[decoBefore] : null;
-  lesson.result = {xp, perfect, goalNow: !wasGoal && S.daily.xp>=S.goal, g0, g1, hatched, newDeco};
+  lesson.result = {xp, perfect, goalNow: !wasGoal && S.daily.xp>=S.goal, g0, g1, hatched, newDeco, visitor};
   view="result"; render();
 }
 function renderResult(){
@@ -2865,6 +2966,7 @@ function renderResult(){
     <h1>${head}</h1>
     <p id="growcap" style="margin:0;font-weight:800;min-height:1.4em;text-align:center"></p>
     <p style="color:var(--muted);margin:0;font-weight:700">Je boom groeide +${grew}% ${r.goalNow?"· dagdoel gehaald 💧":""}</p>
+    ${r.visitor?`<p style="margin:0;font-weight:800">👀 Er is iemand op bezoek in je tuin${r.visitor.r>=3?" … iets bijzonders!":"!"} Tik hem aan op het startscherm.</p>`:""}
     <div class="stats">
       <div class="stat"><b>+${r.xp}</b><span>XP</span></div>
       <div class="stat"><b>${acc}%</b><span>Goed</span></div>
