@@ -83,6 +83,7 @@
 @keyframes legHop{0%,70%,100%{transform:rotate(0)}12%{transform:rotate(12deg)}35%{transform:rotate(-28deg)}}
 @keyframes legHopF{0%,70%,100%{transform:rotate(0)}12%{transform:rotate(-8deg)}35%{transform:rotate(22deg)}}
 .mv-perch .pt,.mv-fly .pt-a,.mv-fly .pt-b{animation:none}
+.pt-wag{animation:wag .45s ease-in-out infinite alternate}@keyframes wag{from{transform:rotate(-12deg)}to{transform:rotate(10deg)}}
 .pt-fin{animation:fin .55s ease-in-out infinite alternate}@keyframes fin{from{transform:skewY(-20deg)}to{transform:skewY(20deg)}}
 .pt-wing{animation:wing .25s ease-in-out infinite alternate}@keyframes wing{from{transform:scaleY(1)}to{transform:scaleY(.55)}}
 .pt-dip{animation:dip 7s ease-in-out infinite}@keyframes dip{0%,62%,100%{transform:skewX(0)}70%,80%{transform:skewX(-22deg) scaleY(.9)}74%{transform:skewX(-18deg) scaleY(.92)}}
@@ -1922,8 +1923,8 @@ function g3dDesc(g, tree){   // what the 3D garden should show, from the same da
   const used={};
   for(const v of visibleVisitors()){ const spots=VISIT_SPOT[v.place]; const k=(used[v.place]=(used[v.place]||0)+1)-1; let [x,y]=spots[k%spots.length];
     if(v.place==="tree" && out.perch){ x=out.perch.x+16; y=out.perch.y+2; }
-    const pos = v.place==="sky" ? {x:-2.5, z:-5, y:5.6} : at(x,y,v.place);
-    figures.push({id:v.id, code:FLUENT[v.id], ...pos, size:(FLUENT_SIZE[v.id]||20)*(v.place==="sky"?1.4:1), motion:MOTION[v.id], faceRight:FACE_RIGHT[v.id], filter:filt(v.id), tap:v.id, phase:hashStr(v.id)%9}); }
+    const pos = v.place==="sky" ? {x:-2.5, z:-5, y:5.6} : v.id==="yamori" ? {x:X(232)-.05, z:Z(236)+.78, y:.03} : at(x,y,v.place);
+    figures.push({id:v.id, code:FLUENT[v.id], ...pos, size:(FLUENT_SIZE[v.id]||20)*(v.place==="sky"?1.4:v.id==="yamori"?1.4:1), motion:v.id==="yamori"?["crawl",0,1]:MOTION[v.id], faceRight:FACE_RIGHT[v.id], filter:filt(v.id), tap:v.id, phase:hashStr(v.id)%9}); }
   const have=earnedIds(), decos=[];
   for(const d of DECOS){ if(!have.has(d.id) || d.id==="fuji") continue;
     const [x,y]=DECO_ANCHOR[d.id] ? decoPos(d.id) : [150,206];
@@ -2220,8 +2221,8 @@ const seasonTint = id => id==="maple" ? ({autumn:"hue-rotate(-75deg) saturate(1.
 // leg: [x0,x1,top,pivotX,pair] swings from the hip, pairs a/b step in turn; part: {r:[x0,y0,x1,y1], p:[px,py], c:class, h:hole inset at the top}
 const L = (x0,x1,top,px,c) => ({r:[x0,top-2,x1,256], p:[px,top], c, h:11});
 const RIG = {
-  "1f415": [L(38,98,180,70,"a"),L(99,138,180,118,"b"),L(141,180,192,164,"b"),L(182,236,192,210,"a")],          // hond
-  "1f408": [L(76,105,190,92,"a"),L(106,141,192,122,"b"),L(143,178,196,165,"b"),L(178,218,196,200,"a")],         // kat
+  "1f415": [L(38,98,180,70,"a"),L(99,138,180,118,"b"),L(141,180,192,164,"b"),L(182,236,192,210,"a"),{r:[150,36,242,95], p:[230,95], c:"wag", h:0}],          // hond
+  "1f408": [L(76,105,190,92,"a"),L(106,141,192,122,"b"),L(143,178,196,165,"b"),L(178,218,196,200,"a"),{r:[160,18,248,88], p:[228,88], c:"wag", h:0}],         // kat
   "1f9a1": [L(46,94,212,74,"a"),L(95,131,212,113,"b"),L(148,184,212,167,"b"),L(184,228,212,206,"a")],          // das
   "1f422": [L(34,108,218,74,"a slow"),L(154,228,218,190,"b slow")],                                             // schildpad
   "1f99a": [L(100,141,203,130,"a"),L(141,174,203,154,"b")],                                                   // pauw

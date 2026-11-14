@@ -277,9 +277,20 @@ function partsTextures(img, parts){   // body with holes + cut-out parts, like t
   const cuts=parts.map(q=>{ const [x0,y0,x1,y1]=q.r, c=document.createElement("canvas"); c.width=x1-x0; c.height=y1-y0; c.getContext("2d").drawImage(img,x0,y0,x1-x0,y1-y0,0,0,x1-x0,y1-y0); return c; });
   return {body, cuts};
 }
+function normalTex(src, strength=5){
+  const n=src.width, m=src.height, c=document.createElement("canvas"); c.width=n; c.height=m; const g=c.getContext("2d");
+  g.filter=`blur(${Math.max(2,Math.round(Math.min(n,m)/26))}px)`; g.drawImage(src,0,0); const A=g.getImageData(0,0,n,m).data;
+  const S=src.getContext("2d").getImageData(0,0,n,m).data, out=g.createImageData(n,m), d=out.data;
+  const H=(x,y)=>{ x=x<0?0:x>=n?n-1:x; y=y<0?0:y>=m?m-1:y; const i=(y*n+x)*4; return Math.sqrt(A[i+3]/255) + (S[i]+S[i+1]+S[i+2])/765*.18; };
+  for(let y=0;y<m;y++) for(let x=0;x<n;x++){ const i=(y*n+x)*4, dx=(H(x+1,y)-H(x-1,y))*strength, dy=(H(x,y+1)-H(x,y-1))*strength, l=Math.hypot(dx,dy,1);
+    d[i]=(-dx/l*.5+.5)*255; d[i+1]=(dy/l*.5+.5)*255; d[i+2]=(1/l*.5+.5)*255; d[i+3]=255; }
+  g.filter="none"; g.putImageData(out,0,0); const t=new THREE.CanvasTexture(c); return t;
+}
 function spriteMat(map, tint){
   map.colorSpace=THREE.SRGBColorSpace;
-  const m=new THREE.MeshStandardMaterial({map, alphaTest:.45, side:THREE.DoubleSide, roughness:1, emissive:"#ffffff", emissiveMap:map, emissiveIntensity:R.emis??.32});
+  const src=map.image, nm=(src && src.getContext) ? normalTex(src) : null;
+  const m=new THREE.MeshStandardMaterial({map, alphaTest:.45, side:THREE.DoubleSide, roughness:.62, emissive:"#ffffff", emissiveMap:map, emissiveIntensity:(R.emis??.32)*(nm?.62:1)});
+  if(nm){ m.normalMap=nm; m.normalScale.set(1.1,1.1); }
   if(tint) m.color.set(tint);
   return m;
 }
@@ -305,10 +316,13 @@ async function makeFigure(f, desc){   // f: {id, code, x, z, y, size, motion, ta
     const t=new THREE.CanvasTexture(img);
     const b=plane(size,size,spriteMat(t)); b.position.y=size/2; inner.add(b); b.userData.tap=f.tap; if(f.tap) R.tappables.push(b);
   }
-  // face the camera (around the vertical axis)
+  // face the camera (around the vertical axis); a crawler lies flat on the ground
   root.rotation.y=Math.atan2(R.camera.position.x-root.position.x, R.camera.position.z-root.position.z)*.6;
+  if(f.motion && f.motion[0]==="crawl"){   // climbing on the face of a rock: lean back, move and turn within that face
+    face.rotation.x=-.32; root.rotation.y=0; inner.children.forEach(ch=>ch.position.y-=size/2); }
   if(f.flip) face.scale.x=-1;
-  R.movers.push({root, face, inner, parts:parts3, f, base:root.position.clone(), phase:f.phase||0});
+  R.movers.push({root, face, inner, parts:parts3, f, base:root.position.clone(), phase:f.phase||0, size,
+    st:{x:f.x, z:f.z, tx:f.x, tz:f.z, wait:Math.random()*2, go:0, dir:1, head:Math.random()*6}});
   return root;
 }
 async function makeTree(desc){
@@ -321,30 +335,61 @@ async function makeTree(desc){
 }
 
 /* ---------- per frame ---------- */
+function wander(mv, dt, rad, speed, zr=.6){   // walk to a random spot nearby, stop for a moment, walk on
+  const st=mv.st, b=mv.base;
+  if(st.wait>0){ st.wait-=dt; st.go=Math.max(0,st.go-dt*4); return 0; }
+  const dx=st.tx-st.x, dz=st.tz-st.z, d=Math.hypot(dx,dz);
+  if(d<.03){ st.wait=1+Math.random()*3; const a=Math.random()*TAU, r=rad*(.35+Math.random()*.65);
+    st.tx=Math.max(-5.6,Math.min(5.6,b.x+Math.cos(a)*r)); st.tz=Math.max(-3.4,Math.min(4,b.z+Math.sin(a)*r*zr)); return 0; }
+  st.go=Math.min(1,st.go+dt*4); const v=Math.min(d, speed*dt*st.go);
+  st.x+=dx/d*v; st.z+=dz/d*v; if(Math.abs(dx)>.02) st.dir = dx>0 ? -1 : 1;
+  return dx/d;
+}
 function animate(t){
+  const dt=Math.min(.1, t-(R.lastT??t)); R.lastT=t;
   for(const mv of R.movers){
-    const {root, face, inner, parts, f, base}=mv, m=f.motion||["still",0,10], [kind,dx,dur]=m, T=t+mv.phase, dxm=dx/U;
-    let p=(T/dur)%1, ox=0, oy=0, flip=1;
-    if(kind==="walk"||kind==="hop"){ ox = p<.45 ? p/.45 : p<.5 ? 1 : p<.95 ? 1-(p-.5)/.45 : 0; ox*=dxm; flip = (p>=.48 && p<.98) ? -1 : 1; }
-    if(kind==="hop"){ const q=(T/.8)%1; oy=q<.7 ? Math.sin(q/.7*Math.PI)*.22 : 0; }
-    if(kind==="walk"){ oy=Math.abs(Math.sin(T*TAU))*.03; }
-    if(kind==="swim"){ ox=Math.sin(p*TAU)*dxm*.5; oy=Math.sin(T*1.7)*.02; flip=Math.cos(p*TAU)>0?1:-1; }
-    if(kind==="fly"||kind==="hover"){ ox=Math.sin(p*TAU)*1.2; oy=Math.sin(p*TAU*2)*.5; root.position.z=base.z+Math.cos(p*TAU)*.6; flip=Math.cos(p*TAU)>0?-1:1;
-      if(kind==="fly") inner.scale.x=.55+.45*Math.abs(Math.cos(T*11)); }
-    if(kind==="glide"){ ox=-14+((T/dur)%1)*28 - base.x; oy=Math.sin(T*.8)*.4; flip=-1; }
-    if(kind==="perch"){ const q=p; oy = q>.78&&q<.9 ? Math.sin((q-.78)/.12*Math.PI)*.18 : 0; }
-    if(kind==="climb"){ oy=(p<.5?p*2:2-p*2)*Math.abs(dxm); inner.rotation.z=Math.sin(T*10)*.08; }
-    root.position.x=base.x+ox; root.position.y=base.y+oy;
-    face.scale.x=(f.flip?-1:1)*flip*(dx>0?-1:1)*(f.faceRight?-1:1);
-    for(const q of parts){ const c=q.c, amp=c.includes("small")?.14:.3, sp=c.includes("slow")?2.2:1;
+    const {root, face, inner, parts, f, base, st}=mv, m=f.motion||["still",0,10], [kind,dx,dur]=m, T=t+mv.phase, dxm=dx/U;
+    let p=(T/dur)%1, ox=0, oy=0, flip=1, moving=1;
+    const ground = (kind==="walk"||kind==="hop") && (f.y||0)===0;
+    if(ground){   // wander around the home spot
+      const rad=Math.max(.8, Math.abs(dxm)*1.1), speed=Math.abs(dxm)*2/(dur*.9)*(kind==="hop"?1.5:1.1)+.05;
+      wander(mv, dt, rad, speed); moving=st.go; root.position.set(st.x, base.y, st.z);
+      face.scale.x=st.dir*(f.faceRight?-1:1);
+      if(kind==="hop"){ const q=(T/.8)%1; oy = moving>.2 && q<.7 ? Math.sin(q/.7*Math.PI)*.22*moving : 0; }
+      else oy=Math.abs(Math.sin(T*TAU))*.03*moving;
+      if(moving<.1){ const z=(T/4.5)%1; inner.rotation.z = z>.6&&z<.8 ? Math.sin((z-.6)/.2*Math.PI)*.12 : 0; } else inner.rotation.z=0;   // sniffing / looking around
+      root.position.y=base.y+oy;
+    } else if(kind==="crawl"){
+      if(st.u===undefined){ st.u=0; st.v=0; st.tu=0; st.tv=0; st.go=0; }
+      if(st.wait>0){ st.wait-=dt; st.go=Math.max(0,st.go-dt*4); }
+      else { const du=st.tu-st.u, dv=st.tv-st.v, d=Math.hypot(du,dv);
+        if(d<.02){ st.wait=.8+Math.random()*2.5; st.tu=(Math.random()-.5)*.7; st.tv=Math.random()*.34; }
+        else { st.go=Math.min(1,st.go+dt*4); const v=Math.min(d,.2*dt*st.go); st.u+=du/d*v; st.v+=dv/d*v;
+          const want=Math.atan2(-du,dv); let dA=want-st.head; dA=Math.atan2(Math.sin(dA),Math.cos(dA)); st.head+=dA*Math.min(1,dt*6); } }
+      moving=st.go; inner.position.set(st.u, st.v, .02); inner.rotation.z=st.head+Math.sin(T*16)*.14*moving; face.scale.x=1;
+    } else {
+      if(kind==="walk"||kind==="hop"){ ox = p<.45 ? p/.45 : p<.5 ? 1 : p<.95 ? 1-(p-.5)/.45 : 0; ox*=dxm; flip = (p>=.48 && p<.98) ? -1 : 1; }
+      if(kind==="hop"){ const q=(T/.8)%1; oy=q<.7 ? Math.sin(q/.7*Math.PI)*.22 : 0; }
+      if(kind==="walk"){ oy=Math.abs(Math.sin(T*TAU))*.03; }
+      if(kind==="swim"){ ox=Math.sin(p*TAU)*dxm*.5; oy=Math.sin(T*1.7)*.02; flip=Math.cos(p*TAU)>0?1:-1; }
+      if(kind==="fly"||kind==="hover"){ ox=Math.sin(p*TAU)*1.2; oy=Math.sin(p*TAU*2)*.5; root.position.z=base.z+Math.cos(p*TAU)*.6; flip=Math.cos(p*TAU)>0?-1:1;
+        if(kind==="fly") inner.scale.x=.55+.45*Math.abs(Math.cos(T*11)); }
+      if(kind==="glide"){ ox=-14+((T/dur)%1)*28 - base.x; oy=Math.sin(T*.8)*.4; flip=-1; }
+      if(kind==="perch"){ const q=p; oy = q>.78&&q<.9 ? Math.sin((q-.78)/.12*Math.PI)*.18 : 0; }
+      if(kind==="climb"){ oy=(p<.5?p*2:2-p*2)*Math.abs(dxm); inner.rotation.z=Math.sin(T*10)*.08; }
+      root.position.x=base.x+ox; root.position.y=base.y+oy;
+      face.scale.x=(f.flip?-1:1)*flip*(dx>0?-1:1)*(f.faceRight?-1:1);
+    }
+    for(const q of parts){ const c=q.c, amp=(c.includes("small")?.14:.3)*(kind==="crawl"?1.3:1), sp=c.includes("slow")?2.2:kind==="crawl"?.45:1;
       let a=0;
-      if(c.includes("fin")) a=Math.sin(T*TAU/1.1)*.3;
+      if(c.includes("wag")) a=Math.sin(T*TAU/(moving>.3?.4:.7))*.22;
+      else if(c.includes("fin")) a=Math.sin(T*TAU/1.1)*.3;
       else if(c.includes("wing")) q.pivot.scale.y=.55+.45*Math.abs(Math.cos(T*TAU/.5));
       else if(c.includes("dip")){ const z=(T/7)%1; a = z>.62&&z<.82 ? .38*Math.sin((z-.62)/.2*Math.PI) : 0; }
       else if(c.includes("sway")) a=Math.sin(T*TAU/3.2)*.16;
-      else if(kind==="hop"){ const z=(T/.8)%1; a=(c.includes("b")||c.includes("f")?-1:1)*(z<.12? z/.12*.2 : z<.35 ? .2-(z-.12)/.23*.7 : z<.7 ? -.5+(z-.35)/.35*.5 : 0); }
+      else if(kind==="hop"){ const z=(T/.8)%1; a=moving*(c.includes("b")||c.includes("f")?-1:1)*(z<.12? z/.12*.2 : z<.35 ? .2-(z-.12)/.23*.7 : z<.7 ? -.5+(z-.35)/.35*.5 : 0); }
       else if(kind==="perch"||kind==="fly"||kind==="still") a=0;
-      else a=Math.sin(T*TAU/sp + (c.includes("b")?Math.PI:0))*amp;
+      else a=Math.sin(T*TAU/sp + (c.includes("b")?Math.PI:0))*amp*moving;
       if(!c.includes("wing")) q.pivot.rotation.z=a; }
   }
   if(R.water && R.water.material.normalMap) R.water.material.normalMap.offset.set(t*.012, t*.008);
