@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(ApkVerifierPlugin.class);
         registerPlugin(ScreenPlugin.class);
+        registerPlugin(JaListenPlugin.class);
         super.onCreate(savedInstanceState);
         // let the app use the area around the camera cutout (the web page pads itself)
         if (Build.VERSION.SDK_INT >= 28) {

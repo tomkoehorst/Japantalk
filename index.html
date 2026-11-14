@@ -212,6 +212,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .mic{width:100%;max-width:420px;padding:18px;border-radius:18px;background:var(--sage);font-weight:800;font-size:1.1rem;color:#3D3A44;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 5px 0 rgba(61,58,68,.15)}
 .mic:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(61,58,68,.15)}
 .mic.listening{background:var(--peach);animation:pulse 1.2s infinite}
+.mic.listening.ready{background:var(--sage);animation:none;box-shadow:0 0 0 calc(4px + var(--lvl,0)*16px) rgba(124,190,150,.35),0 5px 0 rgba(61,58,68,.15);transition:box-shadow .09s linear}
+.mic small{font-weight:600;opacity:.7;font-size:.8rem}
 @keyframes pulse{50%{box-shadow:0 5px 0 rgba(61,58,68,.15),0 0 0 10px color-mix(in srgb,var(--peach) 35%,transparent)}}
 .linkbtn{color:var(--muted);font-weight:700;font-size:.9rem;padding:6px}
 .heard{color:var(--muted);font-size:.95rem;text-align:center;min-height:1.3em}
@@ -1109,6 +1111,13 @@ async function listen(){
   listening=true; lastListenError="";
   try{
     await new Promise(r=>setTimeout(r,250));          // let the voice/audio release the speaker before the mic opens
+    if(jaListenOK!==false){   // our own, more forgiving recogniser (native JaListen plugin)
+      try{
+        const r = await nat("JaListen","start",{language:"ja-JP", maxResults:5, maxWaitMs:8000});
+        if(r && Array.isArray(r.matches)){ jaListenOK=true; if(!r.matches.length) lastListenError=r.error||""; return r.matches; }
+        jaListenOK=false;
+      }catch(e){ jaListenOK=false; }
+    }
     for(let attempt=0; attempt<2; attempt++){
       const t0=Date.now();
       try{
@@ -1126,7 +1135,14 @@ async function listen(){
   }
   finally{ listening=false; }
 }
-let lastListenError="";
+let lastListenError="", jaListenOK=null;
+// live feedback from the microphone: green "Spreek nu!" once it really listens, a ring that grows with your voice
+if(window.Capacitor?.addListener) window.Capacitor.addListener("JaListen","jaListen",e=>{
+  const b=document.querySelector(".mic.listening"); if(!b) return;
+  if(e.state==="ready"||e.state==="speech"){ if(!b.classList.contains("ready")){ b.classList.add("ready"); b.innerHTML="🎙️ Spreek nu! <small>(tik om te stoppen)</small>"; } }
+  else if(e.state==="rms") b.style.setProperty("--lvl", Math.max(0,Math.min(1,(e.value+1)/11)).toFixed(2));
+  else if(e.state==="partial" && e.text){ b.innerHTML=`🎙️ ${esc(e.text)}…`; }
+});
 let azRec = null;      // {stop:fn} while recording
 async function recordPCM({maxMs=7000, silenceMs=1000}={}){
   const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, autoGainControl:true}});
@@ -1384,7 +1400,7 @@ function updateCard(){
     </div></div>`;
 }
 
-function stopListening(){ if(listening){ listening=false; nat("SpeechRecognition","stop").catch(()=>{}); } }
+function stopListening(){ if(listening){ listening=false; if(jaListenOK) nat("JaListen","stop").catch(()=>{}); else nat("SpeechRecognition","stop").catch(()=>{}); } }
 
 // --- matching ---
 function toHira(s){ return s.replace(/[ァ-ヶ]/g, c=>String.fromCharCode(c.charCodeAt(0)-0x60)); }
