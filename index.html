@@ -200,6 +200,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .prow.reading{background:color-mix(in srgb,var(--sage) 25%,var(--card))}
 .opt.right{border-color:var(--good);background:color-mix(in srgb,var(--good) 35%,var(--card))}
 .opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 30%,var(--card))}
+.oldbadge{display:inline-block;font-size:.78rem;font-weight:800;background:color-mix(in srgb,var(--lav) 45%,var(--card));border-radius:999px;padding:3px 10px;margin-bottom:6px}
+.lvl{display:block;font-size:.6rem;letter-spacing:1px;color:var(--good-ink)}
 .scene-label{align-self:center;font-weight:800;font-size:.85rem;background:color-mix(in srgb,var(--butter) 45%,var(--card));border-radius:999px;padding:4px 12px}
 .scene-label span{color:var(--muted);font-weight:700}
 .chat-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -946,10 +948,13 @@ function addXP(n){
   if(S.streak.last!==today()){ S.streak.count+=1; S.streak.last=today(); }
   save();
 }
-function mark(p, ok){
+function mark(p, ok, fixing=false){
   if(!p.key) return;
   const r = S.ph[p.key] || {s:0,n:0};
   r.n++; r.s = Math.max(0, Math.min(5, r.s + (ok?1:-2))); r.t=Date.now(); if(!ok) r.missed=true;
+  // recent mistakes for "Fouten oefenen": they stay until you get it right on a later day, or in that session itself
+  if(!ok){ r.err=Math.min(3,(r.err||0)+1); r.errDay=today(); }
+  else if(r.err && (fixing || r.errDay!==today())) r.err--;
   S.ph[p.key]=r;
 }
 /* ---------- Dutch pronunciation helper: romaji → how a Dutch speaker should read it ----------
@@ -1550,6 +1555,22 @@ function startDaily(){
   lesson = { L:{name:"Dagelijks gesprek", review:true, daily:true}, id:null, queue:ex, i:0, total:ex.length, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
   view="lesson"; render();
 }
+function startSession(name, ex){
+  if(!ex.length){ toast("Niets te oefenen hier 🌱"); return; }
+  window._homeScroll=window.scrollY;
+  lesson = { L:{name, review:true}, id:null, queue:ex, i:0, total:ex.length, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
+  view="lesson"; render();
+}
+const mistakeKeys = () => Object.keys(S.ph).filter(k=>S.ph[k].err>0 && phraseByKey(k) && phraseByKey(k).kind!=="hear").sort((a,b)=>S.ph[b].t-S.ph[a].t);
+function startMistakes(){
+  const ks=mistakeKeys().slice(0,10);
+  startSession("Fouten oefenen", shuffle(ks.flatMap(k=>{ const p=phraseByKey(k); ensureSrs(); const rv=!!(S.srs[k]&&S.srs[k].due<=today());
+    return [{type:"shadow",p}, {type:"speak",p,review:rv}]; })));
+}
+function startUnitReview(ui){
+  const u=UNITS[ui], ps=[...u.phrases, ...u.patternPhrases];
+  startSession(`Herhaal: ${u.title}`, shuffle(pick(ps, Math.min(10, ps.length)).map((p,i)=>({type:["speak","listen","speak","shadow"][i%4], p}))).concat(pick(u.hear, Math.min(3,u.hear.length)).map(p=>({type:"listen",p}))));
+}
 function buildPractice(){
   ensureSrs();
   let keys = dueKeys().sort((a,b)=>(S.srs[a].due<S.srs[b].due?-1:S.srs[a].due>S.srs[b].due?1:0) || S.srs[b].lapses-S.srs[a].lapses).slice(0,REVIEW_MAX);
@@ -2061,6 +2082,7 @@ function renderHome(){
     :due>0?"":`<button class="cta" onclick="startPractice()"><span class="big">🔁</span><span>Alles gedaan!<small>Extra herhalen laat je boom groeien</small></span></button>`}
   <div class="row2">
     <div class="mini">💧 ${S.daily.xp}/${S.goal} XP<small>${mood}</small><div class="bar"><i style="width:${water*100}%;background:var(--blue)"></i></div></div>
+    ${mistakeKeys().length?`<button class="mini" style="grid-column:1 / -1;order:2;background:color-mix(in srgb,var(--peach) 45%,var(--card))" onclick="startMistakes()">❗ Fouten oefenen<small>${mistakeKeys().length} ${mistakeKeys().length===1?"zin":"zinnen"} die je laatst fout had</small></button>`:""}
     ${nLearned>=4?`<button class="mini" style="grid-column:1 / -1;order:3;background:color-mix(in srgb,var(--blue) 40%,var(--card))" onclick="startListenMode()">🎧 Luistermodus<small>Handsfree herhalen: luisteren en antwoorden, zonder naar je scherm te kijken</small></button>`:""}
     <button class="mini" ${nLearned<4?"disabled":""} onclick="startPractice()">🔁 ${due>0?"Herhalen":"Extra herhalen"}<small>${nLearned<4?"Leer eerst een paar zinnen":due>0?`${due} nu · ${tomorrow} morgen`:`niets te doen · morgen ${tomorrow}`}</small></button>
   </div>
@@ -2079,9 +2101,9 @@ function renderLearn(){
     Ls.forEach((L,li)=>{
       const done=!!S.done[lessonId(ui,li)], open=isUnlocked(ui,li), isCur=cur&&cur[0]===ui&&cur[1]===li;
       html+=`<button class="pill ${done?"done":""} ${isCur?"cur":""} ${open?"":"locked"}" ${open?`onclick="startLesson(${ui},${li})"`:`onclick="toast('Rond eerst de vorige les af 🌱')"`}>
-        <span style="font-size:1.2rem">${done?"🌸":open?L.icon:"🔒"}</span>${esc(L.name)}</button>`;
+        <span style="font-size:1.2rem">${done?"🌸":open?L.icon:"🔒"}</span>${esc(L.name)}${done?`<span class="lvl">${"●".repeat(levelOf(lessonId(ui,li)))}${"○".repeat(3-levelOf(lessonId(ui,li)))}</span>`:""}</button>`;
     });
-    html+=`</div></div>`;
+    html+=`</div>${Ls.some((L,li)=>S.done[lessonId(ui,li)])?`<button class="linkbtn" style="margin:0 12px 10px;color:var(--text)" onclick="startUnitReview(${ui})">🔁 Unit herhalen · tik op een 🌸-les voor een hoger niveau</button>`:""}</div>`;
     if(ui===UNITS.length-1 || UNITS[ui+1].block!==u.block){
       for(const st of STORIES.filter(x=>x.block===u.block)){
         const open=storyOpen(st), done=S.stories&&S.stories[st.id], au=UNITS.find(x=>x.id===st.after), aui=UNITS.indexOf(au);
@@ -2423,10 +2445,33 @@ function plantTree(){
 function go(v){ if(v!=="garden") gardenEdit=false; if(view==="learn") window._learnScroll=window.scrollY; view=v; render(); }
 
 /* ---------- lesson flow ---------- */
+const LEVEL_NAME = {1:"", 2:"Niveau 2 · Herhaling", 3:"Niveau 3 · Uit je hoofd"};
+function levelOf(id){ return (S.lvl&&S.lvl[id]) || (S.done[id]?1:0); }
+// a few older phrases mixed into a new lesson (weakest / due first), so old material keeps coming back
+function oldMix(L, n=4){
+  ensureSrs();
+  const here=new Set((L.phrases||[]).map(p=>p.ja));
+  const keys=Object.keys(S.srs).filter(k=>{ const p=phraseByKey(k); return p && p.kind!=="hear" && !here.has(k); })
+    .sort((a,b)=>(S.srs[a].due<S.srs[b].due?-1:1) || (S.srs[a].iv-S.srs[b].iv));
+  return keys.slice(0,n).map((k,i)=>({type:i%2?"listen":"speak", p:phraseByKey(k), old:true, review:S.srs[k].due<=today()}));
+}
+function levelUp(ex, L, level){
+  if(level<=1) return ex;
+  const ps=L.phrases||[];
+  if(L.dialog) return ex;
+  if(L.hear) return shuffle([...ps.map(p=>({type:"listen",p})), ...ps.filter(p=>p.reply&&PHRASES[p.reply]).map(p=>({type:"respond",q:p,p:PHRASES[p.reply]}))]);
+  if(level===2) return shuffle(ps.flatMap(p=>[{type:"shadow",p},{type:"listen",p},{type:"speak",p,scaffold:true}]));
+  return shuffle(ps.flatMap(p=>[{type:"speak",p},{type:"speak",p}]));        // level 3: from memory, twice each
+}
 function startLesson(ui,li){
-  const L = lessonsOf(ui)[li];
+  const L = lessonsOf(ui)[li], id=lessonId(ui,li), level=S.done[id] ? Math.min(3, levelOf(id)+1) : 1;
   window._homeScroll=window.scrollY;
-  lesson = { L, id:lessonId(ui,li), queue:buildLesson(L), i:0, total:0, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
+  let q=levelUp(buildLesson(L), L, level);
+  if(!L.dialog){   // weave in older phrases in the second half
+    const old=oldMix(L, level===1?3:4);
+    old.forEach((o,k)=>q.splice(Math.min(q.length, Math.floor(q.length*.5)+k*3), 0, o));
+  }
+  lesson = { L, id, level, queue:q, i:0, total:0, mistakes:0, correct:0, state:"ask", noMic:false, sel:null, heard:"", attempt:0, retried:new Set() };
   lesson.total = lesson.queue.length;
   view="lesson"; render();
 }
@@ -2567,6 +2612,8 @@ function renderEx(){
       ${lesson.noMic? `<div class="mic-area"><button class="mic" onclick="selfJudgeReveal()">🙊 Ik heb het in gedachten gezegd</button></div>` : micArea("Antwoord "+BUDDY.name)}`;
   }
 
+  const badge = ex.old ? `<div class="oldbadge">🔁 Herhaling uit een eerdere les</div>` : ex.reps ? `<div class="oldbadge">🔁 Nog een keer</div>` : (lesson.level>1 && lesson.i===0) ? `<div class="oldbadge">⭐ ${LEVEL_NAME[lesson.level]}</div>` : "";
+  body = badge + body;
   $app.innerHTML = `<div class="lesson">
     <div class="lesson-top"><button class="closebtn" onclick="quitLesson()" aria-label="Stoppen">✕</button>
       <div class="bar"><i style="width:${prog}%"></i></div></div>
@@ -2702,13 +2749,14 @@ function resolve(ok, skipped=false){
   if(!ex.counted){
     ex.counted=true;
     if(ok) lesson.correct++; else lesson.mistakes++;
-    if(ex.p.key) mark(ex.p, ok);
+    if(ex.p.key) mark(ex.p, ok, lesson.L.name==="Fouten oefenen");
     if(ex.p.key){ if(ex.review) reviewResult(ex.p, ok, lesson.lastScore ?? 1); else if(!ok) softLapse(ex.p); }
   }
-  // wrong answers come back later (once), like Duolingo
-  if(!ok && ex.type!=="dialog" && !ex.requeued){
+  // wrong answers come back a few exercises later, until you get them right (max 3 times), like Duolingo
+  if(!ok && !["dialog","branch","tip","hearIntro"].includes(ex.type) && !ex.requeued && (ex.reps||0)<3){
     ex.requeued=true;
-    lesson.queue.push({type: ex.type==="intro"?"speak":ex.type, p:ex.p, requeued:true});
+    const again={type: ["intro","echo"].includes(ex.type)?"shadow":ex.type, p:ex.p, q:ex.q, model:ex.model, reps:(ex.reps||0)+1, old:ex.old, review:ex.review};
+    lesson.queue.splice(Math.min(lesson.queue.length, lesson.i+4), 0, again);
     lesson.total++;
   }
   renderEx();
@@ -2733,6 +2781,7 @@ function finish(){
   if(lesson.id){
     const stars = perfect?3: lesson.mistakes<=2?2:1;
     S.done[lesson.id] = Math.max(S.done[lesson.id]||0, stars);
+    S.lvl=S.lvl||{}; S.lvl[lesson.id]=Math.max(S.lvl[lesson.id]||0, lesson.level||1);
   }
   save();
   const hatched = ANIMAL_SETS[S.tree.set||0].find(a=>g0<a.hatch && g1>=a.hatch);
