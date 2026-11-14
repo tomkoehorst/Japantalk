@@ -1732,6 +1732,7 @@ function petalsSVG(n=8, seed=7){
 /* ---- animals: drawn around (0,0) = where they stand, ~40px tall at scale 1 ---- */
 const INK="#3D3A44";
 function animalSVG(id, x, y, s, flip=false){
+  if(FLUENT[id]) return `<ellipse cx="${x}" cy="${y}" rx="${(FLUENT_SIZE[id]*s*.3).toFixed(1)}" ry="${(FLUENT_SIZE[id]*s*.07).toFixed(1)}" fill="url(#shadow)"/>${fluent(id, x, y, FLUENT_SIZE[id]*(.55+.45*s), {flip})}`;
   const k=`stroke="${INK}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"`;
   const T=`transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${(flip?-s:s).toFixed(2)} ${s.toFixed(2)})"`;
   const eye=(cx,cy)=>`<circle cx="${cx}" cy="${cy}" r="1.6" fill="${INK}"/>`;
@@ -1869,6 +1870,8 @@ function pondSVG(){
 }
 function decoSVG(id, tod){
   const ink=INK, glow = tod==="evening"||tod==="night";
+  const FD={torii:[32,206], deer:[118,218], pine:[15,227], bamboo:[294,210]};
+  if(FD[id]) return fluent(id, FD[id][0], FD[id][1]);
   switch(id){
     case "toro": return `<g transform="translate(266 236)">
       ${glow?`<circle cx="0" cy="-30" r="22" fill="url(#glow)"/>`:""}
@@ -1904,8 +1907,7 @@ function decoSVG(id, tod){
       [30,80,130,180,230,275].forEach((x,i)=>{ const y=26+ (1-((x-150)/150)**2)*38*0.98;
         s+=`<g class="sway" style="animation-delay:-${i*.4}s"><line x1="${x}" y1="${y.toFixed(1)}" x2="${x}" y2="${(y+4).toFixed(1)}" stroke="#9C7B6B"/>
         ${glow?`<circle cx="${x}" cy="${(y+10).toFixed(1)}" r="9" fill="url(#glow)"/>`:""}
-        <ellipse cx="${x}" cy="${(y+10).toFixed(1)}" rx="4.5" ry="6" fill="${i%2?"#F7C1CC":"#F6E0B8"}" stroke="${ink}" stroke-width=".7"/>
-        <rect x="${x-2.5}" y="${(y+3.5).toFixed(1)}" width="5" height="1.5" fill="#4A4552"/><rect x="${x-2.5}" y="${(y+15).toFixed(1)}" width="5" height="1.5" fill="#4A4552"/></g>`; });
+        ${fluent("lamp", x, y+18, 15)}</g>`; });
       return s; }
     case "bench": return `<g transform="translate(206 222)"><rect x="-14" y="-8" width="28" height="3" rx="1" fill="#C9A88E" stroke="${ink}" stroke-width=".8"/>
       <rect x="-12" y="-5" width="2.5" height="6" fill="#B88F6E"/><rect x="9.5" y="-5" width="2.5" height="6" fill="#B88F6E"/></g>`;
@@ -1939,6 +1941,33 @@ function placedDeco(id, tod, highlight, edit){
   return `<g class="deco ${highlight===id?"hatch":""}" data-id="${id}" transform="${decoTransform(id)}"><ellipse cx="${ax}" cy="${ay+1}" rx="13" ry="3.2" fill="url(#shadow)"/>${decoSVG(id,tod)}
     ${edit?`<ellipse cx="${ax}" cy="${ay}" rx="14" ry="5" fill="rgba(255,255,255,.35)" stroke="#E9A9A0" stroke-width="1.5" stroke-dasharray="3 2"/>`:""}</g>`;
 }
+/* ---------- Microsoft Fluent Emoji (MIT) for animals and decorations; the tree and the companions stay hand-drawn ---------- */
+const FLUENT = { suzume:"1f426", cho:"1f98b", kaeru:"1f438", hato:"1f54a", karasu:"1f426-200d-2b1b", usagi:"1f407", risu:"1f43f", fukuro:"1f989",
+  shiba:"1f415", saru:"1f412", kinkoi:"1f41f", ryu:"1f409",
+  mejiro:"1f426", neko:"1f408", kame:"1f422", tanuki:"1f99d",
+  torii:"26e9", deer:"1f98c", pine:"1f332", bamboo:"1f38b", lamp:"1f3ee", fuji:"1f5fb" };
+const FLUENT_SIZE = { suzume:17, cho:16, kaeru:15, hato:20, karasu:20, usagi:22, risu:19, fukuro:22, shiba:26, saru:24, kitsune:26, kinkoi:20, ryu:60,
+  mejiro:18, neko:26, kame:22, tanuki:26, torii:44, deer:32, pine:34, bamboo:40 };
+// small picture of a decoration or garden animal for the collection cards (Fluent where it exists, otherwise the garden drawing)
+function decoIcon(id){
+  const fid = id==="lamps" ? "lamp" : id;
+  if(FLUENT[fid]) return fluentImg(fid, 36);
+  const [ax,ay]=DECO_ANCHOR[id]||[150,230], vb = id==="bridge"?"22 206 80 42":id==="stones"?"132 230 36 30":`${ax-22} ${ay-48} 44 50`;
+  return `<svg viewBox="${vb}" width="44" height="40">${artDefs()}${decoSVG(id,"day")}</svg>`;
+}
+function animalIcon(a){
+  if(FLUENT[a.id]) return fluentImg(a.id, 36);
+  return `<svg viewBox="${a.id==="koi"?"-24 -12 50 22":"-24 -50 48 54"}" width="44" height="40">${artDefs()}${animalSVG(a.id,0,0,1)}</svg>`;
+}
+// recolours where the emoji differs from the real animal (Fluent's bird is red)
+const FLUENT_TINT = { mejiro:"hue-rotate(95deg) saturate(.75) brightness(1.1)", suzume:"sepia(.85) saturate(1.1) hue-rotate(-15deg) brightness(.95)" };
+// an image standing with its feet on (x,y); soft pastel look so it matches the drawn garden
+function fluent(id, x, y, size, {flip=false, filter=""}={}){
+  const sz=size||FLUENT_SIZE[id]||24, f=`saturate(.85) ${FLUENT_TINT[id]||""} ${filter}`;
+  return `<image href="emoji/${FLUENT[id]}.webp" x="${(x-sz/2).toFixed(1)}" y="${(y-sz).toFixed(1)}" width="${sz}" height="${sz}" style="filter:${f}"${flip?` transform="translate(${(2*x).toFixed(1)} 0) scale(-1 1)"`:""}/>`;
+}
+const fluentImg = (id, px=40, filter="") => `<img src="emoji/${FLUENT[id]}.webp" width="${px}" height="${px}" style="filter:saturate(.85) ${FLUENT_TINT[id]||""} ${filter}" alt="">`;
+
 /* ---------- garden visitors & the animal book (図鑑 zukan) ---------- */
 // rarity: 1 gewoon, 2 bijzonder, 3 zeldzaam, 4 legendarisch
 const VISITORS = [
@@ -1998,6 +2027,11 @@ function visitorsLayer(perch){
   return s;
 }
 function visitorSVG(id, x, y, sc=1){
+  if(FLUENT[id]){
+    const sz=FLUENT_SIZE[id]*sc, gold=id==="kinkoi"?"sepia(1) saturate(3.5) hue-rotate(-8deg) brightness(1.08)":"";
+    const shadow = ["cho","ryu","kinkoi"].includes(id) ? "" : `<ellipse cx="${x}" cy="${y}" rx="${(sz*.32).toFixed(1)}" ry="${(sz*.08).toFixed(1)}" fill="url(#shadow)"/>`;
+    return `${id==="kinkoi"?`<circle cx="${x}" cy="${y-sz*.4}" r="${sz*.7}" fill="url(#glow)"/>`:""}${shadow}${fluent(id, x, y+(id==="kinkoi"?sz*.35:0), sz, {filter:gold})}`;
+  }
   const k=`stroke="${INK}" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"`, E=(cx,cy,r=1.3)=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${INK}"/>`;
   const T=`transform="translate(${x} ${y}) scale(${sc})"`, sea=season();
   switch(id){
@@ -2514,15 +2548,16 @@ function renderGarden(){
         ? `<button class="cta" onclick="gardenEdit=true;renderGarden()"><span class="big">✏️</span><span>Tuin inrichten<small>Zet je decoraties waar jij ze wilt</small></span></button>`
         : `<p style="margin:10px 22px 0;color:var(--muted);font-weight:600">🎁 Rond je eerste unit af en verdien een stenen lantaarn voor je tuin.</p>`}
     <h3 class="sect">Decoraties · ${have.size}/${DECOS.length}</h3>
-    <div class="collect">${DECOS.map((d,i)=>`<div class="citem ${have.has(d.id)?"":"locked"}"><span>${d.emoji}</span>${esc(d.name)}${have.has(d.id)?"":`<small>Unit ${i+1}</small>`}</div>`).join("")}</div>
+    <div class="collect">${DECOS.map((d,i)=>`<div class="citem ${have.has(d.id)?"":"locked"}"><span style="display:flex;justify-content:center">${decoIcon(d.id)}</span>${esc(d.name)}${have.has(d.id)?"":`<small>Unit ${i+1}</small>`}</div>`).join("")}</div>
     <h3 class="sect">Diertjes · ${new Set(animals.map(a=>a.id)).size}/${allAnimals.length}</h3>
     <div class="collect">${allAnimals.map(a=>{const got=animals.some(x=>x.id===a.id);
-      return `<div class="citem ${got?"":"locked"}"><span>${got?a.emoji:"🥚"}</span>${esc(a.name.split(" (")[0])}${got?"":"<small>komt nog</small>"}</div>`;}).join("")}</div>
+      return `<div class="citem ${got?"":"locked"}"><span style="display:flex;justify-content:center">${got?animalIcon(a):"🥚"}</span>${esc(a.name.split(" (")[0])}${got?"":"<small>komt nog</small>"}</div>`;}).join("")}</div>
     <h3 class="sect">図鑑 Dierenboek · ${Object.keys(S.zukan||{}).filter(k=>VISITORS.some(v=>v.id===k)).length}/${VISITORS.length}</h3>
     <p style="margin:2px 22px 0;color:var(--muted);font-weight:600;font-size:.85rem">Bezoekers verschillen per seizoen en tijdstip. Tik ze aan in je tuin om ze te verzamelen.</p>
     <div class="collect">${VISITORS.map(v=>{ const got=S.zukan&&S.zukan[v.id];
       return `<button class="citem ${got?"":"locked"}" onclick="${got?`speak('${v.kana}');toast(${JSON.stringify(v.fact).replace(/"/g,"&quot;")})`:`toast('Nog niet gezien · ${RARITY[v.r].nl}')`}">
-        <svg viewBox="${v.id==="kinkoi"||v.id==="tonbo"?"-26 -20 52 30":v.id==="kyubi"?"-26 -44 58 48":"-24 -36 48 40"}" width="54" height="45" style="${got?"":"filter:grayscale(1) brightness(1.6) opacity(.5)"}">${v.id==="ryu"?`<g transform="scale(.3)">${visitorSVG(v.id,-10,-30)}</g>`:visitorSVG(v.id,0,0)}</svg>
+        ${FLUENT[v.id] ? `<span style="${got?"":"filter:grayscale(1) brightness(1.6) opacity(.5)"}">${fluentImg(v.id,40, v.id==="kinkoi"?"sepia(1) saturate(3.5) hue-rotate(-8deg) brightness(1.08)":"")}</span>`
+          : `<svg viewBox="${v.id==="kinkoi"||v.id==="tonbo"?"-26 -20 52 30":v.id==="kyubi"?"-26 -44 58 48":"-24 -36 48 40"}" width="54" height="45" style="display:block;margin:0 auto;${got?"":"filter:grayscale(1) brightness(1.6) opacity(.5)"}">${visitorSVG(v.id,0,0)}</svg>`}
         ${got?`<b class="jp">${v.ja}</b><small>${v.romaji} · ${v.nl}</small>`:`<b>?</b><small>${RARITY[v.r].nl}</small>`}${RARITY[v.r].stars?`<small>${RARITY[v.r].stars}</small>`:""}</button>`; }).join("")}</div>
     <h3 class="sect">Volgroeide bomen · ${n}</h3>
     ${n?`<div class="garden-wrap">${gardenSVG()}</div>`:

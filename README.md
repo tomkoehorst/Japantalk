@@ -19,3 +19,6 @@ Elke APK wordt ondertekend met jouw eigen sleutel. Die staat als geheim in GitHu
 - `native/` bevat eigen Android-code (`ApkVerifier`, de handtekeningcontrole), die de build in het project kopieert.
 - `npm run www` zet `index.html` en het lettertype Nunito klaar in `www/`. De CI-build doet de rest (`cap add android`, icoon uit `assets/`, `gradlew assembleDebug`).
 - Je voortgang staat in de opslag van de app op je telefoon.
+
+## Illustraties
+De dieren, bezoekers en een deel van de decoraties zijn **Microsoft Fluent Emoji** (MIT-licentie, zie `emoji/LICENSE.txt`). De sakura-boom, de tuin en de begeleiders Neko en Panda zijn zelf getekend in SVG.
