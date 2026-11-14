@@ -127,16 +127,17 @@ function renderPost(){
 }
 
 /* ---------- the world ---------- */
-function sandHeight(x, z, d){   // raked gravel: straight grooves, rings around the island, the rock and the pond
-  const ring=(cx,cz,rx,rz,r0,r1)=>{ const q=Math.hypot((x-cx)/rx,(z-cz)/rz); return q>r0&&q<r1 ? q : -1; };
-  const isl=Math.hypot((x-d.tree[0])/2.6,(z-d.tree[1])/1.9), rock=Math.hypot((x-d.rock[0])/1.25,(z-d.rock[1])/.95), pond=Math.hypot((x-d.pond[0])/1.95,(z-d.pond[1])/1.35);
-  let h;
-  if(isl<1.75) h=Math.sin(isl*TAU*3.2)*.04;
-  else if(rock<1.7) h=Math.sin(rock*TAU*2.2)*.04;
-  else h=Math.sin(z*TAU/.34 + Math.sin(x*.35)*1.2)*.038;
-  h*=Math.min(1, Math.max(0,(pond-1.02)*4));
+function sandHeight(x, z, d){   // raked gravel: rings follow the nearest island, rock or pond and never cross; straight grooves elsewhere
+  const q=(c,rx,rz)=>Math.hypot((x-c[0])/rx,(z-c[1])/rz);
+  const isl=q(d.tree,2.6,1.9), rock=q(d.rock,1.25,.95), pond=q(d.pond,2.25,1.55);
+  const de=Math.min((isl-1)*2.2, (rock-1)*1.1, (pond-1.12)*1.6);   // ~metres from the nearest edge
+  const ringH=Math.sin(Math.max(0,de)*TAU/.34)*.04, lineH=Math.sin(z*TAU/.34 + Math.sin(x*.35)*1.2)*.038;
+  const k=Math.min(1,Math.max(0,(de-1.05)/.25));
+  let h=ringH*(1-k)+lineH*k;
+  h*=Math.min(1, Math.max(0,de*6));                                                   // smooth edge next to each feature
   if(isl<1) h+= .16*Math.cos(Math.min(1,isl)*Math.PI/2)**.6 + fbm(x*2,z*2,7,3)*.05;   // moss island
-  if(pond<1) h-= .32*Math.cos(Math.min(1,pond)*Math.PI/2)**.5;                        // pond basin
+  if(pond<1.14 && pond>=1) h+= .05*Math.sin((pond-1)/.14*Math.PI) + fbm(x*3,z*3,4,2)*.03;   // soft mossy bank
+  if(pond<1) h-= .42*Math.cos(Math.min(1,pond)*Math.PI/2)**.7;                        // pond basin
   return h;
 }
 function buildEnv(desc){
@@ -193,11 +194,12 @@ function buildEnv(desc){
   const pos=geo.attributes.position, colors=new Float32Array(pos.count*3);
   const sand=new THREE.Color(sea==="winter"?"#F2F2F4":"#E4D8C4"), moss=new THREE.Color(sea==="winter"?"#E8EEEC":(sea==="autumn"?"#A7B57F":"#8DBB86")), mossD=new THREE.Color(sea==="winter"?"#C9D3D0":"#5E8E62"), wet=new THREE.Color("#9C9183");
   for(let i=0;i<pos.count;i++){ const x=pos.getX(i), z=pos.getZ(i); pos.setY(i, sandHeight(x,z,D));
-    const isl=Math.hypot((x-D.tree[0])/2.6,(z-D.tree[1])/1.9), pond=Math.hypot((x-D.pond[0])/1.95,(z-D.pond[1])/1.35);
+    const isl=Math.hypot((x-D.tree[0])/2.6,(z-D.tree[1])/1.9), pond=Math.hypot((x-D.pond[0])/2.25,(z-D.pond[1])/1.55);
     const c=sand.clone();
     if(isl<1){ const t=fbm(x*3,z*3,9,3); c.copy(moss).lerp(mossD, t*.9); }
     else if(isl<1.08) c.lerp(moss,.5);
-    if(pond<1.05) c.lerp(wet, Math.min(1,(1.05-pond)*4));
+    if(pond>=.98 && pond<1.14){ const t=fbm(x*4,z*4,3,2); c.copy(moss).lerp(mossD, t*.8); }
+    else if(pond<.98){ c.copy(wet).lerp(new THREE.Color(night?"#141E30":"#33505A"), Math.min(1,(1-pond)*1.6)); }
     if(z<-3.2) c.multiplyScalar(.93);
     colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b; }
   geo.setAttribute("color", new THREE.BufferAttribute(colors,3)); geo.computeVertexNormals();
@@ -210,7 +212,7 @@ function buildEnv(desc){
       g.computeVertexNormals(); const m=new THREE.Mesh(g,rockMat); m.position.set(x,0,z); m.scale.setScalar(s); m.rotation.y=seed; m.castShadow=m.receiveShadow=true; env.add(m); return m; };
   rock(D.rock[0], D.rock[1], .62, .75, 2); rock(D.rock[0]+.75, D.rock[1]+.35, .32, .7, 5);
   const mossCap=new THREE.Mesh(new THREE.SphereGeometry(.32,16,8,0,TAU,0,Math.PI/2), new THREE.MeshStandardMaterial({color:moss, roughness:1})); mossCap.scale.set(1,.35,.8); mossCap.position.set(D.rock[0]-.12, .5, D.rock[1]-.05); env.add(mossCap);
-  for(let i=0;i<18;i++){ const a=i/18*TAU+.2; rock(D.pond[0]+Math.cos(a)*1.95, D.pond[1]+Math.sin(a)*1.32, .17+hash(i,9,4)*.1, .6, i*1.7); }
+  for(let i=0;i<22;i++){ const a=i/22*TAU+.2; if(Math.cos(a)>.55 && Math.sin(a)>-.2 && Math.sin(a)<.6) continue; rock(D.pond[0]+Math.cos(a)*2.25, D.pond[1]+Math.sin(a)*1.52, .16+hash(i,9,4)*.12, .6, i*1.7); }
   /* water */
   const nTex=(()=>{ const n=256, h=tileNoise(n,6,11,3), c=document.createElement("canvas"); c.width=c.height=n; const d=c.getContext("2d").createImageData(n,n);
     for(let y=0;y<n;y++) for(let x=0;x<n;x++){ const i=(y*n+x)*4, H=(a,b)=>h[((b+n)%n)*n+(a+n)%n], dx=(H(x+1,y)-H(x-1,y))*5, dy=(H(x,y+1)-H(x,y-1))*5, l=Math.hypot(dx,dy,1);
@@ -218,9 +220,45 @@ function buildEnv(desc){
     c.getContext("2d").putImageData(d,0,0); return canvasTex(c,false,3); })();
   const pmrem=new THREE.PMREMGenerator(R.renderer); const skyScene=new THREE.Scene(); skyScene.add(sky.clone());
   const envMap=pmrem.fromScene(skyScene, .02).texture; pmrem.dispose();
-  const water=new THREE.Mesh(new THREE.CircleGeometry(1,48), new THREE.MeshStandardMaterial({color:night?"#101C3E":"#2F5F86", roughness:.03, metalness:.35, envMap, envMapIntensity:1.6, normalMap:nTex, normalScale:new THREE.Vector2(.25,.25), transparent:true, opacity:.94}));
-  water.rotation.x=-Math.PI/2; water.scale.set(1.9,1.3,1); water.position.set(D.pond[0], -.08, D.pond[1]); water.receiveShadow=true; env.add(water); R.water=water;
-  for(const [dx,dz,s] of [[.9,-.2,.32],[-.8,.45,.24]]){ const pad=new THREE.Mesh(new THREE.CircleGeometry(s,20,.4,TAU-.5), new THREE.MeshStandardMaterial({color:"#8FC07F",roughness:.7})); pad.rotation.x=-Math.PI/2; pad.position.set(D.pond[0]+dx,-.06,D.pond[1]+dz); env.add(pad); }
+  const wGeo=new THREE.CircleGeometry(1,64,0,TAU); { const p=wGeo.attributes.position, col=new Float32Array(p.count*3), deep=new THREE.Color(night?"#0A1230":"#16405E"), shallow=new THREE.Color(night?"#2A3C6A":"#6FB0C8");
+    for(let i=0;i<p.count;i++){ const r=Math.hypot(p.getX(i),p.getY(i)); const c=deep.clone().lerp(shallow, Math.pow(r,2.2)); col[i*3]=c.r; col[i*3+1]=c.g; col[i*3+2]=c.b; } wGeo.setAttribute("color", new THREE.BufferAttribute(col,3)); }
+  const depthMap=(()=>{ const c=document.createElement("canvas"); c.width=c.height=256; const g=c.getContext("2d"), gr=g.createRadialGradient(128,128,0,128,128,128);
+    gr.addColorStop(0, night?"#08102A":"#123A58"); gr.addColorStop(.55, night?"#14204A":"#2B6688"); gr.addColorStop(.85, night?"#26386A":"#5FA2BE"); gr.addColorStop(1, night?"#34487A":"#8CC4D2");
+    g.fillStyle=gr; g.fillRect(0,0,256,256); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t; })();
+  const water=new THREE.Mesh(wGeo, new THREE.MeshStandardMaterial({map:depthMap, color:"#FFFFFF", roughness:.12, metalness:0, envMap, envMapIntensity:.35, normalMap:nTex, normalScale:new THREE.Vector2(.25,.25), transparent:true, opacity:.9, depthWrite:false}));
+  water.rotation.x=-Math.PI/2; water.scale.set(2.2,1.5,1); water.position.set(D.pond[0], -.08, D.pond[1]); water.receiveShadow=true; env.add(water); R.water=water;
+  const padM=new THREE.MeshStandardMaterial({color:sea==="winter"?"#9DB09A":"#7FB872",roughness:.6, side:THREE.DoubleSide});
+  for(const [dx,dz,s,r] of [[1.0,-.25,.3,0],[-.95,.5,.22,2],[.45,.7,.18,4],[-1.35,-.35,.2,1],[1.35,.4,.16,5],[-.25,-.7,.15,3]]){
+    const pad=new THREE.Mesh(new THREE.CircleGeometry(s,24,.35,TAU-.45), padM); pad.rotation.set(-Math.PI/2,0,r); pad.position.set(D.pond[0]+dx,-.065,D.pond[1]+dz); pad.receiveShadow=true; env.add(pad); }
+  if(sea==="spring"||sea==="summer") for(const [dx,dz] of [[1.05,-.27],[-.25,-.72]]){   // lotus flowers
+    const fl=new THREE.Group(), pm=new THREE.MeshStandardMaterial({color:"#F6B8C8", roughness:.5, emissive:"#F6B8C8", emissiveIntensity:.15});
+    for(let i=0;i<8;i++){ const pe=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8), pm); pe.scale.set(.55,1.3,.3); const a=i/8*TAU; pe.position.set(Math.cos(a)*.05,.07,Math.sin(a)*.05); pe.rotation.set(Math.sin(a)*.5,0,-Math.cos(a)*.5); fl.add(pe); }
+    const core=new THREE.Mesh(new THREE.SphereGeometry(.035,10,8), new THREE.MeshStandardMaterial({color:"#F4D36A"})); core.position.y=.07; fl.add(core);
+    fl.position.set(D.pond[0]+dx,-.06,D.pond[1]+dz); fl.traverse(o=>{ if(o.isMesh) o.castShadow=true; }); env.add(fl); }
+  if(sea!=="winter"){   // reeds and iris along the back of the pond
+    const reedG=new THREE.ConeGeometry(.018,.9,4); reedG.translate(0,.45,0);
+    const reed=new THREE.InstancedMesh(reedG, new THREE.MeshStandardMaterial({color:sea==="autumn"?"#B9A56A":"#6FA866", roughness:.9}), 36);
+    for(let i=0;i<36;i++){ const a=Math.PI*(1.1+hash(i,1,12)*.45), r=1.02+hash(i,2,12)*.1, x=D.pond[0]+Math.cos(a)*2.25*r, z=D.pond[1]+Math.sin(a)*1.55*r;
+      m4.compose(new THREE.Vector3(x,0,z), new THREE.Quaternion().setFromEuler(new THREE.Euler((hash(i,3,12)-.5)*.35,0,(hash(i,4,12)-.5)*.35)), new THREE.Vector3(1,.6+hash(i,5,12)*.8,1)); reed.setMatrixAt(i,m4); }
+    reed.castShadow=true; env.add(reed);
+    if(sea!=="autumn"){ const irisM=new THREE.MeshStandardMaterial({color:"#8C7BD6", roughness:.5, emissive:"#8C7BD6", emissiveIntensity:.12});
+      for(let i=0;i<5;i++){ const a=Math.PI*(1.14+i*.09), x=D.pond[0]+Math.cos(a)*2.36, z=D.pond[1]+Math.sin(a)*1.62;
+        const fl=new THREE.Mesh(new THREE.SphereGeometry(.06,10,8), irisM); fl.scale.set(1,.7,1); fl.position.set(x,.72+hash(i,6,12)*.2,z); env.add(fl); } } }
+  /* shishi-odoshi: a bamboo tube fills with water, tips over and clacks back */
+  { const bamM=new THREE.MeshStandardMaterial({color:"#B8C46A", roughness:.45}), dark=new THREE.MeshStandardMaterial({color:"#7D8A3E", roughness:.6});
+    const so=new THREE.Group(); so.position.set(D.pond[0]+2.55, 0, D.pond[1]+.35); so.rotation.y=-.25; so.scale.setScalar(1.35);
+    for(const sx of [-.11,.11]){ const post=new THREE.Mesh(new THREE.CylinderGeometry(.035,.04,.62,10), bamM); post.position.set(0,.31,sx); so.add(post); }
+    const pivot=new THREE.Group(); pivot.position.set(0,.5,0); so.add(pivot);
+    const tube=new THREE.Mesh(new THREE.CylinderGeometry(.045,.05,.9,12), bamM); tube.rotation.z=Math.PI/2; tube.position.x=-.12; pivot.add(tube);
+    const mouth=new THREE.Mesh(new THREE.CircleGeometry(.044,12), dark); mouth.position.set(-.575,0,0); mouth.rotation.y=-Math.PI/2; pivot.add(mouth);
+    const feed=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.7,10), bamM); feed.rotation.z=Math.PI/2-.25; feed.position.set(.15,.92,0); so.add(feed);
+    const stoneB=new THREE.Mesh(new THREE.SphereGeometry(.16,16,10), new THREE.MeshStandardMaterial({color:"#9C968E", roughness:.9})); stoneB.scale.set(1,.5,1); stoneB.position.set(.22,.05,0); so.add(stoneB);
+    so.traverse(o=>{ if(o.isMesh){ o.castShadow=o.receiveShadow=true; } }); env.add(so);
+    R.shishi={pivot, so, last:-1};
+  }
+  /* ripple rings on the water */
+  R.ripples=[]; const rippleM=()=>new THREE.MeshBasicMaterial({color:"#FFFFFF", transparent:true, opacity:0, depthWrite:false});
+  for(let i=0;i<5;i++){ const r=new THREE.Mesh(new THREE.RingGeometry(.9,1,40), rippleM()); r.rotation.x=-Math.PI/2; r.position.y=-.075; r.visible=false; env.add(r); R.ripples.push({m:r, t0:-9}); }
   /* grass tufts */
   if(sea!=="winter"){ const bl=new THREE.ConeGeometry(.025,.32,3); bl.translate(0,.16,0); const gm=new THREE.MeshStandardMaterial({color:sea==="autumn"?"#C2AE78":"#7FB27A", roughness:.9});
     const n=160, tufts=new THREE.InstancedMesh(bl,gm,n); let k=0;
@@ -393,6 +431,12 @@ function animate(t){
       if(!c.includes("wing")) q.pivot.rotation.z=a; }
   }
   if(R.water && R.water.material.normalMap) R.water.material.normalMap.offset.set(t*.012, t*.008);
+  const ripple=(x,z,size=.35)=>{ const r=R.ripples.find(r=>t-r.t0>2.4); if(!r) return; r.t0=t; r.size=size; r.m.position.x=x; r.m.position.z=z; r.m.visible=true; };
+  if(R.shishi){ const P=7.5, c=(t%P)/P, n=Math.floor(t/P);
+    R.shishi.pivot.rotation.z = c<.86 ? -.28+c/.86*.12 : c<.9 ? -.16+(c-.86)/.04*.75 : c<.95 ? .59 : .59-(c-.95)/.05*.87;   // fills, tips, pours, clacks back
+    if(c>.88 && R.shishi.last!==n){ R.shishi.last=n; const w=new THREE.Vector3(-.6,0,0).applyMatrix4(R.shishi.pivot.matrixWorld); ripple(w.x, w.z+.05, .45); } }
+  if(R.D && Math.random()<dt*.25){ const a=Math.random()*TAU, r=Math.random()*.7; ripple(R.D.pond[0]+Math.cos(a)*r*1.6, R.D.pond[1]+Math.sin(a)*r, .25); }   // a fish comes up
+  for(const r of (R.ripples||[])){ const k=(t-r.t0)/2.4; if(k>1){ r.m.visible=false; continue; } r.m.scale.setScalar(.04+k*r.size); r.m.material.opacity=(1-k)*.55; }
   if(R.motes){ const p=R.motes.geometry.attributes.position; for(let i=0;i<p.count;i++){ p.setY(i, (.3+((hash(i,2,9)*6 + t*(.05+hash(i,4,9)*.08))%6))); p.setX(i, (hash(i,1,9)-.5)*14+Math.sin(t*.3+i)*.3); } p.needsUpdate=true; }
 }
 function loop(){
