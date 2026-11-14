@@ -76,6 +76,9 @@
 @keyframes mvX{0%{transform:translateX(0)}45%{transform:translateX(var(--dx))}50%{transform:translateX(var(--dx))}95%{transform:translateX(0)}100%{transform:translateX(0)}}
 .mv-face{animation:mvFace linear infinite;transform-box:fill-box;transform-origin:center}
 @keyframes mvFace{0%,47%{transform:scaleX(var(--f0))}48%,97%{transform:scaleX(calc(var(--f0) * -1))}98%,100%{transform:scaleX(var(--f0))}}
+.leg{transform-box:fill-box;animation:legSwing .5s ease-in-out infinite alternate}.leg-b{animation-delay:-.5s}.leg-slow{animation-duration:1.1s}.leg-slow.leg-b{animation-delay:-1.1s}
+@keyframes legSwing{from{transform:rotate(-17deg)}to{transform:rotate(17deg)}}
+.mv-slither{animation:mvSlither .9s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}@keyframes mvSlither{0%,100%{transform:skewX(9deg) scaleY(.96)}50%{transform:skewX(-9deg) scaleY(1.04)}}
 .mv-step{animation:mvStep .5s ease-in-out infinite}@keyframes mvStep{50%{transform:translateY(-1.3px)}}
 .mv-hop{animation:mvHop .8s ease-out infinite}@keyframes mvHop{0%,100%{transform:translateY(0)}35%{transform:translateY(-6px)}70%{transform:translateY(0)}}
 .mv-swim{animation:mvSwim ease-in-out infinite}
@@ -86,7 +89,7 @@
 .mv-flap{animation:mvFlap .28s ease-in-out infinite;transform-box:fill-box;transform-origin:center}@keyframes mvFlap{50%{transform:scaleX(.55)}}
 .mv-glide{animation:mvGlide linear infinite}@keyframes mvGlide{0%{transform:translate(-60px,6px)}50%{transform:translate(150px,-4px)}100%{transform:translate(360px,6px)}}
 .mv-perch{animation:mvPerch ease-in-out infinite}@keyframes mvPerch{0%,78%,100%{transform:translateY(0)}84%{transform:translateY(-5px)}90%{transform:translateY(0)}95%{transform:translateY(-2px)}}
-@media (prefers-reduced-motion: reduce){ [class^="mv-"]{animation:none!important} }
+@media (prefers-reduced-motion: reduce){ [class^="mv-"],.leg{animation:none!important} }
 .ripple{animation:ripple 3.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
 @keyframes ripple{0%{transform:scale(.3);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 .snowflake{animation:snow linear infinite}@keyframes snow{to{transform:translate(-20px,275px)}}
@@ -1976,7 +1979,7 @@ function animalIcon(a){
   return `<svg viewBox="${a.id==="koi"?"-24 -12 50 22":"-24 -50 48 54"}" width="44" height="40">${artDefs()}${animalSVG(a.id,0,0,1)}</svg>`;
 }
 // how each creature moves: [kind, distance, seconds]; sprites look left, except the ones in FACE_RIGHT
-const MOTION = { shiba:["walk",-34,12], neko:["walk",-22,15], tanuki:["walk",26,16], anaguma:["walk",30,18], saru:["walk",-18,17], hato:["walk",-20,11], kame:["walk",-14,26], shirohebi:["walk",-26,22],
+const MOTION = { shiba:["walk",-34,12], neko:["walk",-22,15], tanuki:["hop",26,20], anaguma:["walk",30,18], saru:["hop",-18,17], hato:["hop",-20,11], kame:["walk",-14,26], shirohebi:["walk",-26,22],
   suzume:["hop",-22,9], usagi:["hop",-30,10], kaeru:["hop",-8,7], karasu:["hop",-16,12],
   koi:["swim",-20,11], kinkoi:["swim",-22,9], kamo:["swim",-24,14], hakucho:["swim",-18,16],
   cho:["fly",0,14], tentomushi:["fly",0,12], ryu:["glide",0,34], hoo:["walk",-24,20],
@@ -1989,7 +1992,7 @@ function moving(id, markup, delay=0){
   if(kind==="perch") return `<g class="mv-perch" style="animation-duration:${dur}s;animation-delay:-${delay}s">${markup}</g>`;
   if(kind==="fly") return `<g class="mv-fly" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g class="mv-flap">${markup}</g></g>`;
   if(kind==="glide") return `<g class="mv-glide" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g style="transform:scaleX(-1);transform-box:fill-box;transform-origin:center">${markup}</g></g>`;
-  return `<g class="mv-${kind==="swim"?"swim":"walk"}" style="${st}"><g class="mv-face" style="${st}"><g class="mv-${kind==="hop"?"hop":kind==="swim"?"bob":"step"}">${markup}</g></g></g>`;
+  return `<g class="mv-${kind==="swim"?"swim":"walk"}" style="${st}"><g class="mv-face" style="${st}"><g class="mv-${kind==="hop"?"hop":kind==="swim"?"bob":id==="shirohebi"?"slither":"step"}">${markup}</g></g></g>`;
 }
 
 // recolours where the emoji differs from the real animal (Fluent's bird is red)
@@ -1997,10 +2000,27 @@ const FLUENT_TINT = { mejiro:"hue-rotate(95deg) saturate(.75) brightness(1.1)", 
   koi:"hue-rotate(185deg) saturate(1.1) brightness(1.15)", kinkoi:"sepia(1) saturate(3.5) hue-rotate(-8deg) brightness(1.08)",
   hoo:"sepia(.55) saturate(2.2) hue-rotate(-12deg) brightness(1.08)", shirohebi:"grayscale(1) brightness(1.65) contrast(.9)" };
 const seasonTint = id => id==="maple" ? ({autumn:"hue-rotate(-75deg) saturate(1.3)", winter:"grayscale(.7) brightness(1.25)", spring:"brightness(1.08)", summer:""})[season()] : "";
+// legs cut out of the 3D picture so they can swing one by one: [x0,x1,top,pivotX] in the 256px image; legs in pairs a/b step in turn
+const RIG = {
+  shiba:     {legs:[[38,98,180,70,"a"],[99,138,180,118,"b"],[141,180,192,164,"b"],[182,236,192,210,"a"]]},
+  neko:      {legs:[[76,105,190,92,"a"],[106,141,192,122,"b"],[143,178,196,165,"b"],[178,218,196,200,"a"]]},
+  anaguma:   {legs:[[46,94,212,74,"a"],[95,131,212,113,"b"],[148,184,212,167,"b"],[184,228,212,206,"a"]]},
+  kame:      {legs:[[34,108,218,74,"a"],[154,228,218,190,"b"]], slow:1},
+  hoo:       {legs:[[100,141,203,130,"a"],[141,174,203,154,"b"]]},
+};
+const rigDefs = () => Object.entries(RIG).map(([id,r])=>{
+  const R=([x0,x1,t])=>`M${x0/256} ${(t+9)/256}H${x1/256}V1H${x0/256}Z`;
+  return `<clipPath id="rb-${id}" clipPathUnits="objectBoundingBox"><path clip-rule="evenodd" d="M0 0H1V1H0Z ${r.legs.map(R).join(" ")}"/></clipPath>`+
+    r.legs.map((l,i)=>`<clipPath id="rl-${id}-${i}" clipPathUnits="objectBoundingBox"><path d="M${l[0]/256} ${(l[2]-2)/256}H${l[1]/256}V1H${l[0]/256}Z"/></clipPath>`).join("");
+}).join("");
 // an image standing with its feet on (x,y); soft pastel look so it matches the drawn garden
 function fluent(id, x, y, size, {flip=false, filter=""}={}){
   const sz=size||FLUENT_SIZE[id]||24, f=`saturate(.85) ${FLUENT_TINT[id]||""} ${seasonTint(id)} ${filter}`;
-  return `<image href="emoji/${FLUENT[id]}.webp" x="${(x-sz/2).toFixed(1)}" y="${(y-sz).toFixed(1)}" width="${sz}" height="${sz}" style="filter:${f}"${flip?` transform="translate(${(2*x).toFixed(1)} 0) scale(-1 1)"`:""}/>`;
+  const img = (extra="") => `<image href="emoji/${FLUENT[id]}.webp" x="${(x-sz/2).toFixed(1)}" y="${(y-sz).toFixed(1)}" width="${sz}" height="${sz}" style="filter:${f}"${extra}/>`;
+  const fl = flip ? ` transform="translate(${(2*x).toFixed(1)} 0) scale(-1 1)"` : "";
+  const r = RIG[id];
+  if(!r) return img(fl);
+  return `<g${fl}>${r.legs.map((l,i)=>`<g class="leg leg-${l[4]}${r.slow?" leg-slow":""}" style="transform-origin:${(l[3]/2.56).toFixed(1)}% ${(l[2]/2.56).toFixed(1)}%">${img(` clip-path="url(#rl-${id}-${i})"`)}</g>`).join("")}${img(` clip-path="url(#rb-${id})"`)}</g>`;
 }
 const fluentImg = (id, px=40, filter="") => `<img src="emoji/${FLUENT[id]}.webp" width="${px}" height="${px}" style="filter:saturate(.85) ${FLUENT_TINT[id]||""} ${seasonTint(id)} ${filter}" alt="">`;
 
@@ -2103,7 +2123,7 @@ function visitorSVG(id, x, y, sc=1){
 function mixHex(a,b,t){ const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)); const x=p(a), y=p(b); return "#"+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,"0")).join(""); }
 function artDefs(){
   const [L0,L1]=LEAF[season()];
-  return `<defs>
+  return `<defs>${rigDefs()}
     <radialGradient id="leafA" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="${mixHex(L0,"#ffffff",.45)}"/><stop offset=".6" stop-color="${L0}"/><stop offset="1" stop-color="${mixHex(L0,L1,.6)}"/></radialGradient>
     <radialGradient id="leafB" cx=".4" cy=".35" r=".8"><stop offset="0" stop-color="${mixHex(L1,"#ffffff",.25)}"/><stop offset="1" stop-color="${mixHex(L1,"#3D3A44",.12)}"/></radialGradient>
     <radialGradient id="petalG" cx=".5" cy=".85" r=".9"><stop offset="0" stop-color="#FFF4F6"/><stop offset=".55" stop-color="#F9CFD7"/><stop offset="1" stop-color="#F2A9B8"/></radialGradient>
