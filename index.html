@@ -2655,6 +2655,19 @@ function testGrow(frac){
   while(days>0 && treeGrowth()<1){ const d=Math.min(DAY_CAP,days); S.tree.xp[`test-${Date.now()}-${i++}`]=d*S.goal; days-=d; }
   save(); toast(`Boom staat nu op ${Math.round(treeGrowth()*100)}%`); render();
 }
+function showAllAnimals(){   // test: every animal of the garden in motion, on the spot
+  const ids=[...new Set([...ANIMAL_SETS.flat().map(a=>a.id), ...VISITORS.map(v=>v.id)])].filter(id=>FLUENT[id]);
+  const name=id=>{ const v=VISITORS.find(x=>x.id===id); if(v) return v.nl; const a=ANIMAL_SETS.flat().find(x=>x.id===id); return a?a.name.replace(/ \(.*\)/,""):id; };
+  const cell=(id,i)=>{ const m=MOTION[id], big=id==="ryu"; const kind=m&&m[0];
+    let art=fluent(id,50,big?92:84,big?84:64);
+    art = kind==="glide"||kind==="fly"||kind==="hover" ? `<g class="${kind==="fly"?"mv-flap":""}">${art}</g>` : kind==="perch" ? moving(id,art,i) : moving(id,art,i).replace(/--dx:-?[0-9]+px/g,"--dx:0px");
+    return `<div style="text-align:center"><svg viewBox="0 0 100 96" width="96" height="92">${artDefs()}${art}</svg><div style="font-size:.8rem;font-weight:700">${name(id)}</div></div>`; };
+  const d=document.createElement("div"); d.id="allAnimals";
+  d.style.cssText="position:fixed;inset:0;z-index:999;background:var(--bg,#FBF6EF);overflow:auto;padding:16px 12px 40px";
+  d.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><h2 style="margin:0">Alle dieren</h2><button class="btn secondary" style="flex:none;padding:8px 14px" onclick="document.getElementById('allAnimals').remove()">Sluiten</button></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${ids.map(cell).join("")}</div>`;
+  document.body.appendChild(d);
+}
 function testReset(){ ensureGarden(); S.tree.xp={}; save(); render(); }
 function plantTree(){
   ensureGarden(); if(treeGrowth()<1) return;
@@ -3164,7 +3177,8 @@ function renderSettings(){
       ${upd?`<button class="btn" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="installUpdate()">Bijwerken naar 1.${upd.build}</button>`
            :`<button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="checkUpdate(true)">Controleer op updates</button>`}</div>
     <div class="setting" style="border:2px dashed var(--peach)"><h3>🧪 Testen (tijdelijk)</h3><p>Laat je boom vooruit groeien om de diertjes en de tuin te bekijken. Boom ${S.tree?S.tree.n:1} staat op ${Math.round(treeGrowth()*100)}%.</p>
-      <div class="seg"><button onclick="testGrow(.1)">+10%</button><button onclick="testGrow(.3)">+30%</button><button onclick="testGrow(1)">Volle bloei</button><button onclick="testReset()">Terug naar zaadje</button></div></div>
+      <div class="seg"><button onclick="testGrow(.1)">+10%</button><button onclick="testGrow(.3)">+30%</button><button onclick="testGrow(1)">Volle bloei</button><button onclick="testReset()">Terug naar zaadje</button></div>
+      <button class="btn secondary" style="flex:none;padding:10px 16px;font-size:.95rem;margin-top:10px" onclick="showAllAnimals()">🐾 Bekijk alle dieren</button></div>
     <div class="setting"><h3>Thema</h3>${seg("theme",[["auto","Automatisch"],["light","Licht"],["dark","Donker"]],s.theme)}</div>
     <div class="setting"><h3>Voortgang</h3><p>${S.xp} XP · ${learnedPhrases().length} zinnen geleerd · ${Object.keys(S.done).length} lessen gedaan</p>
       <button class="btn coral" style="flex:none;padding:10px 16px;font-size:.95rem" onclick="if(confirm('Alle voortgang wissen?')){S=defaults();save();render();}">Alles wissen</button></div>
