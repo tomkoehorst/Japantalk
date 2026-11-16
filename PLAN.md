@@ -18,6 +18,11 @@
 - Automatische controle van de lesinhoud bij elke build (lezingen, romaji, dubbele betekenissen).
 - Herhalen over dagen (spaced repetition): morgen → 3 → 7 → 16 → 37 → 85 dagen, fout = morgen opnieuw. Herhalen staat vóór nieuwe lessen.
 
+- Nov 2026: alle 20 units staan erin (Blok A t/m F). Nieuw: hotel & ryokan, tempels, uitjes & kaartjes, noodgevallen, apotheek & dokter en over jezelf vertellen. Winkelen en smalltalk zijn vernieuwd.
+- 👂 **Echte Japanners**: wat je verstaat in de vorm waarin mensen het echt zeggen (beleefder, korter, omroep) en op echt tempo. Komt ook terug in de coach en in Verstaan vanaf niveau 2.
+- 🎭 **Rollenspel**: 16 scènes waarin je vrij antwoordt, zonder knoppen. Om herhaling of "langzamer" vragen hoort erbij. Plus een Reisdag met drie scènes achter elkaar.
+- 🆘 **Overlevingscheck**: 30 zinnen die je echt moet kunnen, met een dagelijkse check van de zwakste 10. In reismodus staat die bovenaan.
+
 ## 🎯 Leerkwaliteit (prioriteit)
 1. ✅ **Veel herhalen** over dagen, zie hierboven.
 2. 🚧 **Lesprogramma op een vast kader** (Blok A, B en C staan in de app): JF Standaard / CEFR A1→A2 van de Japan Foundation (de methodes Irodori en Marugoto), met "kan ik…"-doelen per unit, plus de woordenlijst van JLPT N5. Opzet in `CURRICULUM.md`.

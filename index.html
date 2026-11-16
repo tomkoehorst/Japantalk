@@ -360,6 +360,15 @@ const UNITS = [
     {ja:"日本語、上手ですね！",kana:"にほんご、じょうずですね",romaji:"nihongo, jōzu desu ne!",nl:"Uw Japans is goed!",reply:"いえいえ、まだまだです"},
     {ja:"日本は初めてですか？",kana:"にほんははじめてですか",romaji:"Nihon wa hajimete desu ka?",nl:"Is het uw eerste keer in Japan?",reply:"はい"},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"はじめまして！",romaji:"Hajimemashite!",nl:"Aangenaam!"}, options:[{ref:"はじめまして",next:"n2"}]},
+    n2:{cat:{ja:"お名前は？",romaji:"O-namae wa?",nl:"Hoe heet je?"}, options:[{ref:`私は${ME.kata}です`,next:"n3"}]},
+    n3:{cat:{ja:`${ME.kata}さん。どちらからですか？`,romaji:`${ME.romaji}-san. Dochira kara desu ka?`,nl:`${ME.nl}. Waar kom je vandaan?`}, options:[{ref:"オランダから来ました",next:"n4"},{ref:"アムステルダムから来ました",next:"n4"}]},
+    n4:{cat:{ja:"へえ、日本は初めてですか？",romaji:"Hē, Nihon wa hajimete desu ka?",nl:"O, is het je eerste keer in Japan?"}, options:[{ref:"はい",next:"n5"},{ref:"旅行で来ました",next:"n5"}]},
+    n5:{cat:{ja:"日本語、上手ですね！",romaji:"Nihongo, jōzu desu ne!",nl:"Je Japans is goed!"}, options:[{ref:"いえいえ、まだまだです",next:"n6"},{ref:"日本語を勉強しています",next:"n6"}]},
+    n6:{cat:{ja:"よろしくお願いします。",romaji:"Yoroshiku onegai shimasu.",nl:"Prettig kennis te maken."}, options:[{ref:"よろしくお願いします",next:"end"}]},
+    end:{cat:{ja:"こちらこそ！",romaji:"Kochira koso!",nl:"Insgelijks!"}, options:[]},
+   }},
    dialog:[
     {who:"cat",ja:`はじめまして。${BUDDY.ja}です。`,romaji:`Hajimemashite. ${BUDDY.romaji} desu.`,nl:`Aangenaam. Ik ben ${BUDDY.name}.`},
     {who:"me",ref:"はじめまして"},
@@ -586,6 +595,17 @@ const UNITS = [
     {ja:"おかわりはいかがですか？",kana:"おかわりはいかがですか",romaji:"o-kawari wa ikaga desu ka?",nl:"Wilt u er nog een?",reply:"もう一杯お願いします"},
     {ja:"ラストオーダーです",kana:"ラストオーダーです",romaji:"rasuto ōdā desu",nl:"Laatste ronde (laatste bestelling)",note:"Meestal een half uur voor sluitingstijd."},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"乾杯！",romaji:"Kanpai!",nl:"Proost!"}, options:[{ref:"乾杯",next:"n2"}]},
+    n2:{cat:{ja:"苦手なものはありますか？",romaji:"Nigate na mono wa arimasu ka?",nl:"Is er iets wat je niet eet?"}, options:[{ref:"肉が食べられません",next:"n3m"},{ref:"アレルギーがあります",next:"n3a"},{ref:"いいえ",next:"n3"}]},
+    n3m:{cat:{ja:"じゃあ、枝豆はどうですか？",romaji:"Jā, edamame wa dō desu ka?",nl:"Wat dacht je dan van edamame?"}, options:[{ref:"お願いします",next:"n4"},{ref:"からいですか",next:"n3k"}]},
+    n3a:{cat:{ja:"何のアレルギーですか？",tts:"なんのアレルギーですか？",romaji:"Nan no arerugī desu ka?",nl:"Waar ben je allergisch voor?"}, options:[{ref:"えびが食べられません",next:"n3"},{ref:"卵が食べられません",next:"n3"}]},
+    n3:{cat:{ja:"このキムチ、おいしいですよ。",romaji:"Kono kimuchi, oishii desu yo.",nl:"Deze kimchi is lekker hoor."}, options:[{ref:"からいですか",next:"n3k"},{ref:"お願いします",next:"n4"}]},
+    n3k:{cat:{ja:"ちょっとからいです。",romaji:"Chotto karai desu.",nl:"Een beetje pittig."}, options:[{ref:"からくないのはありますか",next:"n4"},{ref:"お願いします",next:"n4"}]},
+    n4:{cat:{ja:"どうぞ。おかわりはいかがですか？",romaji:"Dōzo. O-kawari wa ikaga desu ka?",nl:"Alsjeblieft. Wil je er nog een?"}, options:[{ref:"もう一杯お願いします",next:"n5"},{ref:"お腹いっぱいです",next:"end"}]},
+    n5:{cat:{ja:"はい、どうぞ！おいしいですか？",romaji:"Hai, dōzo! Oishii desu ka?",nl:"Alsjeblieft! Is het lekker?"}, options:[{ref:"おいしいです",next:"end"},{ref:"おいしかったです",next:"end"}]},
+    end:{cat:{ja:"楽しかったですね！",romaji:"Tanoshikatta desu ne!",nl:"Wat was het gezellig, hè!"}, options:[]},
+   }},
    dialog:[
     {who:"cat",ja:"乾杯！",romaji:"Kanpai!",nl:"Proost!"},
     {who:"me",ref:"乾杯"},
@@ -627,6 +647,16 @@ const UNITS = [
     {ja:"レシートです",kana:"レシートです",romaji:"reshīto desu",nl:"Hier is uw bon"},
     {ja:"またお越しください",kana:"またおこしください",romaji:"mata o-koshi kudasai",nl:"Kom gerust nog eens terug",reply:"ごちそうさまでした"},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"はい、お伺いします。",tts:"はい、おうかがいします。",romaji:"Hai, o-ukagai shimasu.",nl:"Ja, zegt u het maar."}, options:[{ref:"お会計お願いします",next:"n2"}]},
+    n2:{cat:{ja:"お会計は別々ですか？",romaji:"O-kaikei wa betsubetsu desu ka?",nl:"Betaalt u apart?"}, options:[{ref:"一緒でお願いします",next:"n3"},{ref:"別々でお願いします",next:"n3b"}]},
+    n3:{cat:{ja:"四千二百円です。",tts:"よんせんにひゃくえんです。",romaji:"Yonsen nihyaku en desu.",nl:"Dat is 4200 yen."}, options:[{ref:"カードで払えますか",next:"n4"},{ref:"現金で払います",next:"n5"}]},
+    n3b:{cat:{ja:"お一人様二千百円です。",tts:"おひとりさまにせんひゃくえんです。",romaji:"O-hitori-sama nisen hyaku en desu.",nl:"2100 yen per persoon."}, options:[{ref:"カードで払えますか",next:"n4"},{ref:"現金で払います",next:"n5"}]},
+    n4:{cat:{ja:"すみません、現金のみです。",romaji:"Sumimasen, genkin nomi desu.",nl:"Sorry, alleen contant."}, options:[{ref:"現金で払います",next:"n5"},{ref:"わかりました",next:"n5"}]},
+    n5:{cat:{ja:"ありがとうございます。レシートです。",romaji:"Arigatō gozaimasu. Reshīto desu.",nl:"Dank u. Hier is uw bon."}, options:[{ref:"領収書をください",next:"n6"},{ref:"ごちそうさまでした",next:"end"}]},
+    n6:{cat:{ja:"はい、どうぞ。",romaji:"Hai, dōzo.",nl:"Alstublieft."}, options:[{ref:"ごちそうさまでした",next:"end"}]},
+    end:{cat:{ja:"またお越しください！",romaji:"Mata o-koshi kudasai!",nl:"Kom gerust nog eens terug!"}, options:[]},
+   }},
    dialog:[
     {who:"me",ref:"すみません"},
     {who:"cat",ja:"はい！",romaji:"Hai!",nl:"Ja!"},
@@ -717,6 +747,16 @@ const UNITS = [
     {ja:"白線の内側までお下がりください",kana:"はくせんのうちがわまでおさがりください",romaji:"hakusen no uchigawa made o-sagari kudasai",nl:"Blijf achter de witte lijn",note:"Dit hoor je op bijna elk perron als er een trein aankomt."},
     {ja:"空いていますよ",kana:"あいていますよ",romaji:"aite imasu yo",nl:"Die is vrij hoor",reply:"ありがとうございます"},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"はい、どうしましたか？",romaji:"Hai, dō shimashita ka?",nl:"Ja, kan ik u helpen?"}, options:[{ref:"京都までいくらですか",next:"n2"},{ref:"切符はどこで買えますか",next:"n1b"}]},
+    n1b:{cat:{ja:"あそこの機械で買えますよ。",tts:"あそこのきかいでかえますよ。",romaji:"Asoko no kikai de kaemasu yo.",nl:"Bij die automaat daar."}, options:[{ref:"京都までいくらですか",next:"n2"}]},
+    n2:{cat:{ja:"京都まで二百四十円です。",tts:"きょうとまでにひゃくよんじゅうえんです。",romaji:"Kyōto made nihyaku yonjū en desu.",nl:"Tot Kyoto is het 240 yen."}, options:[{ref:"何番線ですか",next:"n3"},{ref:"もう一度お願いします",next:"n2b"}]},
+    n2b:{cat:{ja:"二百、四十、円、です。",tts:"にひゃく、よんじゅう、えん、です。",romaji:"Nihyaku, yonjū, en, desu.",nl:"Twee-honderd-veertig yen."}, options:[{ref:"何番線ですか",next:"n3"}]},
+    n3:{cat:{ja:"三番線です。",tts:"さんばんせんです。",romaji:"Sanbansen desu.",nl:"Spoor 3."}, options:[{ref:"次の電車は何時ですか",next:"n4"},{ref:"この電車は京都に止まりますか",next:"n4s"}]},
+    n4:{cat:{ja:"十時十五分です。",tts:"じゅうじじゅうごふんです。",romaji:"Jūji jūgo-fun desu.",nl:"Om kwart over tien."}, options:[{ref:"ありがとうございます",next:"end"},{ref:"わかりました",next:"end"}]},
+    n4s:{cat:{ja:"はい、止まりますよ。",tts:"はい、とまりますよ。",romaji:"Hai, tomarimasu yo.",nl:"Ja, die stopt daar."}, options:[{ref:"ありがとうございます",next:"end"}]},
+    end:{cat:{ja:"お気をつけて。",tts:"おきをつけて。",romaji:"O-ki o tsukete.",nl:"Goede reis."}, options:[]},
+   }},
    dialog:[
     {who:"me",ref:"すみません"},
     {who:"cat",ja:"はい。",romaji:"Hai.",nl:"Ja?"},
@@ -794,6 +834,17 @@ const UNITS = [
     {ja:"着きました",kana:"つきました",romaji:"tsukimashita",nl:"We zijn er",reply:"ありがとうございます"},
     {ja:"整理券をお取りください",kana:"せいりけんをおとりください",romaji:"seiriken o o-tori kudasai",nl:"Neem een volgnummerkaartje",note:"In veel bussen stap je achter in, pak je een kaartje en betaal je bij het uitstappen voorin."},
    ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"どちらまでですか？",romaji:"Dochira made desu ka?",nl:"Waar wilt u heen?"}, options:[{ref:"このホテルまでお願いします",next:"n2"},{ref:"空港までお願いします",next:"n2a"}]},
+    n2:{cat:{ja:"はい、わかりました。",romaji:"Hai, wakarimashita.",nl:"Goed, begrepen."}, options:[{ref:"どのくらいかかりますか",next:"n3"},{ref:"急いでいます",next:"n3q"}]},
+    n2a:{cat:{ja:"空港ですね。高速を使いますか？",tts:"くうこうですね。こうそくをつかいますか？",romaji:"Kūkō desu ne. Kōsoku o tsukaimasu ka?",nl:"Naar het vliegveld. Zal ik de (tol)snelweg nemen?"}, options:[{ref:"はい",next:"n3"},{ref:"いいえ",next:"n3"}]},
+    n3:{cat:{ja:"二十分ぐらいです。",tts:"にじゅっぷんぐらいです。",romaji:"Nijuppun gurai desu.",nl:"Ongeveer twintig minuten."}, options:[{ref:"わかりました",next:"n4"}]},
+    n3q:{cat:{ja:"わかりました。急ぎますね。",tts:"わかりました。いそぎますね。",romaji:"Wakarimashita. Isogimasu ne.",nl:"Begrepen. Ik zal opschieten."}, options:[{ref:"ありがとうございます",next:"n4"}]},
+    n4:{cat:{ja:"着きました。三千二百円です。",tts:"つきました。さんぜんにひゃくえんです。",romaji:"Tsukimashita. Sanzen nihyaku en desu.",nl:"We zijn er. Dat is 3200 yen."}, options:[{ref:"カードで払えますか",next:"n5"},{ref:"現金で払います",next:"n5"}]},
+    n5:{cat:{ja:"はい、どうぞ。",romaji:"Hai, dōzo.",nl:"Ja, alstublieft."}, options:[{ref:"トランクを開けてください",next:"n6"},{ref:"ありがとうございます",next:"n6"}]},
+    n6:{cat:{ja:"はい。忘れ物はありませんか？",tts:"はい。わすれものはありませんか？",romaji:"Hai. Wasuremono wa arimasen ka?",nl:"Alstublieft. Niets vergeten?"}, options:[{ref:"大丈夫です",next:"end"},{ref:"ありがとうございます",next:"end"}]},
+    end:{cat:{ja:"ありがとうございました。",romaji:"Arigatō gozaimashita.",nl:"Hartelijk bedankt."}, options:[]},
+   }},
    dialog:[
     {who:"cat",ja:"どちらまでですか？",romaji:"Dochira made desu ka?",nl:"Waar wilt u heen?"},
     {who:"me",ref:"このホテルまでお願いします"},
@@ -806,52 +857,438 @@ const UNITS = [
     {who:"cat",ja:"はい、どうぞ。",romaji:"Hai, dōzo.",nl:"Ja, gaat uw gang."},
     {who:"me",ref:"トランクを開けてください"},
    ]},
- /* ===== OUDE UNITS (worden later vervangen door blok B–F) ===== */
- { id:"winkel", block:"oud", title:"Winkelen", desc:"Prijzen, betalen en tasjes", color:"var(--lav)",
+ /* ===== BLOK D: VERBLIJVEN & BEZOEKEN ===== */
+ { id:"hotel", block:"D", title:"Hotel & ryokan", desc:"Inchecken, ontbijt, bagage en de onsen", color:"var(--blue)",
+   cando:["Ik kan inchecken en zeggen dat ik gereserveerd heb","Ik kan vragen naar ontbijt, wifi en uitchecken","Ik kan vragen of ze mijn bagage bewaren of iets uitlenen"],
    phrases:[
-    {ja:"これはなんですか",kana:"これはなんですか",romaji:"kore wa nan desu ka",nl:"Wat is dit?",alt:["これは何ですか","これ何ですか","これなんですか"]},
-    {ja:"いくらですか",kana:"いくらですか",romaji:"ikura desu ka",nl:"Hoeveel kost het?",alt:["幾らですか"]},
-    {ja:"高いですね",kana:"たかいですね",romaji:"takai desu ne",nl:"Dat is duur, hè",alt:["たかいですね"]},
-    {ja:"安いですね",kana:"やすいですね",romaji:"yasui desu ne",nl:"Dat is goedkoop, hè",alt:["やすいですね"]},
-    {ja:"見ているだけです",kana:"みているだけです",romaji:"mite iru dake desu",nl:"Ik kijk alleen even",alt:["見てるだけです","みてるだけです"]},
-    {ja:"カードで払えますか",kana:"カードではらえますか",romaji:"kādo de haraemasu ka",nl:"Kan ik met kaart betalen?",alt:["カードで払えますか？","カード使えますか"]},
-    {ja:"袋は要りません",kana:"ふくろはいりません",romaji:"fukuro wa irimasen",nl:"Ik hoef geen tasje",alt:["袋はいりません","袋いりません","袋は大丈夫です"]},
-    {ja:"千円です",kana:"せんえんです",romaji:"sen en desu",nl:"Het is duizend yen",alt:["1000円です","1,000円です","せんえんです"]},
+    {l:1,ja:"チェックインお願いします",kana:"チェックインおねがいします",romaji:"chekku-in onegai shimasu",nl:"Ik wil graag inchecken",alt:["チェックインをお願いします","チェックインおねがいします"]},
+    {l:1,ja:"予約しています",kana:"よやくしています",romaji:"yoyaku shite imasu",nl:"Ik heb gereserveerd",alt:["予約してます","予約してあります"]},
+    {l:1,ja:"朝ご飯は何時からですか",kana:"あさごはんはなんじからですか",tts:"あさごはんはなんじからですか",romaji:"asagohan wa nanji kara desu ka",nl:"Vanaf hoe laat is het ontbijt?",alt:["朝ごはんは何時からですか","朝ご飯はなんじからですか","朝食は何時からですか"]},
+    {l:1,ja:"荷物を預かってもらえますか",kana:"にもつをあずかってもらえますか",romaji:"nimotsu o azukatte moraemasu ka",nl:"Kunt u mijn bagage bewaren?",alt:["荷物預かってもらえますか","荷物を預けてもいいですか"]},
+    {l:2,ja:"Wi-Fiのパスワードはなんですか",kana:"ワイファイのパスワードはなんですか",tts:"ワイファイのパスワードはなんですか",romaji:"waifai no pasuwādo wa nan desu ka",nl:"Wat is het wifi-wachtwoord?",alt:["Wi-Fiのパスワードは何ですか","WiFiのパスワードは何ですか","wifiのパスワードは何ですか","ワイファイのパスワードは何ですか"]},
+    {l:2,ja:"チェックアウトは何時ですか",kana:"チェックアウトはなんじですか",tts:"チェックアウトはなんじですか",romaji:"chekku-auto wa nanji desu ka",nl:"Hoe laat moet ik uitchecken?",alt:["チェックアウトはなんじですか","チェックアウト何時ですか"]},
+    {l:2,ja:"温泉は何時までですか",kana:"おんせんはなんじまでですか",tts:"おんせんはなんじまでですか",romaji:"onsen wa nanji made desu ka",nl:"Tot hoe laat is de onsen (het warmwaterbad) open?",alt:["温泉はなんじまでですか","温泉何時までですか"]},
+    {l:2,ja:"もう一泊できますか",kana:"もういっぱくできますか",tts:"もういっぱくできますか",romaji:"mō ippaku dekimasu ka",nl:"Kan ik een nacht langer blijven?",alt:["もう1泊できますか","もう一泊出来ますか"]},
    ],
+   pattern:{ tip:"〇〇を貸してもらえますか (… o kashite moraemasu ka) = kunt u me … lenen? Veel hotels lenen gratis opladers, paraplu's en adapters uit.",
+     frame:{ja:"{x}を貸してもらえますか",kana:"{x}をかしてもらえますか",romaji:"{x} o kashite moraemasu ka",nl:"Kunt u me {x} lenen?"},
+     slots:[
+      {ja:"充電器",kana:"じゅうでんき",romaji:"jūdenki",nl:"een oplader"},
+      {ja:"傘",kana:"かさ",romaji:"kasa",nl:"een paraplu"},
+      {ja:"ドライヤー",kana:"ドライヤー",romaji:"doraiyā",nl:"een föhn"},
+      {ja:"変換プラグ",kana:"へんかんプラグ",romaji:"henkan puragu",nl:"een stekkeradapter"},
+     ]},
+   theysay:[
+    {ja:"ご予約のお名前をお願いします",kana:"ごよやくのおなまえをおねがいします",romaji:"go-yoyaku no o-namae o onegai shimasu",nl:"Op welke naam staat de reservering?",reply:`私は${ME.kata}です`},
+    {ja:"パスポートを見せてください",kana:"パスポートをみせてください",romaji:"pasupōto o misete kudasai",nl:"Mag ik uw paspoort zien?",reply:"はい"},
+    {ja:"朝食は七時からです",kana:"ちょうしょくはしちじからです",tts:"ちょうしょくはしちじからです",romaji:"chōshoku wa shichiji kara desu",nl:"Het ontbijt is vanaf zeven uur",reply:"わかりました"},
+    {ja:"お部屋は五階です",kana:"おへやはごかいです",tts:"おへやはごかいです",romaji:"o-heya wa go-kai desu",nl:"Uw kamer is op de vijfde verdieping",note:"階 (kai) = verdieping. 1階 (ikkai) is de begane grond."},
+    {ja:"タオルは湯船に入れないでください",kana:"タオルはゆぶねにいれないでください",romaji:"taoru wa yubune ni irenaide kudasai",nl:"Doe de handdoek niet in het bad",note:"Onsen-regels: eerst zittend douchen, dan pas het bad in. Het kleine handdoekje leg je op je hoofd of naast het bad."},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"いらっしゃいませ。チェックインですか？",romaji:"Irasshaimase. Chekku-in desu ka?",nl:"Welkom. Komt u inchecken?"}, options:[{ref:"予約しています",next:"n2"},{ref:"チェックインお願いします",next:"n2"}]},
+    n2:{cat:{ja:"ご予約のお名前をお願いします。",romaji:"Go-yoyaku no o-namae o onegai shimasu.",nl:"Op welke naam staat de reservering?"}, options:[{ref:`私は${ME.kata}です`,next:"n3"}]},
+    n3:{cat:{ja:`${ME.kata}様ですね。パスポートを見せてください。`,romaji:`${ME.romaji}-sama desu ne. Pasupōto o misete kudasai.`,nl:`${ME.nl}, juist. Mag ik uw paspoort zien?`}, options:[{ref:"はい",next:"n4"}]},
+    n4:{cat:{ja:"ありがとうございます。お部屋は五階です。",tts:"ありがとうございます。おへやはごかいです。",romaji:"Arigatō gozaimasu. O-heya wa go-kai desu.",nl:"Dank u. Uw kamer is op de vijfde verdieping."}, options:[{ref:"朝ご飯は何時からですか",next:"n5"},{ref:"Wi-Fiのパスワードはなんですか",next:"n5w"}]},
+    n5:{cat:{ja:"朝食は七時から十時までです。",tts:"ちょうしょくはしちじからじゅうじまでです。",romaji:"Chōshoku wa shichiji kara jūji made desu.",nl:"Het ontbijt is van zeven tot tien uur."}, options:[{ref:"わかりました",next:"n6"},{ref:"もう一度お願いします",next:"n5b"}]},
+    n5b:{cat:{ja:"朝食は、七時から、です。",tts:"ちょうしょくは、しちじから、です。",romaji:"Chōshoku wa, shichiji kara, desu.",nl:"Ontbijt: vanaf zeven uur."}, options:[{ref:"わかりました",next:"n6"}]},
+    n5w:{cat:{ja:"パスワードはこのカードに書いてあります。",romaji:"Pasuwādo wa kono kādo ni kaite arimasu.",nl:"Het wachtwoord staat op dit kaartje."}, options:[{ref:"ありがとうございます",next:"n6"},{ref:"わかりました",next:"n6"}]},
+    n6:{cat:{ja:"他に何かありますか？",romaji:"Hoka ni nani ka arimasu ka?",nl:"Kan ik nog iets anders voor u doen?"}, options:[{ref:"荷物を預かってもらえますか",next:"n7"},{ref:"充電器を貸してもらえますか",next:"n7c"},{ref:"大丈夫です",next:"end"}]},
+    n7:{cat:{ja:"はい、お預かりします。",romaji:"Hai, o-azukari shimasu.",nl:"Ja, die bewaren we voor u."}, options:[{ref:"ありがとうございます",next:"end"}]},
+    n7c:{cat:{ja:"はい、どうぞ。",romaji:"Hai, dōzo.",nl:"Ja, alstublieft."}, options:[{ref:"ありがとうございます",next:"end"}]},
+    end:{cat:{ja:"ごゆっくりどうぞ。",romaji:"Go-yukkuri dōzo.",nl:"Geniet van uw verblijf."}, options:[]},
+   }},
+   dialog:[
+    {who:"cat",ja:"いらっしゃいませ。チェックインですか？",romaji:"Irasshaimase. Chekku-in desu ka?",nl:"Welkom. Komt u inchecken?"},
+    {who:"me",ref:"予約しています"},
+    {who:"cat",ja:"ご予約のお名前をお願いします。",romaji:"Go-yoyaku no o-namae o onegai shimasu.",nl:"Op welke naam staat de reservering?"},
+    {who:"me",ref:`私は${ME.kata}です`},
+    {who:"cat",ja:"パスポートを見せてください。",romaji:"Pasupōto o misete kudasai.",nl:"Mag ik uw paspoort zien?"},
+    {who:"me",ref:"はい"},
+    {who:"cat",ja:"ありがとうございます。お部屋は五階です。",tts:"ありがとうございます。おへやはごかいです。",romaji:"Arigatō gozaimasu. O-heya wa go-kai desu.",nl:"Dank u. Uw kamer is op de vijfde verdieping."},
+    {who:"me",ref:"朝ご飯は何時からですか"},
+    {who:"cat",ja:"朝食は七時からです。",tts:"ちょうしょくはしちじからです。",romaji:"Chōshoku wa shichiji kara desu.",nl:"Het ontbijt is vanaf zeven uur."},
+    {who:"me",ref:"チェックアウトは何時ですか"},
+    {who:"cat",ja:"十一時です。",tts:"じゅういちじです。",romaji:"Jūichi-ji desu.",nl:"Om elf uur."},
+    {who:"me",ref:"荷物を預かってもらえますか"},
+    {who:"cat",ja:"はい、大丈夫ですよ。",romaji:"Hai, daijōbu desu yo.",nl:"Ja, dat kan hoor."},
+    {who:"me",ref:"ありがとうございます"},
+   ]},
+ { id:"tempel", block:"D", title:"Tempels & schrijnen", desc:"Foto's, schoenen uit, omamori en goshuin", color:"var(--sage)",
+   cando:["Ik kan vragen of ik een foto mag maken of naar binnen mag","Ik kan een omamori of een tempelstempel (goshuin) vragen","Ik begrijp wat er gezegd wordt over fotograferen en schoenen"],
+   phrases:[
+    {l:1,ja:"写真を撮ってもいいですか",kana:"しゃしんをとってもいいですか",romaji:"shashin o totte mo ii desu ka",nl:"Mag ik een foto maken?",alt:["写真撮ってもいいですか","写真をとってもいいですか"]},
+    {l:1,ja:"入ってもいいですか",kana:"はいってもいいですか",romaji:"haitte mo ii desu ka",nl:"Mag ik naar binnen?",alt:["入っていいですか","はいってもいいですか"]},
+    {l:1,ja:"入場料はいくらですか",kana:"にゅうじょうりょうはいくらですか",romaji:"nyūjōryō wa ikura desu ka",nl:"Hoeveel kost de toegang?",alt:["入場料いくらですか"]},
+    {l:1,ja:"靴を脱ぎますか",kana:"くつをぬぎますか",romaji:"kutsu o nugimasu ka",nl:"Moet ik mijn schoenen uitdoen?",alt:["靴脱ぎますか","くつをぬぎますか"]},
+    {l:2,ja:"お守りをください",kana:"おまもりをください",romaji:"o-mamori o kudasai",nl:"Een omamori (gelukszakje), alstublieft",alt:["お守りください","おまもりをください"]},
+    {l:2,ja:"御朱印をお願いします",kana:"ごしゅいんをおねがいします",romaji:"go-shuin o onegai shimasu",nl:"Een tempelstempel (goshuin), alstublieft",alt:["ご朱印をお願いします","御朱印お願いします","ご朱印お願いします"]},
+    {l:2,ja:"写真を撮ってもらえますか",kana:"しゃしんをとってもらえますか",romaji:"shashin o totte moraemasu ka",nl:"Wilt u een foto van me maken?",alt:["写真撮ってもらえますか"]},
+    {l:2,ja:"きれいですね",kana:"きれいですね",romaji:"kirei desu ne",nl:"Wat mooi, hè",alt:["綺麗ですね"]},
+   ],
+   pattern:{ tip:"〇〇てもいいですか (… te mo ii desu ka) = mag ik …? Het werkwoord staat in de te-vorm: 座って (suwatte), 触って (sawatte), 見て (mite).",
+     frame:{ja:"{x}てもいいですか",kana:"{x}てもいいですか",romaji:"{x}te mo ii desu ka",nl:"Mag ik {x}?"},
+     slots:[
+      {ja:"ここに座っ",kana:"ここにすわっ",romaji:"koko ni suwat",nl:"hier zitten"},
+      {ja:"触っ",kana:"さわっ",romaji:"sawat",nl:"het aanraken"},
+      {ja:"中を見",kana:"なかをみ",romaji:"naka o mi",nl:"even binnen kijken"},
+      {ja:"動画を撮っ",kana:"どうがをとっ",romaji:"dōga o tot",nl:"filmen"},
+     ]},
+   theysay:[
+    {ja:"撮影禁止です",kana:"さつえいきんしです",romaji:"satsuei kinshi desu",nl:"Fotograferen is verboden",note:"禁止 (kinshi) = verboden. Dat woord staat ook vaak op bordjes."},
+    {ja:"靴を脱いでください",kana:"くつをぬいでください",romaji:"kutsu o nuide kudasai",nl:"Doe uw schoenen uit, alstublieft",reply:"はい"},
+    {ja:"拝観料は五百円です",kana:"はいかんりょうはごひゃくえんです",tts:"はいかんりょうはごひゃくえんです",romaji:"haikanryō wa gohyaku en desu",nl:"De toegang is 500 yen",note:"拝観料 (haikanryō) = toegangsprijs voor een tempel."},
+    {ja:"ここは撮ってもいいですよ",kana:"ここはとってもいいですよ",romaji:"koko wa totte mo ii desu yo",nl:"Hier mag u wel foto's maken",reply:"ありがとうございます"},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"こんにちは。拝観ですか？",tts:"こんにちは。はいかんですか？",romaji:"Konnichiwa. Haikan desu ka?",nl:"Hallo. Komt u de tempel bezoeken?"}, options:[{ref:"入場料はいくらですか",next:"n2"},{ref:"はい",next:"n2"}]},
+    n2:{cat:{ja:"お一人様五百円です。",tts:"おひとりさまごひゃくえんです。",romaji:"O-hitori-sama gohyaku en desu.",nl:"500 yen per persoon."}, options:[{ref:"現金で払います",next:"n3"},{ref:"カードで払えますか",next:"n2c"}]},
+    n2c:{cat:{ja:"すみません、現金のみです。",romaji:"Sumimasen, genkin nomi desu.",nl:"Sorry, alleen contant."}, options:[{ref:"現金で払います",next:"n3"},{ref:"わかりました",next:"n3"}]},
+    n3:{cat:{ja:"ありがとうございます。どうぞ。",romaji:"Arigatō gozaimasu. Dōzo.",nl:"Dank u. Gaat uw gang."}, options:[{ref:"写真を撮ってもいいですか",next:"n4"},{ref:"靴を脱ぎますか",next:"n4s"}]},
+    n4:{cat:{ja:"庭はいいですよ。でも、中は撮影禁止です。",romaji:"Niwa wa ii desu yo. Demo, naka wa satsuei kinshi desu.",nl:"In de tuin mag het. Maar binnen is fotograferen verboden."}, options:[{ref:"わかりました",next:"n5"},{ref:"もう一度お願いします",next:"n4b"}]},
+    n4b:{cat:{ja:"庭は、オーケー。中は、だめです。",romaji:"Niwa wa, ōkē. Naka wa, dame desu.",nl:"Tuin: oké. Binnen: niet."}, options:[{ref:"わかりました",next:"n5"}]},
+    n4s:{cat:{ja:"はい、ここで靴を脱いでください。",romaji:"Hai, koko de kutsu o nuide kudasai.",nl:"Ja, doe uw schoenen hier uit."}, options:[{ref:"はい",next:"n5"},{ref:"わかりました",next:"n5"}]},
+    n5:{cat:{ja:"お守りや御朱印もありますよ。",romaji:"O-mamori ya go-shuin mo arimasu yo.",nl:"We hebben ook omamori en tempelstempels."}, options:[{ref:"御朱印をお願いします",next:"n6"},{ref:"お守りをください",next:"n6"},{ref:"見ているだけです",next:"end"}]},
+    n6:{cat:{ja:"はい、少々お待ちください。",romaji:"Hai, shōshō o-machi kudasai.",nl:"Ja, een ogenblikje."}, options:[{ref:"ありがとうございます",next:"end"}]},
+    end:{cat:{ja:"どうぞ、ごゆっくり。",romaji:"Dōzo, go-yukkuri.",nl:"Neem rustig de tijd."}, options:[]},
+   }},
+   dialog:[
+    {who:"me",ref:"すみません"},
+    {who:"cat",ja:"はい。",romaji:"Hai.",nl:"Ja?"},
+    {who:"me",ref:"入場料はいくらですか"},
+    {who:"cat",ja:"五百円です。",tts:"ごひゃくえんです。",romaji:"Gohyaku en desu.",nl:"500 yen."},
+    {who:"me",ref:"写真を撮ってもいいですか"},
+    {who:"cat",ja:"庭はいいですよ。でも、中は撮影禁止です。",romaji:"Niwa wa ii desu yo. Demo, naka wa satsuei kinshi desu.",nl:"In de tuin mag het. Maar binnen is fotograferen verboden."},
+    {who:"me",ref:"わかりました"},
+    {who:"cat",ja:"中に入るときは、靴を脱いでください。",romaji:"Naka ni hairu toki wa, kutsu o nuide kudasai.",nl:"Doe binnen uw schoenen uit."},
+    {who:"me",ref:"はい"},
+    {who:"cat",ja:"庭、きれいでしょう？",romaji:"Niwa, kirei deshō?",nl:"Mooie tuin, hè?"},
+    {who:"me",ref:"きれいですね"},
+    {who:"cat",ja:"御朱印もありますよ。",romaji:"Go-shuin mo arimasu yo.",nl:"We hebben ook tempelstempels."},
+    {who:"me",ref:"御朱印をお願いします"},
+   ]},
+ { id:"uitje", block:"D", title:"Uitjes & kaartjes", desc:"Kaartjes, reserveren, wachtrijen en de ingang", color:"var(--butter)",
+   cando:["Ik kan kaartjes kopen en vragen wat ze kosten","Ik kan vragen of ik kan reserveren en of er nog plek is","Ik kan vragen naar de ingang, kluisjes en hoe laat iets begint"],
+   phrases:[
+    {l:1,ja:"大人二枚ください",kana:"おとなにまいください",tts:"おとなにまいください",romaji:"otona nimai kudasai",nl:"Twee kaartjes voor volwassenen, alstublieft",alt:["大人2枚ください","おとな二枚ください","大人二枚お願いします"]},
+    {l:1,ja:"予約できますか",kana:"よやくできますか",romaji:"yoyaku dekimasu ka",nl:"Kan ik reserveren?",alt:["予約出来ますか"]},
+    {l:1,ja:"今日、席はありますか",kana:"きょう、せきはありますか",tts:"きょう、せきはありますか",romaji:"kyō, seki wa arimasu ka",nl:"Zijn er vandaag nog plaatsen?",alt:["今日席はありますか","今日は席ありますか","今日席ありますか"]},
+    {l:1,ja:"入り口はどこですか",kana:"いりぐちはどこですか",romaji:"iriguchi wa doko desu ka",nl:"Waar is de ingang?",alt:["入口はどこですか","入り口どこですか"]},
+    {l:2,ja:"ロッカーはありますか",kana:"ロッカーはありますか",romaji:"rokkā wa arimasu ka",nl:"Zijn er kluisjes?",alt:["ロッカーありますか"]},
+    {l:2,ja:"どのくらい待ちますか",kana:"どのくらいまちますか",romaji:"dono kurai machimasu ka",nl:"Hoe lang moeten we wachten?",alt:["どれくらい待ちますか","どのくらいまちますか"]},
+    {l:2,ja:"英語のパンフレットはありますか",kana:"えいごのパンフレットはありますか",romaji:"eigo no panfuretto wa arimasu ka",nl:"Heeft u een Engelse folder?",alt:["英語のパンフレットありますか"]},
+    {l:2,ja:"何時に始まりますか",kana:"なんじにはじまりますか",tts:"なんじにはじまりますか",romaji:"nanji ni hajimarimasu ka",nl:"Hoe laat begint het?",alt:["なんじに始まりますか"]},
+   ],
+   pattern:{ tip:"〇〇はいくらですか = hoeveel kost …? 大人 (otona) = volwassene, 券 (ken) = kaartje. Kaartjes tel je met 枚 (mai): 一枚 ichimai, 二枚 nimai, 三枚 sanmai.",
+     frame:{ja:"{x}はいくらですか",kana:"{x}はいくらですか",romaji:"{x} wa ikura desu ka",nl:"Hoeveel kost {x}?"},
+     slots:[
+      {ja:"大人",kana:"おとな",romaji:"otona",nl:"een kaartje voor volwassenen"},
+      {ja:"子供",kana:"こども",romaji:"kodomo",nl:"een kinderkaartje",alt:["子ども"]},
+      {ja:"一日券",kana:"いちにちけん",romaji:"ichinichi-ken",nl:"een dagkaart",alt:["1日券"]},
+      {ja:"セット券",kana:"セットけん",romaji:"setto-ken",nl:"een combikaartje"},
+     ]},
+   theysay:[
+    {ja:"何枚ですか？",kana:"なんまいですか",tts:"なんまいですか",romaji:"nanmai desu ka?",nl:"Hoeveel kaartjes?",reply:"大人二枚ください"},
+    {ja:"本日は満席です",kana:"ほんじつはまんせきです",romaji:"honjitsu wa manseki desu",nl:"Vandaag is alles vol",note:"満席 (manseki) = volgeboekt. 本日 (honjitsu) is het nette woord voor 'vandaag'."},
+    {ja:"三十分待ちです",kana:"さんじゅっぷんまちです",tts:"さんじゅっぷんまちです",romaji:"sanjuppun machi desu",nl:"Het is 30 minuten wachten",reply:"わかりました"},
+    {ja:"こちらにお並びください",kana:"こちらにおならびください",romaji:"kochira ni o-narabi kudasai",nl:"Sluit hier aan in de rij, alstublieft",reply:"はい"},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"いらっしゃいませ。何枚ですか？",tts:"いらっしゃいませ。なんまいですか？",romaji:"Irasshaimase. Nanmai desu ka?",nl:"Welkom. Hoeveel kaartjes?"}, options:[{ref:"大人二枚ください",next:"n2"},{ref:"大人はいくらですか",next:"n1p"}]},
+    n1p:{cat:{ja:"大人は千二百円です。",tts:"おとなはせんにひゃくえんです。",romaji:"Otona wa sen nihyaku en desu.",nl:"Volwassenen: 1200 yen."}, options:[{ref:"大人二枚ください",next:"n2"}]},
+    n2:{cat:{ja:"二千四百円です。",tts:"にせんよんひゃくえんです。",romaji:"Nisen yonhyaku en desu.",nl:"Dat is 2400 yen."}, options:[{ref:"カードで払えますか",next:"n3"},{ref:"現金で払います",next:"n3"}]},
+    n3:{cat:{ja:"はい、どうぞ。今、三十分待ちです。",tts:"はい、どうぞ。いま、さんじゅっぷんまちです。",romaji:"Hai, dōzo. Ima, sanjuppun machi desu.",nl:"Alstublieft. Het is nu 30 minuten wachten."}, options:[{ref:"わかりました",next:"n4"},{ref:"ロッカーはありますか",next:"n3l"}]},
+    n3l:{cat:{ja:"ロッカーはあちらです。",romaji:"Rokkā wa achira desu.",nl:"De kluisjes zijn daar."}, options:[{ref:"ありがとうございます",next:"n4"}]},
+    n4:{cat:{ja:"こちらにお並びください。",romaji:"Kochira ni o-narabi kudasai.",nl:"Sluit hier aan in de rij."}, options:[{ref:"はい",next:"end"},{ref:"英語のパンフレットはありますか",next:"n4e"}]},
+    n4e:{cat:{ja:"はい、どうぞ。",romaji:"Hai, dōzo.",nl:"Ja, alstublieft."}, options:[{ref:"ありがとうございます",next:"end"}]},
+    end:{cat:{ja:"楽しんでください！",romaji:"Tanoshinde kudasai!",nl:"Veel plezier!"}, options:[]},
+   }},
+   dialog:[
+    {who:"cat",ja:"いらっしゃいませ。",romaji:"Irasshaimase.",nl:"Welkom."},
+    {who:"me",ref:"今日、席はありますか"},
+    {who:"cat",ja:"はい、ありますよ。何枚ですか？",tts:"はい、ありますよ。なんまいですか？",romaji:"Hai, arimasu yo. Nanmai desu ka?",nl:"Ja, die zijn er. Hoeveel kaartjes?"},
+    {who:"me",ref:"大人二枚ください"},
+    {who:"cat",ja:"二千四百円です。",tts:"にせんよんひゃくえんです。",romaji:"Nisen yonhyaku en desu.",nl:"Dat is 2400 yen."},
+    {who:"me",ref:"カードで払えますか"},
+    {who:"cat",ja:"はい、大丈夫です。",romaji:"Hai, daijōbu desu.",nl:"Ja, dat kan."},
+    {who:"me",ref:"何時に始まりますか"},
+    {who:"cat",ja:"二時に始まります。",tts:"にじにはじまります。",romaji:"Niji ni hajimarimasu.",nl:"Het begint om twee uur."},
+    {who:"me",ref:"入り口はどこですか"},
+    {who:"cat",ja:"あちらです。",romaji:"Achira desu.",nl:"Daar."},
+    {who:"me",ref:"ありがとうございます"},
+   ]},
+ { id:"winkel", block:"D", title:"Winkelen & souvenirs", desc:"Prijzen, passen, inpakken en tax-free", color:"var(--lav)",
+   cando:["Ik kan vragen wat iets is en wat het kost","Ik kan zeggen dat ik alleen kijk, of vragen of ik iets mag passen","Ik kan vragen om tax-free of om cadeauverpakking"],
+   phrases:[
+    {l:1,ja:"これはなんですか",kana:"これはなんですか",romaji:"kore wa nan desu ka",nl:"Wat is dit?",alt:["これは何ですか","これ何ですか","これなんですか"]},
+    {l:1,ja:"いくらですか",kana:"いくらですか",romaji:"ikura desu ka",nl:"Hoeveel kost het?",alt:["幾らですか"]},
+    {l:1,ja:"見ているだけです",kana:"みているだけです",romaji:"mite iru dake desu",nl:"Ik kijk alleen even",alt:["見てるだけです","みてるだけです"]},
+    {l:1,ja:"カードで払えますか",kana:"カードではらえますか",romaji:"kādo de haraemasu ka",nl:"Kan ik met kaart betalen?",alt:["カードで払えますか？","カード使えますか"]},
+    {l:2,ja:"高いですね",kana:"たかいですね",romaji:"takai desu ne",nl:"Dat is duur, hè",alt:["たかいですね"]},
+    {l:2,ja:"安いですね",kana:"やすいですね",romaji:"yasui desu ne",nl:"Dat is goedkoop, hè",alt:["やすいですね"]},
+    {l:2,ja:"袋は要りません",kana:"ふくろはいりません",romaji:"fukuro wa irimasen",nl:"Ik hoef geen tasje",alt:["袋はいりません","袋いりません","袋は大丈夫です"]},
+    {l:2,ja:"試着してもいいですか",kana:"しちゃくしてもいいですか",romaji:"shichaku shite mo ii desu ka",nl:"Mag ik het passen?",alt:["試着していいですか","試着してもいいですか？"]},
+    {l:2,ja:"免税できますか",kana:"めんぜいできますか",romaji:"menzei dekimasu ka",nl:"Kan het tax-free?",alt:["免税出来ますか"]},
+    {l:2,ja:"プレゼント用に包んでもらえますか",kana:"プレゼントようにつつんでもらえますか",romaji:"purezento-yō ni tsutsunde moraemasu ka",nl:"Kunt u het als cadeau inpakken?",alt:["プレゼント用に包んでください","プレゼント用でお願いします"]},
+   ],
+   pattern:{ tip:"もう少し〇〇のはありますか (mō sukoshi … no wa arimasu ka) = heeft u er een die iets …er is? Vul een bijvoeglijk naamwoord in: 大きい (groot), 小さい (klein), 安い (goedkoop).",
+     frame:{ja:"もう少し{x}のはありますか",kana:"もうすこし{x}のはありますか",romaji:"mō sukoshi {x} no wa arimasu ka",nl:"Heeft u er een die iets {x} is?"},
+     slots:[
+      {ja:"大きい",kana:"おおきい",romaji:"ōkii",nl:"groter"},
+      {ja:"小さい",kana:"ちいさい",romaji:"chiisai",nl:"kleiner"},
+      {ja:"安い",kana:"やすい",romaji:"yasui",nl:"goedkoper"},
+      {ja:"軽い",kana:"かるい",romaji:"karui",nl:"lichter"},
+     ]},
+   theysay:[
+    {ja:"千円です",kana:"せんえんです",romaji:"sen en desu",nl:"Het is duizend yen",alt:["1000円です","1,000円です","せんえんです"]},
+    {ja:"パスポートはお持ちですか？",kana:"パスポートはおもちですか",romaji:"pasupōto wa o-mochi desu ka?",nl:"Heeft u uw paspoort bij u?",reply:"はい",note:"Voor tax-free (免税, menzei) heb je je paspoort nodig, meestal vanaf 5000 yen."},
+    {ja:"プレゼント用ですか？",kana:"プレゼントようですか",romaji:"purezento-yō desu ka?",nl:"Is het een cadeau?",reply:"はい"},
+    {ja:"ご自宅用ですか？",kana:"ごじたくようですか",romaji:"go-jitaku-yō desu ka?",nl:"Is het voor uzelf?",reply:"はい",note:"Dan pakken ze het eenvoudig in. Is het een cadeau? Zeg dan プレゼント用です (purezento-yō desu)."},
+    {ja:"試着室はあちらです",kana:"しちゃくしつはあちらです",romaji:"shichakushitsu wa achira desu",nl:"De paskamer is daar",reply:"ありがとうございます"},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"いらっしゃいませ。何かお探しですか？",romaji:"Irasshaimase. Nanika o-sagashi desu ka?",nl:"Welkom. Zoekt u iets?"}, options:[{ref:"見ているだけです",next:"n1b"},{ref:"これはなんですか",next:"n2"}]},
+    n1b:{cat:{ja:"どうぞ、ごゆっくり。",romaji:"Dōzo, go-yukkuri.",nl:"Kijkt u rustig rond."}, options:[{ref:"これはなんですか",next:"n2"}]},
+    n2:{cat:{ja:"京都の扇子です。",romaji:"Kyōto no sensu desu.",nl:"Een waaier uit Kyoto."}, options:[{ref:"いくらですか",next:"n3"},{ref:"きれいですね",next:"n2b"}]},
+    n2b:{cat:{ja:"ありがとうございます。手作りですよ。",romaji:"Arigatō gozaimasu. Tezukuri desu yo.",nl:"Dank u. Hij is handgemaakt."}, options:[{ref:"いくらですか",next:"n3"}]},
+    n3:{cat:{ja:"三千円です。",tts:"さんぜんえんです。",romaji:"Sanzen en desu.",nl:"3000 yen."}, options:[{ref:"高いですね",next:"n3b"},{ref:"これにします",next:"n4"}]},
+    n3b:{cat:{ja:"こちらは千五百円ですよ。",tts:"こちらはせんごひゃくえんですよ。",romaji:"Kochira wa sen gohyaku en desu yo.",nl:"Deze kost 1500 yen."}, options:[{ref:"これにします",next:"n4"},{ref:"見ているだけです",next:"end2"}]},
+    n4:{cat:{ja:"プレゼント用ですか？",romaji:"Purezento-yō desu ka?",nl:"Is het een cadeau?"}, options:[{ref:"プレゼント用に包んでもらえますか",next:"n5"},{ref:"袋は要りません",next:"n5"}]},
+    n5:{cat:{ja:"かしこまりました。お支払いは？",romaji:"Kashikomarimashita. O-shiharai wa?",nl:"Komt in orde. Hoe wilt u betalen?"}, options:[{ref:"カードで払えますか",next:"end"},{ref:"現金で払います",next:"end"}]},
+    end:{cat:{ja:"ありがとうございました！",romaji:"Arigatō gozaimashita!",nl:"Hartelijk bedankt!"}, options:[]},
+    end2:{cat:{ja:"またどうぞ。",romaji:"Mata dōzo.",nl:"Graag tot ziens."}, options:[]},
+   }},
    dialog:[
     {who:"cat",ja:"いらっしゃいませ。",romaji:"Irasshaimase.",nl:"Welkom."},
     {who:"me",ref:"これはなんですか"},
     {who:"cat",ja:"日本のお茶です。",romaji:"Nihon no o-cha desu.",nl:"Het is Japanse thee."},
     {who:"me",ref:"いくらですか"},
     {who:"cat",ja:"千円です。",romaji:"Sen en desu.",nl:"Duizend yen."},
-    {who:"me",ref:"カードで払えますか"},
-    {who:"cat",ja:"はい、大丈夫です。袋は要りますか？",romaji:"Hai, daijōbu desu. Fukuro wa irimasu ka?",nl:"Ja, dat kan. Wilt u een tasje?"},
+    {who:"me",ref:"免税できますか"},
+    {who:"cat",ja:"すみません、五千円からです。",tts:"すみません、ごせんえんからです。",romaji:"Sumimasen, gosen en kara desu.",nl:"Sorry, dat kan pas vanaf 5000 yen."},
+    {who:"me",ref:"わかりました"},
+    {who:"cat",ja:"プレゼント用ですか？",romaji:"Purezento-yō desu ka?",nl:"Is het een cadeau?"},
+    {who:"me",ref:"プレゼント用に包んでもらえますか"},
+    {who:"cat",ja:"かしこまりました。袋は要りますか？",romaji:"Kashikomarimashita. Fukuro wa irimasu ka?",nl:"Komt in orde. Wilt u een tasje?"},
     {who:"me",ref:"袋は要りません"},
     {who:"cat",ja:"ありがとうございました！",romaji:"Arigatō gozaimashita!",nl:"Bedankt!"},
    ]},
- { id:"praat", block:"oud", title:"Smalltalk", desc:"Het weer, hobby's en 'nog een keer?'", color:"var(--peach)",
+ /* ===== BLOK E: ALS HET MISGAAT ===== */
+ { id:"nood", block:"E", title:"Hulp & noodgevallen", desc:"Kwijt, verdwaald, politie en 'help!'", color:"var(--peach)",
+   cando:["Ik kan om hulp vragen en zeggen dat ik iets kwijt ben","Ik kan naar het politiepostje (kōban) vragen","Ik kan vragen of iemand de politie of een ambulance belt"],
    phrases:[
-    {ja:"お元気ですか",kana:"おげんきですか",romaji:"o-genki desu ka",nl:"Hoe gaat het?",alt:["おげんきですか","元気ですか"]},
-    {ja:"元気です",kana:"げんきです",romaji:"genki desu",nl:"Het gaat goed",alt:["げんきです","元気"]},
-    {ja:"いい天気ですね",kana:"いいてんきですね",romaji:"ii tenki desu ne",nl:"Mooi weer, hè",alt:["良い天気ですね","いいてんきですね"]},
-    {ja:"暑いですね",kana:"あついですね",romaji:"atsui desu ne",nl:"Warm, hè",alt:["熱いですね","厚いですね","あついですね"]},
-    {ja:"寒いですね",kana:"さむいですね",romaji:"samui desu ne",nl:"Koud, hè",alt:["さむいですね"]},
-    {ja:"趣味はなんですか",kana:"しゅみはなんですか",romaji:"shumi wa nan desu ka",nl:"Wat zijn je hobby's?",alt:["趣味は何ですか"]},
-    {ja:"料理が好きです",kana:"りょうりがすきです",romaji:"ryōri ga suki desu",nl:"Ik kook graag",alt:["料理がすきです"]},
-    {ja:"もう一度お願いします",kana:"もういちどおねがいします",romaji:"mō ichido onegai shimasu",nl:"Nog een keer, alstublieft",alt:["もう1度お願いします","もういちどお願いします"]},
-    {ja:"ゆっくり話してください",kana:"ゆっくりはなしてください",romaji:"yukkuri hanashite kudasai",nl:"Wilt u langzaam praten?",alt:["ゆっくりはなしてください","ゆっくりお願いします"]},
+    {l:1,ja:"助けてください",kana:"たすけてください",romaji:"tasukete kudasai",nl:"Help me, alstublieft!",alt:["助けて","たすけて","助けて下さい"]},
+    {l:1,ja:"財布をなくしました",kana:"さいふをなくしました",romaji:"saifu o nakushimashita",nl:"Ik ben mijn portemonnee kwijt",alt:["財布を無くしました","財布なくしました"]},
+    {l:1,ja:"交番はどこですか",kana:"こうばんはどこですか",romaji:"kōban wa doko desu ka",nl:"Waar is het politiepostje (kōban)?",alt:["交番どこですか"]},
+    {l:1,ja:"救急車を呼んでください",kana:"きゅうきゅうしゃをよんでください",romaji:"kyūkyūsha o yonde kudasai",nl:"Bel een ambulance, alstublieft",alt:["救急車呼んでください"]},
+    {l:2,ja:"電車に忘れ物をしました",kana:"でんしゃにわすれものをしました",romaji:"densha ni wasuremono o shimashita",nl:"Ik heb iets in de trein laten liggen",alt:["電車に忘れ物しました"]},
+    {l:2,ja:"警察を呼んでください",kana:"けいさつをよんでください",romaji:"keisatsu o yonde kudasai",nl:"Bel de politie, alstublieft",alt:["警察呼んでください"]},
+    {l:2,ja:"オランダ大使館に連絡したいです",kana:"オランダたいしかんにれんらくしたいです",romaji:"Oranda taishikan ni renraku shitai desu",nl:"Ik wil contact opnemen met de Nederlandse ambassade",alt:["オランダ大使館に連絡したい"]},
+    {l:2,ja:"大丈夫ですか",kana:"だいじょうぶですか",romaji:"daijōbu desu ka",nl:"Gaat het? (aan iemand anders)",alt:["大丈夫？","だいじょうぶですか"]},
    ],
+   pattern:{ tip:"〇〇をなくしました (… o nakushimashita) = ik ben … kwijt. Ga ermee naar een 交番 (kōban): die kleine politieposten zijn overal en heel behulpzaam. Noodnummers: 110 politie, 119 ambulance en brandweer.",
+     frame:{ja:"{x}をなくしました",kana:"{x}をなくしました",romaji:"{x} o nakushimashita",nl:"Ik ben {x} kwijt"},
+     slots:[
+      {ja:"パスポート",kana:"パスポート",romaji:"pasupōto",nl:"mijn paspoort"},
+      {ja:"スマホ",kana:"スマホ",romaji:"sumaho",nl:"mijn telefoon",alt:["スマートフォン"]},
+      {ja:"鍵",kana:"かぎ",romaji:"kagi",nl:"mijn sleutel",alt:["かぎ"]},
+      {ja:"切符",kana:"きっぷ",romaji:"kippu",nl:"mijn kaartje"},
+     ]},
+   theysay:[
+    {ja:"どうしましたか？",kana:"どうしましたか",romaji:"dō shimashita ka?",nl:"Wat is er aan de hand?",reply:"財布をなくしました"},
+    {ja:"どこでなくしましたか？",kana:"どこでなくしましたか",romaji:"doko de nakushimashita ka?",nl:"Waar bent u het kwijtgeraakt?",reply:"電車に忘れ物をしました"},
+    {ja:"この紙に書いてください",kana:"このかみにかいてください",romaji:"kono kami ni kaite kudasai",nl:"Schrijf het op dit papier, alstublieft",reply:"はい"},
+    {ja:"ここで待っていてください",kana:"ここでまっていてください",romaji:"koko de matte ite kudasai",nl:"Wacht hier, alstublieft",reply:"わかりました"},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"こんにちは。どうしましたか？",romaji:"Konnichiwa. Dō shimashita ka?",nl:"Hallo. Wat is er aan de hand?"}, options:[{ref:"財布をなくしました",next:"n2"},{ref:"パスポートをなくしました",next:"n2p"}]},
+    n2:{cat:{ja:"どこでなくしましたか？",romaji:"Doko de nakushimashita ka?",nl:"Waar bent u hem kwijtgeraakt?"}, options:[{ref:"電車に忘れ物をしました",next:"n3t"},{ref:"わかりません",next:"n3"}]},
+    n2p:{cat:{ja:"それは大変ですね。どこでなくしましたか？",romaji:"Sore wa taihen desu ne. Doko de nakushimashita ka?",nl:"Dat is vervelend. Waar bent u hem kwijtgeraakt?"}, options:[{ref:"わかりません",next:"n3"},{ref:"電車に忘れ物をしました",next:"n3t"}]},
+    n3t:{cat:{ja:"何時ごろの電車ですか？",tts:"なんじごろのでんしゃですか？",romaji:"Nanji goro no densha desu ka?",nl:"Rond hoe laat was die trein?"}, options:[{ref:"わかりません",next:"n3"},{ref:"もう一度お願いします",next:"n3tb"}]},
+    n3tb:{cat:{ja:"電車は、何時、でしたか？",tts:"でんしゃは、なんじ、でしたか？",romaji:"Densha wa, nanji, deshita ka?",nl:"Hoe laat was de trein?"}, options:[{ref:"わかりません",next:"n3"}]},
+    n3:{cat:{ja:"大丈夫ですよ。この紙に名前と電話番号を書いてください。",tts:"だいじょうぶですよ。このかみになまえとでんわばんごうをかいてください。",romaji:"Daijōbu desu yo. Kono kami ni namae to denwa bangō o kaite kudasai.",nl:"Geen zorgen. Schrijf hier uw naam en telefoonnummer op."}, options:[{ref:"はい",next:"n4"},{ref:"英語は話せますか",next:"n3e"}]},
+    n3e:{cat:{ja:"少しだけ。ここに、名前。ここに、電話番号。",tts:"すこしだけ。ここに、なまえ。ここに、でんわばんごう。",romaji:"Sukoshi dake. Koko ni, namae. Koko ni, denwa bangō.",nl:"Een beetje. Hier uw naam. Hier uw telefoonnummer."}, options:[{ref:"わかりました",next:"n4"}]},
+    n4:{cat:{ja:"見つかったら、電話します。",romaji:"Mitsukattara, denwa shimasu.",nl:"Als we het vinden, bellen we u."}, options:[{ref:"ありがとうございます",next:"end"},{ref:"よろしくお願いします",next:"end"}]},
+    end:{cat:{ja:"気をつけてくださいね。",romaji:"Ki o tsukete kudasai ne.",nl:"Pas goed op uzelf."}, options:[]},
+   }},
+   dialog:[
+    {who:"me",ref:"すみません"},
+    {who:"cat",ja:"はい、どうしましたか？",romaji:"Hai, dō shimashita ka?",nl:"Ja, wat is er aan de hand?"},
+    {who:"me",ref:"財布をなくしました"},
+    {who:"cat",ja:"どこでなくしましたか？",romaji:"Doko de nakushimashita ka?",nl:"Waar bent u hem kwijtgeraakt?"},
+    {who:"me",ref:"電車に忘れ物をしました"},
+    {who:"cat",ja:"何時ごろの電車ですか？",tts:"なんじごろのでんしゃですか？",romaji:"Nanji goro no densha desu ka?",nl:"Rond hoe laat was die trein?"},
+    {who:"me",ref:"わかりません"},
+    {who:"cat",ja:"大丈夫ですよ。駅に電話しますね。",romaji:"Daijōbu desu yo. Eki ni denwa shimasu ne.",nl:"Geen zorgen. Ik bel het station even."},
+    {who:"me",ref:"お願いします"},
+    {who:"cat",ja:"ありました！駅にありますよ。",romaji:"Arimashita! Eki ni arimasu yo.",nl:"Gevonden! Hij ligt op het station."},
+    {who:"me",ref:"ありがとうございます"},
+   ]},
+ { id:"dokter", block:"E", title:"Apotheek & dokter", desc:"Pijn, koorts en medicijnen", color:"var(--lav)",
+   cando:["Ik kan zeggen dat ik me niet goed voel en waar het pijn doet","Ik kan bij de apotheek om een medicijn vragen en vragen hoe ik het inneem","Ik kan vragen waar een apotheek of ziekenhuis is"],
+   phrases:[
+    {l:1,ja:"気分が悪いです",kana:"きぶんがわるいです",romaji:"kibun ga warui desu",nl:"Ik voel me niet goed",alt:["気分悪いです"]},
+    {l:1,ja:"熱があります",kana:"ねつがあります",romaji:"netsu ga arimasu",nl:"Ik heb koorts",alt:["熱あります"]},
+    {l:1,ja:"薬局はどこですか",kana:"やっきょくはどこですか",romaji:"yakkyoku wa doko desu ka",nl:"Waar is een apotheek?",alt:["薬局どこですか"]},
+    {l:1,ja:"病院に行きたいです",kana:"びょういんにいきたいです",romaji:"byōin ni ikitai desu",nl:"Ik wil naar een dokter (ziekenhuis)",alt:["病院に行きたい"]},
+    {l:2,ja:"風邪薬はありますか",kana:"かぜぐすりはありますか",romaji:"kazegusuri wa arimasu ka",nl:"Heeft u iets tegen verkoudheid?",alt:["風邪薬ありますか"]},
+    {l:2,ja:"一日何回飲みますか",kana:"いちにちなんかいのみますか",tts:"いちにちなんかいのみますか",romaji:"ichinichi nankai nomimasu ka",nl:"Hoe vaak per dag moet ik het innemen?",alt:["1日何回飲みますか"]},
+    {l:2,ja:"昨日からです",kana:"きのうからです",tts:"きのうからです",romaji:"kinō kara desu",nl:"Sinds gisteren",alt:["きのうからです"]},
+    {l:2,ja:"保険があります",kana:"ほけんがあります",romaji:"hoken ga arimasu",nl:"Ik ben verzekerd",alt:["保険あります"]},
+   ],
+   pattern:{ tip:"〇〇が痛いです (… ga itai desu) = mijn … doet pijn. Bij de apotheek (薬局, yakkyoku) mag je ook gewoon aanwijzen waar het zit.",
+     frame:{ja:"{x}が痛いです",kana:"{x}がいたいです",romaji:"{x} ga itai desu",nl:"Mijn {x} doet pijn"},
+     slots:[
+      {ja:"頭",kana:"あたま",romaji:"atama",nl:"hoofd"},
+      {ja:"お腹",kana:"おなか",romaji:"onaka",nl:"buik",alt:["おなか"]},
+      {ja:"喉",kana:"のど",romaji:"nodo",nl:"keel",alt:["のど"]},
+      {ja:"足",kana:"あし",romaji:"ashi",nl:"voet"},
+     ]},
+   theysay:[
+    {ja:"どこが痛いですか？",kana:"どこがいたいですか",romaji:"doko ga itai desu ka?",nl:"Waar doet het pijn?",reply:"頭が痛いです"},
+    {ja:"いつからですか？",kana:"いつからですか",romaji:"itsu kara desu ka?",nl:"Sinds wanneer?",reply:"昨日からです"},
+    {ja:"一日三回、食後に飲んでください",kana:"いちにちさんかい、しょくごにのんでください",tts:"いちにちさんかい、しょくごにのんでください",romaji:"ichinichi sankai, shokugo ni nonde kudasai",nl:"Neem het drie keer per dag in, na het eten",note:"食後 (shokugo) = na het eten, 食前 (shokuzen) = voor het eten."},
+    {ja:"アレルギーはありますか？",kana:"アレルギーはありますか",romaji:"arerugī wa arimasu ka?",nl:"Heeft u allergieën?",reply:"いいえ"},
+    {ja:"お大事に",kana:"おだいじに",romaji:"o-daiji ni",nl:"Beterschap!",reply:"ありがとうございます"},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"いらっしゃいませ。どうされましたか？",romaji:"Irasshaimase. Dō saremashita ka?",nl:"Welkom. Wat is er aan de hand?"}, options:[{ref:"気分が悪いです",next:"n2"},{ref:"頭が痛いです",next:"n3h"}]},
+    n2:{cat:{ja:"熱はありますか？",romaji:"Netsu wa arimasu ka?",nl:"Heeft u koorts?"}, options:[{ref:"熱があります",next:"n3f"},{ref:"いいえ",next:"n3"}]},
+    n3f:{cat:{ja:"いつからですか？",romaji:"Itsu kara desu ka?",nl:"Sinds wanneer?"}, options:[{ref:"昨日からです",next:"n4"},{ref:"今日",next:"n4"}]},
+    n3:{cat:{ja:"どこが痛いですか？",romaji:"Doko ga itai desu ka?",nl:"Waar doet het pijn?"}, options:[{ref:"お腹が痛いです",next:"n4"},{ref:"喉が痛いです",next:"n4"},{ref:"頭が痛いです",next:"n4"}]},
+    n3h:{cat:{ja:"いつからですか？",romaji:"Itsu kara desu ka?",nl:"Sinds wanneer?"}, options:[{ref:"昨日からです",next:"n4"},{ref:"今日",next:"n4"}]},
+    n4:{cat:{ja:"アレルギーはありますか？",romaji:"Arerugī wa arimasu ka?",nl:"Heeft u allergieën?"}, options:[{ref:"いいえ",next:"n5"},{ref:"アレルギーがあります",next:"n4a"}]},
+    n4a:{cat:{ja:"何のアレルギーですか？この紙に書いてください。",tts:"なんのアレルギーですか？このかみにかいてください。",romaji:"Nan no arerugī desu ka? Kono kami ni kaite kudasai.",nl:"Waar bent u allergisch voor? Schrijf het hier op."}, options:[{ref:"はい",next:"n5"}]},
+    n5:{cat:{ja:"では、この薬をどうぞ。",romaji:"Dewa, kono kusuri o dōzo.",nl:"Neem dan dit medicijn."}, options:[{ref:"一日何回飲みますか",next:"n6"},{ref:"ありがとうございます",next:"end"}]},
+    n6:{cat:{ja:"一日三回、食後に飲んでください。",tts:"いちにちさんかい、しょくごにのんでください。",romaji:"Ichinichi sankai, shokugo ni nonde kudasai.",nl:"Drie keer per dag, na het eten."}, options:[{ref:"わかりました",next:"end"},{ref:"もう一度お願いします",next:"n6b"}]},
+    n6b:{cat:{ja:"一日、三回。ご飯の、あとです。",tts:"いちにち、さんかい。ごはんの、あとです。",romaji:"Ichinichi, sankai. Gohan no, ato desu.",nl:"Drie keer per dag. Na het eten."}, options:[{ref:"わかりました",next:"end"}]},
+    end:{cat:{ja:"お大事に。",romaji:"O-daiji ni.",nl:"Beterschap!"}, options:[]},
+   }},
+   dialog:[
+    {who:"me",ref:"すみません"},
+    {who:"cat",ja:"はい、どうされましたか？",romaji:"Hai, dō saremashita ka?",nl:"Ja, wat is er aan de hand?"},
+    {who:"me",ref:"気分が悪いです"},
+    {who:"cat",ja:"熱はありますか？",romaji:"Netsu wa arimasu ka?",nl:"Heeft u koorts?"},
+    {who:"me",ref:"熱があります"},
+    {who:"cat",ja:"いつからですか？",romaji:"Itsu kara desu ka?",nl:"Sinds wanneer?"},
+    {who:"me",ref:"昨日からです"},
+    {who:"cat",ja:"喉は痛いですか？",romaji:"Nodo wa itai desu ka?",nl:"Doet uw keel pijn?"},
+    {who:"me",ref:"喉が痛いです"},
+    {who:"cat",ja:"じゃあ、この風邪薬がいいですよ。",romaji:"Jā, kono kazegusuri ga ii desu yo.",nl:"Dan is dit middel tegen verkoudheid goed."},
+    {who:"me",ref:"一日何回飲みますか"},
+    {who:"cat",ja:"一日三回、食後に飲んでください。お大事に。",tts:"いちにちさんかい、しょくごにのんでください。おだいじに。",romaji:"Ichinichi sankai, shokugo ni nonde kudasai. O-daiji ni.",nl:"Drie keer per dag, na het eten. Beterschap!"},
+    {who:"me",ref:"ありがとうございます"},
+   ]},
+ /* ===== BLOK F: ECHTE GESPREKKEN ===== */
+ { id:"praat", block:"F", title:"Smalltalk & het weer", desc:"Hoe gaat het? Het weer en de seizoenen", color:"var(--peach)",
+   cando:["Ik kan vragen hoe het gaat en antwoorden","Ik kan iets zeggen over het weer en de herfst","Ik kan vragen of iemand langzamer wil praten"],
+   phrases:[
+    {l:1,ja:"お元気ですか",kana:"おげんきですか",romaji:"o-genki desu ka",nl:"Hoe gaat het?",alt:["おげんきですか","元気ですか"]},
+    {l:1,ja:"元気です",kana:"げんきです",romaji:"genki desu",nl:"Het gaat goed",alt:["げんきです","元気"]},
+    {l:1,ja:"いい天気ですね",kana:"いいてんきですね",romaji:"ii tenki desu ne",nl:"Mooi weer, hè",alt:["良い天気ですね","いいてんきですね"]},
+    {l:1,ja:"暑いですね",kana:"あついですね",romaji:"atsui desu ne",nl:"Warm, hè",alt:["熱いですね","厚いですね","あついですね"]},
+    {l:1,ja:"寒いですね",kana:"さむいですね",romaji:"samui desu ne",nl:"Koud, hè",alt:["さむいですね"]},
+    {l:2,ja:"雨が降っていますね",kana:"あめがふっていますね",romaji:"ame ga futte imasu ne",nl:"Het regent, hè",alt:["雨が降ってますね","雨降ってますね"]},
+    {l:2,ja:"涼しくなりましたね",kana:"すずしくなりましたね",romaji:"suzushiku narimashita ne",nl:"Het is koeler geworden, hè",alt:["すずしくなりましたね"]},
+    {l:2,ja:"紅葉がきれいですね",kana:"こうようがきれいですね",romaji:"kōyō ga kirei desu ne",nl:"De herfstbladeren zijn prachtig, hè",alt:["紅葉が綺麗ですね","もみじがきれいですね"]},
+    {l:2,ja:"ゆっくり話してください",kana:"ゆっくりはなしてください",romaji:"yukkuri hanashite kudasai",nl:"Wilt u langzaam praten?",alt:["ゆっくりはなしてください","ゆっくりお願いします"]},
+   ],
+   pattern:{ say:"kana", tip:"明日は〇〇ですか (ashita wa … desu ka) = krijgen we morgen …? In oktober kan er nog een 台風 (taifū, tyfoon) langskomen: handig om te kunnen vragen.",
+     frame:{ja:"明日は{x}ですか",kana:"あしたは{x}ですか",romaji:"ashita wa {x} desu ka",nl:"Krijgen we morgen {x}?"},
+     slots:[
+      {ja:"雨",kana:"あめ",romaji:"ame",nl:"regen"},
+      {ja:"晴れ",kana:"はれ",romaji:"hare",nl:"zon"},
+      {ja:"雪",kana:"ゆき",romaji:"yuki",nl:"sneeuw"},
+      {ja:"台風",kana:"たいふう",romaji:"taifū",nl:"een tyfoon"},
+     ]},
+   theysay:[
+    {ja:"最近どうですか？",kana:"さいきんどうですか",romaji:"saikin dō desu ka?",nl:"Hoe gaat het de laatste tijd?",reply:"元気です"},
+    {ja:"今日は暑いですね",kana:"きょうはあついですね",tts:"きょうはあついですね",romaji:"kyō wa atsui desu ne",nl:"Warm vandaag, hè",reply:"暑いですね"},
+    {ja:"明日は雨みたいですよ",kana:"あしたはあめみたいですよ",tts:"あしたはあめみたいですよ",romaji:"ashita wa ame mitai desu yo",nl:"Morgen gaat het blijkbaar regenen",reply:"わかりました"},
+    {ja:"秋は紅葉がきれいですよ",kana:"あきはこうようがきれいですよ",romaji:"aki wa kōyō ga kirei desu yo",nl:"In de herfst zijn de herfstbladeren prachtig",note:"紅葉 (kōyō) = de rode en gele herfstbladeren. In oktober en november gaan Japanners er speciaal voor op pad."},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"こんにちは！お元気ですか？",romaji:"Konnichiwa! O-genki desu ka?",nl:"Hallo! Hoe gaat het?"}, options:[{ref:"元気です",next:"n2"},{ref:"お元気ですか",next:"n1b"}]},
+    n1b:{cat:{ja:"はい、元気です！今日はいい天気ですね。",tts:"はい、げんきです！きょうはいいてんきですね。",romaji:"Hai, genki desu! Kyō wa ii tenki desu ne.",nl:"Ja, prima! Mooi weer vandaag, hè."}, options:[{ref:"いい天気ですね",next:"n3"},{ref:"暑いですね",next:"n3"}]},
+    n2:{cat:{ja:"よかった。今日はいい天気ですね。",tts:"よかった。きょうはいいてんきですね。",romaji:"Yokatta. Kyō wa ii tenki desu ne.",nl:"Fijn. Mooi weer vandaag, hè."}, options:[{ref:"いい天気ですね",next:"n3"},{ref:"暑いですね",next:"n3"}]},
+    n3:{cat:{ja:"でも、明日は雨みたいですよ。",tts:"でも、あしたはあめみたいですよ。",romaji:"Demo, ashita wa ame mitai desu yo.",nl:"Maar morgen gaat het blijkbaar regenen."}, options:[{ref:"明日は雨ですか",next:"n4"},{ref:"ゆっくり話してください",next:"n3b"}]},
+    n3b:{cat:{ja:"明日は、雨、です。",tts:"あしたは、あめ、です。",romaji:"Ashita wa, ame, desu.",nl:"Morgen: regen."}, options:[{ref:"わかりました",next:"n4"}]},
+    n4:{cat:{ja:"京都の紅葉はもう見ましたか？",tts:"きょうとのこうようはもうみましたか？",romaji:"Kyōto no kōyō wa mō mimashita ka?",nl:"Heb je de herfstbladeren in Kyoto al gezien?"}, options:[{ref:"紅葉がきれいですね",next:"n5"},{ref:"いいえ",next:"n4n"}]},
+    n4n:{cat:{ja:"ぜひ行ってください。とてもきれいですよ。",romaji:"Zehi itte kudasai. Totemo kirei desu yo.",nl:"Ga zeker kijken. Het is heel mooi."}, options:[{ref:"わかりました",next:"n5"},{ref:"ありがとうございます",next:"n5"}]},
+    n5:{cat:{ja:"じゃあ、また！",romaji:"Jā, mata!",nl:"Nou, tot ziens!"}, options:[]},
+   }},
    dialog:[
     {who:"cat",ja:"こんにちは！お元気ですか？",romaji:"Konnichiwa! O-genki desu ka?",nl:"Hallo! Hoe gaat het?"},
     {who:"me",ref:"元気です"},
-    {who:"cat",ja:"今日は暑いですね。",romaji:"Kyō wa atsui desu ne.",nl:"Het is warm vandaag, hè."},
-    {who:"me",ref:"暑いですね"},
-    {who:"cat",ja:"趣味はなんですか？",romaji:"Shumi wa nan desu ka?",nl:"Wat zijn je hobby's?"},
-    {who:"me",ref:"料理が好きです"},
-    {who:"cat",ja:"私も料理が大好きで、毎日いろいろ作っています！",romaji:"Watashi mo ryōri ga daisuki de, mainichi iroiro tsukutte imasu!",nl:"Ik kook ook heel graag, ik maak elke dag van alles!",fast:true},
+    {who:"cat",ja:"今日は涼しいですね。",tts:"きょうはすずしいですね。",romaji:"Kyō wa suzushii desu ne.",nl:"Het is fris vandaag, hè."},
+    {who:"me",ref:"涼しくなりましたね"},
+    {who:"cat",ja:"もう秋ですね。紅葉、見ましたか？",tts:"もうあきですね。こうよう、みましたか？",romaji:"Mō aki desu ne. Kōyō, mimashita ka?",nl:"Het is al herfst. Heb je de herfstbladeren gezien?"},
+    {who:"me",ref:"紅葉がきれいですね"},
+    {who:"cat",ja:"でも、明日は台風が来るかもしれません。",tts:"でも、あしたはたいふうがくるかもしれません。",romaji:"Demo, ashita wa taifū ga kuru kamo shiremasen.",nl:"Maar morgen komt er misschien een tyfoon.",fast:true},
     {who:"me",ref:"ゆっくり話してください"},
-    {who:"cat",ja:"あ、ごめんなさい。私も、料理が、好きです。",romaji:"A, gomen nasai. Watashi mo, ryōri ga, suki desu.",nl:"O, sorry. Ik kook ook graag.",slow:true},
-    {who:"me",ref:"わかりました"},
+    {who:"cat",ja:"明日、台風、です。",tts:"あした、たいふう、です。",romaji:"Ashita, taifū, desu.",nl:"Morgen: tyfoon.",slow:true},
+    {who:"me",ref:"明日は台風ですか"},
+    {who:"cat",ja:"はい。気をつけてね。",romaji:"Hai. Ki o tsukete ne.",nl:"Ja. Pas goed op jezelf."},
+    {who:"me",ref:"ありがとうございます"},
+   ]},
+ { id:"gesprek", block:"F", title:"Over jezelf vertellen", desc:"Je reis, hobby's, werk en afscheid nemen", color:"var(--butter)",
+   cando:["Ik kan vertellen hoe lang ik in Japan ben en waar ik geweest ben","Ik kan zeggen wat ik leuk vind en iemand iets terugvragen","Ik kan een gesprek vriendelijk afsluiten"],
+   phrases:[
+    {l:1,ja:"日本が大好きです",kana:"にほんがだいすきです",romaji:"Nihon ga daisuki desu",nl:"Ik ben dol op Japan",alt:["日本大好きです"]},
+    {l:1,ja:"二週間います",kana:"にしゅうかんいます",tts:"にしゅうかんいます",romaji:"ni-shūkan imasu",nl:"Ik ben hier twee weken",alt:["2週間います"]},
+    {l:1,ja:"趣味はなんですか",kana:"しゅみはなんですか",romaji:"shumi wa nan desu ka",nl:"Wat zijn je hobby's?",alt:["趣味は何ですか"]},
+    {l:1,ja:"料理が好きです",kana:"りょうりがすきです",romaji:"ryōri ga suki desu",nl:"Ik kook graag",alt:["料理がすきです"]},
+    {l:2,ja:"京都に行きました",kana:"きょうとにいきました",romaji:"Kyōto ni ikimashita",nl:"Ik ben in Kyoto geweest",alt:["京都行きました"]},
+    {l:2,ja:"楽しかったです",kana:"たのしかったです",romaji:"tanoshikatta desu",nl:"Het was leuk",alt:["楽しかった"]},
+    {l:2,ja:"仕事は何をしていますか",kana:"しごとはなにをしていますか",romaji:"shigoto wa nani o shite imasu ka",nl:"Wat voor werk doe je?",alt:["お仕事は何をしていますか","仕事は何をしてますか"]},
+    {l:2,ja:"話せてうれしかったです",kana:"はなせてうれしかったです",romaji:"hanasete ureshikatta desu",nl:"Leuk dat we even konden praten",alt:["話せて嬉しかったです"]},
+    {l:2,ja:"また会いましょう",kana:"またあいましょう",romaji:"mata aimashō",nl:"Laten we elkaar weer zien",alt:["またあいましょう"]},
+   ],
+   pattern:{ tip:"〇〇が好きです (… ga suki desu) = ik hou van … . Met 大好き (daisuki) wordt het 'ik ben dol op'. Zo heb je altijd iets om over te praten.",
+     frame:{ja:"{x}が好きです",kana:"{x}がすきです",romaji:"{x} ga suki desu",nl:"Ik hou van {x}"},
+     slots:[
+      {ja:"ラーメン",kana:"ラーメン",romaji:"rāmen",nl:"ramen"},
+      {ja:"温泉",kana:"おんせん",romaji:"onsen",nl:"onsen (warmwaterbaden)"},
+      {ja:"アニメ",kana:"アニメ",romaji:"anime",nl:"anime"},
+      {ja:"写真",kana:"しゃしん",romaji:"shashin",nl:"fotograferen"},
+     ]},
+   theysay:[
+    {ja:"どのくらい日本にいますか？",kana:"どのくらいにほんにいますか",romaji:"dono kurai Nihon ni imasu ka?",nl:"Hoe lang ben je in Japan?",reply:"二週間います"},
+    {ja:"どこに行きましたか？",kana:"どこにいきましたか",romaji:"doko ni ikimashita ka?",nl:"Waar ben je geweest?",reply:"京都に行きました"},
+    {ja:"ご趣味は？",kana:"ごしゅみは",romaji:"go-shumi wa?",nl:"Wat zijn uw hobby's?",reply:"料理が好きです"},
+    {ja:"日本はどうですか？",kana:"にほんはどうですか",romaji:"Nihon wa dō desu ka?",nl:"Hoe vind je Japan?",reply:"日本が大好きです"},
+    {ja:"楽しんでくださいね",kana:"たのしんでくださいね",romaji:"tanoshinde kudasai ne",nl:"Geniet ervan!",reply:"ありがとうございます"},
+   ],
+   branch:{ start:"n1", nodes:{
+    n1:{cat:{ja:"こんばんは！旅行ですか？",tts:"こんばんは！りょこうですか？",romaji:"Konbanwa! Ryokō desu ka?",nl:"Goedenavond! Ben je op reis?"}, options:[{ref:"旅行で来ました",next:"n2"},{ref:"はい",next:"n2"}]},
+    n2:{cat:{ja:"どちらからですか？",romaji:"Dochira kara desu ka?",nl:"Waar kom je vandaan?"}, options:[{ref:"オランダから来ました",next:"n3"}]},
+    n3:{cat:{ja:"オランダ！いいですね。日本はどうですか？",romaji:"Oranda! Ii desu ne. Nihon wa dō desu ka?",nl:"Nederland! Leuk. Hoe vind je Japan?"}, options:[{ref:"日本が大好きです",next:"n4"},{ref:"きれいですね",next:"n4"}]},
+    n4:{cat:{ja:"どのくらい日本にいますか？",romaji:"Dono kurai Nihon ni imasu ka?",nl:"Hoe lang ben je in Japan?"}, options:[{ref:"二週間います",next:"n5"}]},
+    n5:{cat:{ja:"いいですね。どこに行きましたか？",romaji:"Ii desu ne. Doko ni ikimashita ka?",nl:"Leuk. Waar ben je geweest?"}, options:[{ref:"京都に行きました",next:"n6"},{ref:"ゆっくり話してください",next:"n5b"}]},
+    n5b:{cat:{ja:"どこに、行きましたか？",tts:"どこに、いきましたか？",romaji:"Doko ni, ikimashita ka?",nl:"Waar ben je geweest?"}, options:[{ref:"京都に行きました",next:"n6"}]},
+    n6:{cat:{ja:"京都はどうでしたか？",tts:"きょうとはどうでしたか？",romaji:"Kyōto wa dō deshita ka?",nl:"Hoe was Kyoto?"}, options:[{ref:"楽しかったです",next:"n7"}]},
+    n7:{cat:{ja:"ご趣味は？",romaji:"Go-shumi wa?",nl:"Wat zijn je hobby's?"}, options:[{ref:"料理が好きです",next:"n8"},{ref:"ラーメンが好きです",next:"n8"},{ref:"温泉が好きです",next:"n8"}]},
+    n8:{cat:{ja:"私もです！日本語、上手ですね。",tts:"わたしもです！にほんご、じょうずですね。",romaji:"Watashi mo desu! Nihongo, jōzu desu ne.",nl:"Ik ook! Je Japans is goed."}, options:[{ref:"いえいえ、まだまだです",next:"n9"},{ref:"ありがとうございます",next:"n9"}]},
+    n9:{cat:{ja:"そろそろ帰ります。楽しんでくださいね！",tts:"そろそろかえります。たのしんでくださいね！",romaji:"Sorosoro kaerimasu. Tanoshinde kudasai ne!",nl:"Ik ga zo naar huis. Geniet ervan!"}, options:[{ref:"話せてうれしかったです",next:"end"},{ref:"また会いましょう",next:"end"}]},
+    end:{cat:{ja:"またね！",romaji:"Mata ne!",nl:"Doei, tot ziens!"}, options:[]},
+   }},
+   dialog:[
+    {who:"cat",ja:"こんばんは！旅行ですか？",tts:"こんばんは！りょこうですか？",romaji:"Konbanwa! Ryokō desu ka?",nl:"Goedenavond! Ben je op reis?"},
+    {who:"me",ref:"旅行で来ました"},
+    {who:"cat",ja:"どのくらい日本にいますか？",romaji:"Dono kurai Nihon ni imasu ka?",nl:"Hoe lang ben je in Japan?"},
+    {who:"me",ref:"二週間います"},
+    {who:"cat",ja:"日本はどうですか？",romaji:"Nihon wa dō desu ka?",nl:"Hoe vind je Japan?"},
+    {who:"me",ref:"日本が大好きです"},
+    {who:"cat",ja:"ご趣味は？",romaji:"Go-shumi wa?",nl:"Wat zijn je hobby's?"},
+    {who:"me",ref:"料理が好きです"},
+    {who:"cat",ja:"へえ！日本料理も作りますか？",tts:"へえ！にほんりょうりもつくりますか？",romaji:"Hē! Nihon ryōri mo tsukurimasu ka?",nl:"O! Kook je ook Japans?"},
+    {who:"me",ref:"はい"},
+    {who:"cat",ja:"すごいですね！",romaji:"Sugoi desu ne!",nl:"Wat goed!"},
+    {who:"me",ref:"仕事は何をしていますか"},
+    {who:"cat",ja:"私は先生です。",tts:"わたしはせんせいです。",romaji:"Watashi wa sensei desu.",nl:"Ik ben leraar."},
+    {who:"me",ref:"話せてうれしかったです"},
+    {who:"cat",ja:"私も！また会いましょう。",tts:"わたしも！またあいましょう。",romaji:"Watashi mo! Mata aimashō.",nl:"Ik ook! Laten we elkaar weer zien."},
+    {who:"me",ref:"また会いましょう"},
    ]},
 ];
 
@@ -908,6 +1345,57 @@ const STORIES = [
     {q:"Hoe laat vertrekt de trein?", o:["Om 10 uur","Om 9 uur","Om 12 uur"], a:0},
     {q:"Wat gebeurt er in Kyoto?", o:["Ze verdwaalt","Ze verliest haar kaartje","Ze mist de trein"], a:0},
    ]},
+ { id:"ryokan", block:"D", after:"winkel", title:"Een nacht in een ryokan", emoji:"♨️",
+   lines:[
+    {ja:"アンナさんは京都の旅館に泊まりました。",romaji:"Anna-san wa Kyōto no ryokan ni tomarimashita.",nl:"Anna logeerde in een ryokan in Kyoto."},
+    {ja:"受付で「予約しています」と言いました。",tts:"うけつけで「よやくしています」といいました。",romaji:"Uketsuke de \"yoyaku shite imasu\" to iimashita.",nl:"Bij de receptie zei ze: \"Ik heb gereserveerd.\""},
+    {ja:"部屋は畳の部屋でした。",tts:"へやはたたみのへやでした。",romaji:"Heya wa tatami no heya deshita.",nl:"De kamer was een tatamikamer."},
+    {ja:"夜、アンナさんは温泉に入りました。",romaji:"Yoru, Anna-san wa onsen ni hairimashita.",nl:"'s Avonds ging Anna naar de onsen."},
+    {ja:"まず体を洗って、それからお湯に入りました。",tts:"まずからだをあらって、それからおゆにはいりました。",romaji:"Mazu karada o aratte, sorekara o-yu ni hairimashita.",nl:"Eerst waste ze zich, daarna ging ze het warme water in."},
+    {ja:"朝ご飯は七時からでした。",tts:"あさごはんはしちじからでした。",romaji:"Asagohan wa shichiji kara deshita.",nl:"Het ontbijt was vanaf zeven uur."},
+    {ja:"魚とご飯とみそ汁を食べました。",tts:"さかなとごはんとみそしるをたべました。",romaji:"Sakana to gohan to misoshiru o tabemashita.",nl:"Ze at vis, rijst en misosoep."},
+    {ja:"チェックアウトの後、荷物を預けて、お寺に行きました。",tts:"チェックアウトのあと、にもつをあずけて、おてらにいきました。",romaji:"Chekku-auto no ato, nimotsu o azukete, o-tera ni ikimashita.",nl:"Na het uitchecken liet ze haar bagage achter en ging ze naar een tempel."},
+   ],
+   questions:[
+    {q:"Waar logeerde Anna?", o:["In een ryokan in Kyoto","In een hotel in Tokio","Bij vrienden in Osaka"], a:0},
+    {q:"Wat deed ze eerst in de onsen?", o:["Zich wassen","Meteen het bad in","Een handdoek halen"], a:0},
+    {q:"Hoe laat begon het ontbijt?", o:["Om 7 uur","Om 8 uur","Om 10 uur"], a:0},
+    {q:"Wat deed ze met haar bagage?", o:["Ze liet die bewaren","Ze nam die mee naar de tempel","Ze stuurde die op"], a:0},
+   ]},
+ { id:"saifu", block:"E", after:"dokter", title:"De verloren portemonnee", emoji:"👛",
+   lines:[
+    {ja:"ある日、ケンさんは財布をなくしました。",tts:"あるひ、ケンさんはさいふをなくしました。",romaji:"Aru hi, Ken-san wa saifu o nakushimashita.",nl:"Op een dag raakte Ken zijn portemonnee kwijt."},
+    {ja:"電車の中に忘れました。",tts:"でんしゃのなかにわすれました。",romaji:"Densha no naka ni wasuremashita.",nl:"Hij had hem in de trein laten liggen."},
+    {ja:"ケンさんは交番に行きました。",romaji:"Ken-san wa kōban ni ikimashita.",nl:"Ken ging naar het politiepostje."},
+    {ja:"おまわりさんは「どこでなくしましたか」と聞きました。",romaji:"Omawari-san wa \"doko de nakushimashita ka\" to kikimashita.",nl:"De agent vroeg: \"Waar bent u hem kwijtgeraakt?\""},
+    {ja:"ケンさんは紙に名前と電話番号を書きました。",tts:"ケンさんはかみになまえとでんわばんごうをかきました。",romaji:"Ken-san wa kami ni namae to denwa bangō o kakimashita.",nl:"Ken schreef zijn naam en telefoonnummer op een papiertje."},
+    {ja:"次の日、駅から電話がありました。",tts:"つぎのひ、えきからでんわがありました。",romaji:"Tsugi no hi, eki kara denwa ga arimashita.",nl:"De volgende dag belde het station."},
+    {ja:"財布は駅にありました。お金も全部ありました。",tts:"さいふはえきにありました。おかねもぜんぶありました。",romaji:"Saifu wa eki ni arimashita. O-kane mo zenbu arimashita.",nl:"De portemonnee lag op het station. Al het geld zat er nog in."},
+    {ja:"ケンさんは「日本はすごい！」と思いました。",tts:"ケンさんは「にほんはすごい！」とおもいました。",romaji:"Ken-san wa \"Nihon wa sugoi!\" to omoimashita.",nl:"Ken dacht: \"Japan is geweldig!\""},
+   ],
+   questions:[
+    {q:"Wat was Ken kwijt?", o:["Zijn portemonnee","Zijn paspoort","Zijn telefoon"], a:0},
+    {q:"Waar had hij het laten liggen?", o:["In de trein","In een restaurant","In het hotel"], a:0},
+    {q:"Wat schreef hij op?", o:["Zijn naam en telefoonnummer","Zijn adres in Nederland","Niets"], a:0},
+    {q:"Wat ontbrak er toen hij hem terugkreeg?", o:["Niets","Het geld","Zijn pasjes"], a:0},
+   ]},
+ { id:"bar", block:"F", after:"gesprek", title:"Een avond in een barretje", emoji:"🍶",
+   lines:[
+    {ja:"金曜日の夜、アンナさんは小さいバーに行きました。",tts:"きんようびのよる、アンナさんはちいさいバーにいきました。",romaji:"Kin'yōbi no yoru, Anna-san wa chiisai bā ni ikimashita.",nl:"Op vrijdagavond ging Anna naar een klein barretje."},
+    {ja:"隣の人が「旅行ですか？」と聞きました。",tts:"となりのひとが「りょこうですか？」とききました。",romaji:"Tonari no hito ga \"ryokō desu ka?\" to kikimashita.",nl:"Degene naast haar vroeg: \"Ben je op reis?\""},
+    {ja:"その人の名前はユキさんでした。",tts:"そのひとのなまえはユキさんでした。",romaji:"Sono hito no namae wa Yuki-san deshita.",nl:"Diegene heette Yuki."},
+    {ja:"ユキさんは大阪から来ました。仕事は先生です。",tts:"ユキさんはおおさかからきました。しごとはせんせいです。",romaji:"Yuki-san wa Ōsaka kara kimashita. Shigoto wa sensei desu.",nl:"Yuki kwam uit Osaka en is leraar."},
+    {ja:"二人は趣味の話をしました。",tts:"ふたりはしゅみのはなしをしました。",romaji:"Futari wa shumi no hanashi o shimashita.",nl:"Ze praatten over hun hobby's."},
+    {ja:"ユキさんは写真が好きで、アンナさんは料理が好きです。",tts:"ユキさんはしゃしんがすきで、アンナさんはりょうりがすきです。",romaji:"Yuki-san wa shashin ga suki de, Anna-san wa ryōri ga suki desu.",nl:"Yuki houdt van fotograferen en Anna van koken."},
+    {ja:"ユキさんは「明日は雨みたいですよ」と言いました。",tts:"ユキさんは「あしたはあめみたいですよ」といいました。",romaji:"Yuki-san wa \"ashita wa ame mitai desu yo\" to iimashita.",nl:"Yuki zei: \"Morgen gaat het blijkbaar regenen.\""},
+    {ja:"最後に、二人は「また会いましょう」と言いました。",tts:"さいごに、ふたりは「またあいましょう」といいました。",romaji:"Saigo ni, futari wa \"mata aimashō\" to iimashita.",nl:"Tot slot zeiden ze: \"Laten we elkaar weer zien.\""},
+   ],
+   questions:[
+    {q:"Waar komt Yuki vandaan?", o:["Osaka","Kyoto","Tokio"], a:0},
+    {q:"Wat voor werk doet Yuki?", o:["Leraar","Kok","Fotograaf"], a:0},
+    {q:"Wat is Anna's hobby?", o:["Koken","Fotograferen","Zingen"], a:0},
+    {q:"Wat voor weer komt er morgen?", o:["Regen","Zon","Sneeuw"], a:0},
+   ]},
 ];
 // pattern lessons: one frame, several words to swap in
 function expandPattern(pat){
@@ -916,6 +1404,81 @@ function expandPattern(pat){
   return pat.slots.map(sl=>({ ja:put(pat.frame.ja,sl.ja), kana:put(pat.frame.kana,sl.kana), romaji:put(pat.frame.romaji,sl.romaji),
     nl:put(pat.frame.nl,sl.nl), ...(pat.say==="kana"?{tts:put(pat.frame.kana,sl.kana)}:{}), alt:[...(sl.alt||[]).map(x=>put(pat.frame.ja,x)), put(pat.frame.kana,sl.kana)], slot:sl }));
 }
+// how people really say the things in "Verstaan": politer shop language, casual speech, announcements. Same meaning, other words.
+const REAL = {
+ "いらっしゃいませ":[{ja:"いらっしゃいませー！",romaji:"irasshaimasē!",how:"zangerig, zoals in winkels"},{ja:"いらっしゃいませ、こんにちは！",tts:"いらっしゃいませ、こんにちは！",romaji:"irasshaimase, konnichiwa!",how:"veel in winkelketens"}],
+ "どうぞ":[{ja:"はい、どうぞー",romaji:"hai, dōzō",how:"kort"},{ja:"どうぞ、お使いください",tts:"どうぞ、おつかいください",romaji:"dōzo, o-tsukai kudasai",how:"beleefder: gebruikt u het maar"}],
+ "少々お待ちください":[{ja:"少々お待ちくださいませ",tts:"しょうしょうおまちくださいませ",romaji:"shōshō o-machi kudasaimase",how:"extra beleefd"},{ja:"ちょっと待ってくださいね",tts:"ちょっとまってくださいね",romaji:"chotto matte kudasai ne",how:"informeel"}],
+ "ありがとうございました":[{ja:"ありがとうございましたー！",romaji:"arigatō gozaimashitā!",how:"zangerig, bij de kassa"},{ja:"どうもありがとうございました",romaji:"dōmo arigatō gozaimashita",how:"extra dankbaar"}],
+ "お名前は？":[{ja:"お名前をお伺いしてもよろしいですか？",tts:"おなまえをおうかがいしてもよろしいですか？",romaji:"o-namae o o-ukagai shite mo yoroshii desu ka?",how:"heel beleefd"},{ja:"名前、なんていうの？",tts:"なまえ、なんていうの？",romaji:"namae, nan te iu no?",how:"informeel"}],
+ "どちらから来ましたか？":[{ja:"どこから来たんですか？",tts:"どこからきたんですか？",romaji:"doko kara kita n desu ka?",how:"spreektaal"},{ja:"お国はどちらですか？",tts:"おくにはどちらですか？",romaji:"o-kuni wa dochira desu ka?",how:"beleefd: uit welk land?"}],
+ "日本語、上手ですね！":[{ja:"日本語うまいですね！",tts:"にほんごうまいですね！",romaji:"nihongo umai desu ne!",how:"spreektaal"},{ja:"えー、日本語話せるんですか！すごい！",tts:"えー、にほんごはなせるんですか！すごい！",romaji:"ē, nihongo hanaseru n desu ka! sugoi!",how:"verrast"}],
+ "日本は初めてですか？":[{ja:"日本、初めて？",tts:"にほん、はじめて？",romaji:"Nihon, hajimete?",how:"informeel"}],
+ "三百円です":[{ja:"三百円になります",tts:"さんびゃくえんになります",romaji:"sanbyaku en ni narimasu",how:"winkeltaal"},{ja:"お会計、三百円です",tts:"おかいけい、さんびゃくえんです",romaji:"o-kaikei, sanbyaku en desu",how:"bij de kassa"}],
+ "千五百円になります":[{ja:"千五百円でございます",tts:"せんごひゃくえんでございます",romaji:"sen gohyaku en de gozaimasu",how:"extra beleefd"}],
+ "二千円お預かりします":[{ja:"二千円お預かりいたします",tts:"にせんえんおあずかりいたします",romaji:"nisen en o-azukari itashimasu",how:"extra beleefd"}],
+ "お釣りです":[{ja:"五百円のお返しです",tts:"ごひゃくえんのおかえしです",romaji:"gohyaku en no o-kaeshi desu",how:"met bedrag: 500 yen terug"},{ja:"お釣りとレシートです",tts:"おつりとレシートです",romaji:"o-tsuri to reshīto desu",how:"met de bon erbij"}],
+ "大丈夫ですか？":[{ja:"大丈夫？",tts:"だいじょうぶ？",romaji:"daijōbu?",how:"informeel"},{ja:"何かお困りですか？",tts:"なにかおこまりですか？",romaji:"nanika o-komari desu ka?",how:"beleefd: kan ik helpen?"}],
+ "わかりますか？":[{ja:"わかる？",romaji:"wakaru?",how:"informeel"}],
+ "もう一度言いましょうか？":[{ja:"もう一回言いましょうか？",tts:"もういっかいいいましょうか？",romaji:"mō ikkai iimashō ka?",how:"spreektaal"}],
+ "温めますか？":[{ja:"こちら温めますか？",tts:"こちらあたためますか？",romaji:"kochira atatamemasu ka?",how:"zo zeggen ze het vaak"},{ja:"お弁当温めますか？",tts:"おべんとうあたためますか？",romaji:"o-bentō atatamemasu ka?",how:"met wat het is"}],
+ "袋はご利用ですか？":[{ja:"袋はお使いになりますか？",tts:"ふくろはおつかいになりますか？",romaji:"fukuro wa o-tsukai ni narimasu ka?",how:"extra beleefd"},{ja:"袋いりますか？",tts:"ふくろいりますか？",romaji:"fukuro irimasu ka?",how:"kort"}],
+ "ポイントカードはお持ちですか？":[{ja:"ポイントカードございますか？",romaji:"pointo kādo gozaimasu ka?",how:"winkeltaal"},{ja:"ポイントカードは？",romaji:"pointo kādo wa?",how:"heel kort"}],
+ "お箸はおつけしますか？":[{ja:"お箸、お付けしますか？",tts:"おはし、おつけしますか？",romaji:"o-hashi, o-tsuke shimasu ka?",how:"vlot"},{ja:"お箸はご利用ですか？",tts:"おはしはごりようですか？",romaji:"o-hashi wa go-riyō desu ka?",how:"andere winkeltaal"}],
+ "何名様ですか？":[{ja:"何名様でしょうか？",tts:"なんめいさまでしょうか？",romaji:"nanmei-sama deshō ka?",how:"extra beleefd"},{ja:"何人ですか？",tts:"なんにんですか？",romaji:"nannin desu ka?",how:"gewone taal"}],
+ "こちらへどうぞ":[{ja:"お席へご案内します",tts:"おせきへごあんないします",romaji:"o-seki e go-annai shimasu",how:"ik breng u naar uw tafel"}],
+ "ご注文はお決まりですか？":[{ja:"ご注文お伺いします",tts:"ごちゅうもんおうかがいします",romaji:"go-chūmon o-ukagai shimasu",how:"ik neem uw bestelling op"}],
+ "お飲み物はいかがですか？":[{ja:"お飲み物は何になさいますか？",tts:"おのみものはなにになさいますか？",romaji:"o-nomimono wa nani ni nasaimasu ka?",how:"wat wilt u drinken?"},{ja:"先にお飲み物お伺いします",tts:"さきにおのみものおうかがいします",romaji:"saki ni o-nomimono o-ukagai shimasu",how:"eerst de drankjes"}],
+ "苦手なものはありますか？":[{ja:"食べられないものはありますか？",tts:"たべられないものはありますか？",romaji:"taberarenai mono wa arimasu ka?",how:"iets wat u niet kunt eten?"}],
+ "おかわりはいかがですか？":[{ja:"おかわりいかがですか？",romaji:"o-kawari ikaga desu ka?",how:"vlot"},{ja:"もう一杯いかがですか？",tts:"もういっぱいいかがですか？",romaji:"mō ippai ikaga desu ka?",how:"nog een drankje?"}],
+ "ラストオーダーです":[{ja:"そろそろラストオーダーのお時間です",tts:"そろそろラストオーダーのおじかんです",romaji:"sorosoro rasuto ōdā no o-jikan desu",how:"beleefd"}],
+ "お会計は別々ですか？":[{ja:"お支払いは別々になさいますか？",tts:"おしはらいはべつべつになさいますか？",romaji:"o-shiharai wa betsubetsu ni nasaimasu ka?",how:"extra beleefd"}],
+ "現金のみです":[{ja:"現金だけなんですよ",tts:"げんきんだけなんですよ",romaji:"genkin dake nan desu yo",how:"spreektaal"},{ja:"申し訳ありません、カードは使えません",tts:"もうしわけありません、カードはつかえません",romaji:"mōshiwake arimasen, kādo wa tsukaemasen",how:"sorry, geen kaart"}],
+ "レシートです":[{ja:"レシートのお返しです",tts:"レシートのおかえしです",romaji:"reshīto no o-kaeshi desu",how:"winkeltaal"}],
+ "またお越しください":[{ja:"またお越しくださいませ",tts:"またおこしくださいませ",romaji:"mata o-koshi kudasaimase",how:"extra beleefd"},{ja:"またどうぞー！",romaji:"mata dōzō!",how:"kort"}],
+ "まっすぐ行ってください":[{ja:"この道をまっすぐです",tts:"このみちをまっすぐです",romaji:"kono michi o massugu desu",how:"deze weg rechtdoor"},{ja:"まっすぐ行けばありますよ",tts:"まっすぐいけばありますよ",romaji:"massugu ikeba arimasu yo",how:"rechtdoor, dan ziet u het"}],
+ "右に曲がってください":[{ja:"あの信号を右です",tts:"あのしんごうをみぎです",romaji:"ano shingō o migi desu",how:"bij dat stoplicht rechts"}],
+ "二つ目の角を左です":[{ja:"二つ目の角を左に曲がってください",tts:"ふたつめのかどをひだりにまがってください",romaji:"futatsume no kado o hidari ni magatte kudasai",how:"volledige zin"}],
+ "歩いて五分ぐらいです":[{ja:"歩いて五分くらいかな",tts:"あるいてごふんくらいかな",romaji:"aruite go-fun kurai ka na",how:"spreektaal"}],
+ "あそこです":[{ja:"あそこに見えますよ",tts:"あそこにみえますよ",romaji:"asoko ni miemasu yo",how:"daar ziet u het"}],
+ "次は京都です":[{ja:"次は、京都、京都です",tts:"つぎは、きょうと、きょうとです",romaji:"tsugi wa, Kyōto, Kyōto desu",how:"zo klinkt de omroep"},{ja:"まもなく京都です",tts:"まもなくきょうとです",romaji:"mamonaku Kyōto desu",how:"zo meteen Kyoto"}],
+ "三番線です":[{ja:"三番線から出ます",tts:"さんばんせんからでます",romaji:"sanbansen kara demasu",how:"vertrekt van spoor 3"},{ja:"三番線に電車がまいります",tts:"さんばんせんにでんしゃがまいります",romaji:"sanbansen ni densha ga mairimasu",how:"omroep: er komt een trein op spoor 3"}],
+ "ドアが閉まります":[{ja:"ドアが閉まります。ご注意ください",tts:"ドアがしまります。ごちゅういください",romaji:"doa ga shimarimasu. go-chūi kudasai",how:"omroep"}],
+ "白線の内側までお下がりください":[{ja:"黄色い線の内側までお下がりください",tts:"きいろいせんのうちがわまでおさがりください",romaji:"kiiroi sen no uchigawa made o-sagari kudasai",how:"gele lijn: op veel stations"}],
+ "空いていますよ":[{ja:"どうぞ、空いてますよ",tts:"どうぞ、あいてますよ",romaji:"dōzo, aitemasu yo",how:"spreektaal"}],
+ "十時からです":[{ja:"十時からになります",tts:"じゅうじからになります",romaji:"jūji kara ni narimasu",how:"winkeltaal"}],
+ "五時までです":[{ja:"五時で閉まります",tts:"ごじでしまります",romaji:"goji de shimarimasu",how:"om vijf uur dicht"}],
+ "今日は休みです":[{ja:"本日は休業日です",tts:"ほんじつはきゅうぎょうびです",romaji:"honjitsu wa kyūgyōbi desu",how:"zo staat het op bordjes"},{ja:"今日はお休みなんです",tts:"きょうはおやすみなんです",romaji:"kyō wa o-yasumi nan desu",how:"spreektaal"}],
+ "もうすぐ閉まります":[{ja:"まもなく閉店です",tts:"まもなくへいてんです",romaji:"mamonaku heiten desu",how:"winkel sluit zo"}],
+ "どちらまでですか？":[{ja:"どちらまで？",romaji:"dochira made?",how:"kort"},{ja:"どちらまで行かれますか？",tts:"どちらまでいかれますか？",romaji:"dochira made ikaremasu ka?",how:"extra beleefd"}],
+ "二十分ぐらいです":[{ja:"二十分くらいですね",tts:"にじゅっぷんくらいですね",romaji:"nijuppun kurai desu ne",how:"spreektaal"},{ja:"混んでなければ二十分です",tts:"こんでなければにじゅっぷんです",romaji:"konde nakereba nijuppun desu",how:"als het niet druk is"}],
+ "着きました":[{ja:"はい、着きましたよ",tts:"はい、つきましたよ",romaji:"hai, tsukimashita yo",how:"spreektaal"}],
+ "ご予約のお名前をお願いします":[{ja:"お名前をお伺いできますか？",tts:"おなまえをおうかがいできますか？",romaji:"o-namae o o-ukagai dekimasu ka?",how:"heel beleefd"}],
+ "パスポートを見せてください":[{ja:"パスポートを拝見してもよろしいですか？",tts:"パスポートをはいけんしてもよろしいですか？",romaji:"pasupōto o haiken shite mo yoroshii desu ka?",how:"heel beleefd"}],
+ "朝食は七時からです":[{ja:"朝食は七時から一階のレストランです",tts:"ちょうしょくはしちじからいっかいのレストランです",romaji:"chōshoku wa shichiji kara ikkai no resutoran desu",how:"met de plek erbij"}],
+ "お部屋は五階です":[{ja:"お部屋は五階の五〇三号室です",tts:"おへやはごかいのごーまるさんごうしつです",romaji:"o-heya wa go-kai no go-maru-san gōshitsu desu",how:"met kamernummer 503"}],
+ "撮影禁止です":[{ja:"ここは撮影できません",tts:"ここはさつえいできません",romaji:"koko wa satsuei dekimasen",how:"hier mag het niet"},{ja:"写真はご遠慮ください",tts:"しゃしんはごえんりょください",romaji:"shashin wa go-enryo kudasai",how:"beleefd: liever geen foto's"}],
+ "靴を脱いでください":[{ja:"こちらで靴をお脱ぎください",tts:"こちらでくつをおぬぎください",romaji:"kochira de kutsu o o-nugi kudasai",how:"extra beleefd"}],
+ "何枚ですか？":[{ja:"大人何枚ですか？",tts:"おとななんまいですか？",romaji:"otona nanmai desu ka?",how:"hoeveel volwassenen?"}],
+ "本日は満席です":[{ja:"申し訳ございません、本日は満席となっております",tts:"もうしわけございません、ほんじつはまんせきとなっております",romaji:"mōshiwake gozaimasen, honjitsu wa manseki to natte orimasu",how:"heel beleefd"}],
+ "三十分待ちです":[{ja:"ただいま三十分ほどお待ちいただいています",tts:"ただいまさんじゅっぷんほどおまちいただいています",romaji:"tadaima sanjuppun hodo o-machi itadaite imasu",how:"heel beleefd"}],
+ "こちらにお並びください":[{ja:"最後尾はこちらです",tts:"さいこうびはこちらです",romaji:"saikōbi wa kochira desu",how:"hier sluit de rij aan"}],
+ "パスポートはお持ちですか？":[{ja:"免税ですとパスポートが必要です",tts:"めんぜいですとパスポートがひつようです",romaji:"menzei desu to pasupōto ga hitsuyō desu",how:"voor tax-free is uw paspoort nodig"}],
+ "プレゼント用ですか？":[{ja:"ご贈答用ですか？",tts:"ごぞうとうようですか？",romaji:"go-zōtō-yō desu ka?",how:"deftig woord voor cadeau"}],
+ "どうしましたか？":[{ja:"どうされましたか？",romaji:"dō saremashita ka?",how:"beleefder"},{ja:"どうしたの？",romaji:"dō shita no?",how:"informeel"}],
+ "どこが痛いですか？":[{ja:"どこが痛いんですか？",tts:"どこがいたいんですか？",romaji:"doko ga itai n desu ka?",how:"spreektaal"}],
+ "いつからですか？":[{ja:"いつから痛いですか？",tts:"いつからいたいですか？",romaji:"itsu kara itai desu ka?",how:"sinds wanneer doet het pijn?"}],
+ "お大事に":[{ja:"お大事になさってください",tts:"おだいじになさってください",romaji:"o-daiji ni nasatte kudasai",how:"extra beleefd"}],
+ "最近どうですか？":[{ja:"最近どう？",tts:"さいきんどう？",romaji:"saikin dō?",how:"informeel"}],
+ "明日は雨みたいですよ":[{ja:"明日、雨らしいですよ",tts:"あした、あめらしいですよ",romaji:"ashita, ame rashii desu yo",how:"spreektaal"}],
+ "どのくらい日本にいますか？":[{ja:"日本にはどれくらいいるんですか？",tts:"にほんにはどれくらいいるんですか？",romaji:"Nihon ni wa dore kurai iru n desu ka?",how:"spreektaal"}],
+ "どこに行きましたか？":[{ja:"どこか行きました？",tts:"どこかいきました？",romaji:"doko ka ikimashita?",how:"spreektaal"}],
+ "日本はどうですか？":[{ja:"日本、どうですか？楽しいですか？",tts:"にほん、どうですか？たのしいですか？",romaji:"Nihon, dō desu ka? Tanoshii desu ka?",how:"met een vervolgvraag"}],
+ "楽しんでくださいね":[{ja:"楽しんでね！",tts:"たのしんでね！",romaji:"tanoshinde ne!",how:"informeel"}],
+};
+// a phrase as a local might really say it (same meaning, same memory card), or the phrase itself when there is no variant
+function realOf(p){ const v=REAL[p.ja]; if(!v) return p; const r=v[Math.random()*v.length|0];
+  return {...p, ja:r.ja, tts:r.tts||r.ja, romaji:r.romaji, real:r.how, base:p}; }
 // global phrase lookup & keys (key = the Japanese text, so it stays stable when units change)
 const PHRASES = {};
 UNITS.forEach((u,ui)=>{
@@ -962,12 +1525,16 @@ function load(){
   return defaults();
 }
 function migrate(){
+  if((S.v||0)>=2 && S.v<3){   // "winkel" and "praat" grew from 3 to 5 lessons: their conversation lesson moved from .2 to .4
+    for(const id of ["winkel","praat"]) if(S.done[id+".2"]){ S.done[id+".4"]=S.done[id+".2"]; delete S.done[id+".2"]; if(S.lvl&&S.lvl[id+".2"]){ S.lvl[id+".4"]=S.lvl[id+".2"]; delete S.lvl[id+".2"]; } }
+    S.v=3; save();
+  }
   if(S.v>=2) return;
   const mapKeys=o=>{ const n={}; for(const k in o||{}){ const ja=OLD_KEYS[k]||k; n[ja]=o[k]; } return n; };
   S.ph=mapKeys(S.ph); if(S.srs) S.srs=mapKeys(S.srs);
   const ids={4:"eten",5:"weg",6:"winkel",7:"praat"}, done={};
   for(const k in S.done||{}){ const [u,l]=k.split("."); if(ids[u]) done[`${ids[u]}.${l}`]=S.done[k]; }
-  S.done=done; S.v=2; save();
+  S.done=done; S.v=2; save(); migrate();
 }
 function save(){ localStorage.setItem(STORE, JSON.stringify(S)); }
 function rollDay(){
@@ -1160,7 +1727,7 @@ function coachPlan(size=16){
   return {ex: shuffle(out).slice(0,size+4), due:due.length, words:ww.length};
 }
 function exercisesFor({p, sk, rec}){
-  if(p.kind==="hear" || sk==="hear") return [{type:"listen", p, review:true, fast: rec && rec.s>=7}];
+  if(p.kind==="hear" || sk==="hear") return [{type:"listen", p: rec && rec.s>=3 && Math.random()<.6 ? realOf(p) : p, review:true, fast: rec && rec.s>=7}];
   if(sk==="rec") return [{type:"choose", p, review:true}];
   // say: support depends on how well it sits
   if(!rec || rec.s<1.5) return [{type:"shadow", p, review:true},{type:"speak", p, review:true, scaffold:true}];
@@ -1173,6 +1740,53 @@ function startCoach(size=16){
   const plan=coachPlan(size);
   if(!plan.ex.length){ toast("Leer eerst een paar zinnen, dan kan de coach aan de slag 🌱"); return; }
   startSession(size<=10?"Coach · 5 minuten":"Coach", plan.ex);
+}
+/* ---------- Rollenspel: you play the scene yourself, answering freely ---------- */
+const playable = ui => !!(UNITS[ui].branch && S.done[lessonId(ui,0)]);
+function roleplayEx(ui, scene=false){
+  const u=UNITS[ui], st=u.branch.nodes[u.branch.start], sc=SCENE[u.id];
+  return {type:"branch", ui, free:true, node:u.branch.start, hist: scene&&sc ? [{scene:true, ja:`${sc[0]} ${sc[1]}`, nl:sc[3]}] : [], p:PHRASES[st.options[0]?.ref]};
+}
+function startRoleplay(ui){ startSession(`Rollenspel: ${UNITS[ui].title}`, [roleplayEx(ui)]); }
+function startTravelDay(){
+  const us=UNITS.map((u,ui)=>ui).filter(playable); if(us.length<2){ toast("Rond eerst Les 1 van een paar units af 🌱"); return; }
+  startSession("Reisdag", shuffle(us).slice(0,3).map(ui=>roleplayEx(ui, true)));
+}
+function renderRoleplay(){
+  const list=UNITS.map((u,ui)=>({u,ui})).filter(x=>x.u.branch), open=list.filter(x=>playable(x.ui));
+  $app.innerHTML=`<div class="tabpage">${topbar("🎭 Rollenspel")}
+    <div class="ucard" style="padding:14px 16px;font-weight:600;line-height:1.5">Jij speelt de scène zelf. ${esc(BUDDY.name)} is de ober, de receptionist of de agent; jij antwoordt <b>vrij</b>, zonder keuzeknoppen. Wat je zegt, bepaalt hoe het gesprek verder gaat. Niet verstaan? Zeg <span class="jp">もう一度お願いします</span> of <span class="jp">ゆっくりお願いします</span>, net als in het echt.</div>
+    ${open.length>=2?`<button class="cta" style="background:var(--butter)" onclick="startTravelDay()"><span class="big">🎲</span><span>Reisdag<small>Drie scènes achter elkaar, door elkaar gehusseld</small></span></button>`:""}
+    ${list.map(({u,ui})=>{ const sc=SCENE[u.id]||["🎭","","",u.title], ok=playable(ui), done=S.rp&&S.rp[u.id];
+      return `<button class="ucard storycard ${ok?"":"locked"}" onclick="${ok?`startRoleplay(${ui})`:`toast('Rond eerst Les 1 van Unit ${ui+1} af 🌱')`}">
+        <span style="font-size:1.8rem">${ok?sc[0]:"🔒"}</span><span><b>${esc(sc[3])}</b>${done?` 🌸${done>1?"×"+done:""}`:""}<small>${esc(u.title)}${ok?"":` · na Les 1 van Unit ${ui+1}`}</small></span></button>`; }).join("")}
+  </div>${tabbar()}`;
+}
+/* ---------- Overleven: the 30 sentences you really must be able to say ---------- */
+const SURVIVAL = ["すみません","ありがとうございます","お願いします","大丈夫です","わかりません","もう一度お願いします","ゆっくりお願いします","英語は話せますか","いくらですか","カードで払えますか","これにします","トイレはどこですか","駅はどこですか","道に迷いました","このホテルまでお願いします","切符はどこで買えますか","何番線ですか","二人です","おすすめはなんですか","お水、お願いします","お会計お願いします","ごちそうさまでした","袋は大丈夫です","予約しています","写真を撮ってもいいですか","はじめまして","オランダから来ました","助けてください","気分が悪いです","交番はどこですか"];
+function survivalState(){ ensureMem(); const day=today();
+  const rows=SURVIVAL.map(k=>PHRASES[k]).filter(Boolean).map(p=>{ const r=memR(p.key,"say",day), m=S.mem[p.key]&&S.mem[p.key].say;
+    return {p, r, solid: r!=null && r>=.85 && m.s>=3}; });   // solid = you can say it now AND it has stuck for a few days
+  return {rows, ok:rows.filter(x=>x.solid).length, total:rows.length}; }
+function startSurvival(all=false){
+  const st=survivalState(), rows=[...st.rows].sort((a,b)=>(a.r??-1)-(b.r??-1));
+  const take = all ? rows : rows.slice(0, 10);
+  const ex = take.flatMap(({p,r})=> r==null ? [{type:"shadow",p,review:true},{type:"speak",p,review:true,scaffold:true}] : r<.7 ? [{type:"speak",p,review:true,scaffold:true}] : [{type:"speak",p,review:true}]);
+  startSession(all?"Overleven: alle 30":"Overlevingscheck", ex);
+  if(lesson) lesson.survival=true;
+}
+function survivalCard(compact=false){
+  const st=survivalState(), doneToday=S.survivalDay===today();
+  return `<button class="mini" style="grid-column:1 / -1;order:1;background:color-mix(in srgb,var(--peach) 35%,var(--card))" onclick="startSurvival()">🆘 Overlevingscheck · ${st.ok}/${st.total} zitten erin${doneToday?" ✓":""}<small>${doneToday?"Vandaag gedaan. Nog een keer kan altijd.":"10 zinnen die je in Japan écht moet kunnen, de zwakste eerst · 3 minuten"}</small><div class="bar"><i style="width:${st.ok/st.total*100}%;background:var(--sage)"></i></div></button>`;
+}
+/* ---------- Echte Japanners: what you learned to understand, the way people really say it, at real speed ---------- */
+function realPool(){ return Object.keys(REAL).map(k=>PHRASES[k]).filter(p=>p && ((S.mem&&S.mem[p.key]) || (S.ph&&S.ph[p.key]))); }
+function startRealTalk(){
+  const pool=realPool(); if(pool.length<3){ toast("Doe eerst een paar 👂 Verstaan-lessen, dan kun je dit oefenen."); return; }
+  const ps=pick(pool, Math.min(10, pool.length)), ex=[];
+  ps.forEach(p=>{ ex.push({type:"listen", p:realOf(p), fast:true, review:true});
+    if(p.reply && PHRASES[p.reply]) ex.push({type:"respond", q:realOf(p), p:PHRASES[p.reply], fast:true, review:true}); });
+  startSession("Echte Japanners", shuffle(ex));
 }
 function startSoundDrill(id){
   const s=SOUNDS.find(x=>x.id===id); if(!s) return;
@@ -1206,6 +1820,10 @@ function renderProgress(){
     <h3 class="sect">📅 Afgelopen week</h3>
     <div class="ucard" style="padding:14px 16px"><p style="margin:0;font-weight:700">${ws.n?`${ws.n} oefeningen op ${ws.days} ${ws.days===1?"dag":"dagen"} · ${ws.acc}% goed`:"Nog geen oefeningen deze week."}</p>
       ${weakest?`<p style="margin:6px 0 0;font-weight:600">Focus voor deze week: <b>${esc(weakest.u.title)}</b> (${Math.round(weakest.r*100)}% reisklaar).</p><button class="linkbtn" style="color:var(--text);margin-top:4px" onclick="startUnitReview(${weakest.ui})">🔁 Oefen ${esc(weakest.u.title)}</button>`:""}</div>
+    <h3 class="sect">🆘 Overlevingszinnen</h3>
+    ${(()=>{ const st=survivalState(); return `<div class="ucard" style="padding:10px 16px"><p style="margin:4px 0 8px;font-weight:700">${st.ok} van de ${st.total} zitten erin</p>
+      <div class="wline">${st.rows.map(({p,solid})=>`<button class="wd ${solid?"ok":"miss"}" onclick="speak(${JSON.stringify(p.ja).replace(/"/g,"&quot;")})"><b class="jp">${esc(p.ja)}</b><small>${esc(p.nl)}</small></button>`).join("")}</div>
+      <div class="btnrow" style="margin-top:10px"><button class="btn secondary" style="padding:8px" onclick="startSurvival(true)">Alle 30 oefenen</button><button class="btn" style="padding:8px" onclick="startSurvival()">Check: zwakste 10</button></div></div>`; })()}
     <h3 class="sect">🧭 Reisklaar per situatie</h3>
     <div class="ucard" style="padding:10px 16px">${units.map(x=>`<div style="margin:8px 0" onclick="${x.r>0?`startUnitReview(${x.ui})`:""}"><div style="display:flex;justify-content:space-between;font-weight:700"><span>${esc(x.u.title)}</span><span>${Math.round(x.r*100)}%</span></div>${bar(x.r)}</div>`).join("")}
       <p style="margin:8px 0 2px;font-size:.85rem;color:var(--muted);font-weight:600">Hoeveel van de zinnen je vandaag waarschijnlijk nog kunt zeggen en verstaan. Tik op een situatie om die te oefenen.</p></div>
@@ -1763,7 +2381,10 @@ function buildLesson(L){
 const SCENE = { groet:["☕","カフェで","Kafe de","In een café"], intro:["🎉","パーティーで","Pātī de","Op een feestje"], getal:["🛍️","お店で","O-mise de","In een winkeltje"],
   hulp:["🗣️","町で","Machi de","In de stad"], konbini:["🏪","コンビニで","Konbini de","In de konbini"], restaurant:["🍜","レストランで","Resutoran de","In een restaurant"],
   smaak:["🏮","居酒屋で","Izakaya de","In een izakaya"], betalen:["💴","レジで","Reji de","Bij de kassa"], richting:["🗺️","道で","Michi de","Op straat"],
-  trein:["🚃","駅で","Eki de","Op het station"], tijd:["🏯","お寺で","O-tera de","Bij een tempel"], taxi:["🚕","タクシーで","Takushī de","In de taxi"] };
+  trein:["🚃","駅で","Eki de","Op het station"], tijd:["🏯","お寺で","O-tera de","Bij een tempel"], taxi:["🚕","タクシーで","Takushī de","In de taxi"],
+  hotel:["🏨","ホテルで","Hoteru de","In het hotel"], tempel:["⛩️","神社で","Jinja de","Bij een schrijn"], uitje:["🎟️","チケット売り場で","Chiketto uriba de","Bij de kaartjesbalie"],
+  winkel:["🛍️","お土産屋で","O-miyage-ya de","In een souvenirwinkel"], nood:["🚓","交番で","Kōban de","Bij het politiepostje"], dokter:["💊","薬局で","Yakkyoku de","In de apotheek"],
+  praat:["🍂","公園で","Kōen de","In het park"], gesprek:["🍶","バーで","Bā de","In een barretje"] };
 function dailyUnits(){ return UNITS.map((u,ui)=>ui).filter(ui=>SCENE[UNITS[ui].id] && S.done[lessonId(ui, lessonsOf(ui).length-1)]); }
 function buildDaily(){
   const pickU = shuffle(dailyUnits()).slice(0,3), lines=[], ex=[];
@@ -2652,6 +3273,7 @@ function render(){
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
   else if(view==="progress") renderProgress();
+  else if(view==="roleplay") renderRoleplay();
   mount3D();
   window.scrollTo?.(0, view==="learn" ? (window._learnScroll||0) : 0);
 }
@@ -2709,7 +3331,8 @@ function renderHome(){
       return `<div class="ucard" style="padding:14px 16px;background:color-mix(in srgb,var(--butter) 40%,var(--card))"><h3 style="margin:0">📅 Je week</h3>
         <p style="margin:6px 0 0;font-weight:600">${wk.n} oefeningen op ${wk.days} ${wk.days===1?"dag":"dagen"}, ${wk.acc}% goed.${units[0]?` Deze week pakt de coach <b>${esc(units[0].u.title)}</b> aan.`:""}${sp?` Let op: ${esc(sp.nl)}.`:""}</p>
         <div class="btnrow" style="margin-top:8px"><button class="btn secondary" style="padding:8px" onclick="S.weekSeen=today();save();render()">Oké</button><button class="btn" style="padding:8px" onclick="S.weekSeen=today();save();go('progress')">Bekijk alles</button></div></div>`; })()}
-  ${pl.travel?`<button class="cta" style="background:var(--butter)" onclick="go('progress')"><span class="big">✈️</span><span>Reismodus<small>Nog ${pl.daysToGo} dagen: oefen per situatie wat je straks nodig hebt</small></span></button>`:""}
+  ${pl.travel?`<button class="cta" style="background:var(--butter)" onclick="go('progress')"><span class="big">✈️</span><span>Reismodus<small>Nog ${pl.daysToGo} dagen: oefen per situatie wat je straks nodig hebt</small></span></button>
+    ${S.survivalDay!==today()?`<button class="cta" style="background:var(--peach)" onclick="startSurvival()"><span class="big">🆘</span><span>Overlevingscheck van vandaag<small>${survivalState().ok}/30 zitten erin · 3 minuten</small></span></button>`:""}`:""}
   ${coach.due>0||coach.words>0?`<button class="cta" style="background:var(--lav)" onclick="startCoach()"><span class="big">🧭</span>
      <span>Coach · ${coach.due} ${coach.due===1?"zin":"zinnen"}${coach.words?` + ${coach.words} ${coach.words===1?"woord":"woorden"}`:""}<small>Ik kies wat jij nu het meest nodig hebt · eerst dit, dan iets nieuws</small></span></button>`:""}
   ${curL?`<button class="cta" ${coach.due>0?'style="background:var(--card);box-shadow:var(--shadow)"':""} onclick="startLesson(${cur[0]},${cur[1]})"><span class="big">🌱</span>
@@ -2719,6 +3342,9 @@ function renderHome(){
     <div class="mini">💧 ${S.daily.xp}/${S.goal} XP<small>${mood}</small><div class="bar"><i style="width:${water*100}%;background:var(--blue)"></i></div></div>
     ${mistakeKeys().length?`<button class="mini" style="grid-column:1 / -1;order:2;background:color-mix(in srgb,var(--peach) 45%,var(--card))" onclick="startMistakes()">❗ Fouten oefenen<small>${mistakeKeys().length} ${mistakeKeys().length===1?"zin":"zinnen"} die je laatst fout had</small></button>`:""}
     ${nLearned>=4?`<button class="mini" style="grid-column:1 / -1;order:3;background:color-mix(in srgb,var(--blue) 40%,var(--card))" onclick="startListenMode()">🎧 Luistermodus<small>Handsfree herhalen: luisteren en antwoorden, zonder naar je scherm te kijken</small></button>`:""}
+    ${survivalCard()}
+    ${UNITS.some((u,ui)=>playable(ui))?`<button class="mini" style="grid-column:1 / -1;order:3;background:color-mix(in srgb,var(--butter) 45%,var(--card))" onclick="go('roleplay')">🎭 Rollenspel<small>Speel een scène en antwoord vrij: hotel, restaurant, taxi, kōban…</small></button>`:""}
+    ${realPool().length>=3?`<button class="mini" style="grid-column:1 / -1;order:3;background:color-mix(in srgb,var(--sage) 40%,var(--card))" onclick="startRealTalk()">👂 Echte Japanners<small>Wat je kent, maar zoals ze het écht zeggen: beleefder, korter, sneller</small></button>`:""}
     <button class="mini" ${nLearned<4?"disabled":""} onclick="startCoach(8)">⏱️ 5 minuten<small>${nLearned<4?"Leer eerst een paar zinnen":"Korte coach-sessie voor drukke dagen"}</small></button>
     <button class="mini" style="grid-column:1 / -1;order:4" onclick="go('progress')">🧭 Voortgang · ✈️ nog ${pl.daysToGo} dagen<small>Reisklaar per situatie, je week, lastige klanken en je planning tot oktober 2027</small></button>
     <button class="mini" style="display:none" ${nLearned<4?"disabled":""} onclick="startPractice()">🔁 ${due>0?"Herhalen":"Extra herhalen"}<small>${nLearned<4?"Leer eerst een paar zinnen":due>0?`${due} nu · ${tomorrow} morgen`:`niets te doen · morgen ${tomorrow}`}</small></button>
@@ -2727,7 +3353,7 @@ function renderHome(){
 }
 function renderLearn(){
   const cur=currentLesson();
-  const BLOCKS={A:"Blok A · Fundament", B:"Blok B · Eten & drinken", C:"Blok C · Onderweg", oud:"Meer situaties (wordt vernieuwd)"};
+  const BLOCKS={A:"Blok A · Fundament", B:"Blok B · Eten & drinken", C:"Blok C · Onderweg", D:"Blok D · Verblijven & bezoeken", E:"Blok E · Als het misgaat", F:"Blok F · Echte gesprekken"};
   let html=`<div class="tabpage">${topbar("Lessen")}`, lastBlock=null;
   UNITS.forEach((u,ui)=>{
     if(u.block!==lastBlock){ lastBlock=u.block; html+=`<h3 class="blockhead">${esc(BLOCKS[u.block]||"Blok "+u.block)}</h3>`; }
@@ -3139,7 +3765,7 @@ function levelUp(ex, L, level){
   if(level<=1) return ex;
   const ps=L.phrases||[];
   if(L.dialog) return ex;
-  if(L.hear) return shuffle([...ps.map(p=>({type:"listen",p})), ...ps.filter(p=>p.reply&&PHRASES[p.reply]).map(p=>({type:"respond",q:p,p:PHRASES[p.reply]}))]);
+  if(L.hear) return shuffle([...ps.map(p=>({type:"listen",p:realOf(p),fast:level===3})), ...ps.filter(p=>p.reply&&PHRASES[p.reply]).map(p=>({type:"respond",q:realOf(p),p:PHRASES[p.reply],fast:level===3}))]);
   if(level===2) return shuffle(ps.flatMap(p=>[{type:"shadow",p},{type:"listen",p},{type:"speak",p,scaffold:true}]));
   return shuffle(ps.flatMap(p=>[{type:"speak",p},{type:"speak",p}]));        // level 3: from memory, twice each
 }
@@ -3288,12 +3914,16 @@ function renderEx(){
       ${micArea("Antwoord")}`;
   }
   else if(t==="branch"){
-    const u=UNITS[lesson.L.ui], n=u.branch.nodes[ex.node], opts=n.options.map(o=>({...o, p:PHRASES[o.ref]}));
-    body = `<div class="chat-head">${buddy("talking",48)}<div><b>Vrij gesprek met ${BUDDY.name}</b><div style="color:var(--muted);font-size:.85rem">Kies zelf wat je zegt: zeg het hardop</div></div></div>
-      <div class="chat">${[...ex.hist, {who:"cat",...n.cat}].map((l,i,arr)=>`<div class="msg ${l.who}">
-          <div class="jp">${esc(l.ja)}</div>${S.settings.romaji?`<div class="r">${esc(l.romaji)}</div>`:""}<div class="t">${esc(l.nl)}</div>
-          ${l.who==="cat"&&i===arr.length-1?`<button onclick="branchSay()">🔊 nog eens</button>`:""}</div>`).join("")}</div>
-      ${opts.length?`<div style="font-weight:800;margin:6px 0 8px">Wat zeg je?</div>
+    const u=brU(ex), n=u.branch.nodes[ex.node], opts=n.options.map(o=>({...o, p:PHRASES[o.ref]}));
+    const voice=!(lesson.noMic||!canRecognize()), hidden = ex.free && voice && !lesson.hint && (ex.tries||0)<2 && n.options.length>0;   // role-play: answer freely, ideas only on request
+    const sc=SCENE[u.id];
+    body = `<div class="chat-head">${buddy("talking",48)}<div><b>${ex.free?`🎭 ${sc?esc(sc[3]):"Rollenspel"}`:`Vrij gesprek met ${BUDDY.name}`}</b><div style="color:var(--muted);font-size:.85rem">${ex.free?"Antwoord zoals jij wilt. Niet verstaan? Vraag gewoon om herhaling.":"Kies zelf wat je zegt: zeg het hardop"}</div></div></div>
+      <div class="chat">${[...ex.hist, {who:"cat",...n.cat}].map((l,i,arr)=>l.scene?`<div class="scene-label">${esc(l.ja)} <span>· ${esc(l.nl)}</span></div>`:`<div class="msg ${l.who}">
+          <div class="jp">${esc(l.ja)}</div>${S.settings.romaji&&!(hidden&&l.who==="cat"&&i===arr.length-1&&!ex.showNL)?`<div class="r">${esc(l.romaji)}</div>`:""}${hidden&&l.who==="cat"&&i===arr.length-1&&!ex.showNL?`<button onclick="curEx().showNL=true;renderEx()">👀 vertaling</button>`:`<div class="t">${esc(l.nl)}</div>`}
+          ${l.who==="cat"&&i===arr.length-1?`<button onclick="branchSay()">🔊 nog eens</button><button onclick="branchSay(.65)">🐢</button>`:""}</div>`).join("")}</div>
+      ${opts.length && hidden ? `<div class="card" style="font-weight:700;line-height:1.45">🎤 Wat zeg jij? Zeg het gewoon in het Japans.<div style="color:var(--muted);font-weight:600;font-size:.88rem;margin-top:4px">Lukt het niet? Zeg もう一度お願いします (nog een keer) of ゆっくりお願いします (langzamer), of tik 💡 voor ideeën.</div></div>
+        <button class="hint" onclick="lesson.hint=true;renderEx()">💡 Ideeën</button>${micArea("Zeg je antwoord")}`
+      : opts.length?`<div style="font-weight:800;margin:6px 0 8px">Wat zeg je?</div>
         <div class="options" style="margin-top:0">${opts.map((o,i)=>`<button class="opt" onclick="${lesson.noMic||!canRecognize()?`branchPick(${i})`:`speak(PHRASES['${o.ref}'].ja)`}">
           <span class="sp">${lesson.noMic||!canRecognize()?"👉":"🔊"}</span><span>${esc(o.p.nl)}${lesson.hint?`<br><small class="romaji">${esc(o.p.romaji)}</small>`:""}</span></button>`).join("")}</div>
         ${lesson.hint?"":`<button class="hint" onclick="lesson.hint=true;renderEx()">💡 Toon romaji</button>`}
@@ -3397,6 +4027,8 @@ function micArea(label){
     ${st==="ask"?`<button class="linkbtn" onclick="noMic()">Kan nu niet praten</button>`:""}
   </div>`;
 }
+function realNote(ex){ const r=ex.q&&ex.q.real?ex.q:ex.p&&ex.p.real?ex.p:null; if(!r) return "";
+  return `<p style="margin-top:6px;font-size:.9rem">🗣️ <b>Echt Japans</b> (${esc(r.real)}): <span class="jp">${esc(r.ja)}</span>${S.settings.romaji?` · ${esc(r.romaji)}`:""}<br>Uit de les ken je: <span class="jp">${esc(r.base.ja)}</span></p>`; }
 function actionBar(t){
   const st=lesson.state, ex=curEx();
   if(st==="good"||st==="bad"){
@@ -3413,6 +4045,7 @@ function actionBar(t){
         ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") + (lesson.marks && lesson.marks.includes(false) ? wordLine(ex.p, lesson.marks)+`<p style="font-size:.85rem">Oranje woorden hoorde ik niet goed. Tik erop om ze te horen.</p>` : "") :
           `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}${WORDS[ex.p.ja] && ex.p.ja ? wordLine(ex.p, lesson.marks)+`<p style="font-size:.85rem;margin-bottom:4px">${lesson.marks&&lesson.marks.includes(false)?"Oranje woorden hoorde ik niet goed. ":""}Tik op een woord om het los te horen.</p><p>${esc(ex.p.nl)}</p>` : `<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
            ${phonMode()!=="uit"&&ex.p.romaji?`<p style="margin-top:4px">Zo spreek je het uit: <b>${esc(phonetic(ex.p.romaji))}</b></p>`:""}`}
+        ${realNote(ex)}
         <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
       <div class="btnrow">
         ${!good&&speakish?`<button class="btn secondary" onclick="retry()">Opnieuw</button>`:""}
@@ -3439,18 +4072,30 @@ function actionBar(t){
 
 function say(mult=1){ if(!lesson||view!=="lesson"||!curEx()) return; const ex=curEx();
   if(ex.type==="word") return ttsSpeak(ex.p.kana, mult*.85, ex.p.kana);
-  return speak(ex.p.ja, mult*(ex.p.kind==="hear"?1.1:1)*(ex.fast&&mult===1?1.15:1)); }
-function branchSay(){ const ex=curEx(); if(!ex||ex.type!=="branch") return; const n=UNITS[lesson.L.ui].branch.nodes[ex.node]; speak(n.cat.ja, 1, n.cat.tts); }
+  return speak(ex.p.ja, mult*(ex.p.kind==="hear"?1.1:1)*(ex.fast&&mult===1?1.15:1), ex.p.tts); }
+const brU = ex => UNITS[ex.ui ?? lesson.L.ui];
+function branchSay(mult=1){ const ex=curEx(); if(!ex||ex.type!=="branch") return; const n=brU(ex).branch.nodes[ex.node]; speak(n.cat.ja, mult, n.cat.tts); }
+// asking to repeat or to slow down is real Japanese too: in a role-play the other person just says it again, slowly
+const REPAIR = ["もう一度お願いします","ゆっくりお願いします","ゆっくり話してください","わかりません","すみません"];
+function branchRepair(k){
+  const ex=curEx(), n=brU(ex).branch.nodes[ex.node], p=PHRASES[REPAIR[k]];
+  ex.hist.push({who:"cat",...n.cat}, {who:"me", ja:p.ja, romaji:p.romaji, nl:p.nl});
+  if(p.key) memRecord(p, "say", 3);
+  ex.repairs=(ex.repairs||0)+1; ex.showNL=true; lesson.heard=""; lesson.state="ask"; lesson.autoplayed=true;
+  renderEx(); setTimeout(()=>branchSay(.65), 300);
+  toast(["Goed gedaan: vragen om herhaling hoort erbij 👍","Zo houd je een gesprek gaande 👍"][k%2]);
+}
 function branchGo(i, heardOk=true){
-  const ex=curEx(), N=UNITS[lesson.L.ui].branch.nodes, n=N[ex.node], o=n.options[i], p=PHRASES[o.ref];
+  const ex=curEx(), N=brU(ex).branch.nodes, n=N[ex.node], o=n.options[i], p=PHRASES[o.ref];
   ex.hist.push({who:"cat",...n.cat}, {who:"me", ja:p.ja, romaji:p.romaji, nl:p.nl});
   if(p.key) mark(p, heardOk);
-  ex.node=o.next; lesson.heard=""; lesson.hint=false; lesson.autoplayed=false;
-  if(!N[ex.node].options.length){ branchSay(); lesson.fbNote="Je koos zelf je antwoorden. 会話、上手！"; resolve(!ex.miss); return; }
+  if(p.key && ex.free) memRecord(p, "say", heardOk ? (lesson.hint ? 2 : 3) : 1);
+  ex.node=o.next; ex.tries=0; ex.showNL=false; lesson.heard=""; lesson.hint=false; lesson.autoplayed=false;
+  if(!N[ex.node].options.length){ branchSay(); lesson.fbNote=ex.free?`Je voerde het hele gesprek zelf${ex.repairs?`, en vroeg ${ex.repairs}× om herhaling: precies goed`:""}. 会話、上手！`:"Je koos zelf je antwoorden. 会話、上手！"; resolve(ex.free || !ex.miss); return; }
   renderEx();
 }
 function branchPick(i){ branchGo(i, true); }
-function sayQ(mult=1){ if(!lesson||view!=="lesson"||!curEx()?.q) return; const ex=curEx(); return speak(ex.q.ja, mult*1.1); }
+function sayQ(mult=1){ if(!lesson||view!=="lesson"||!curEx()?.q) return; const ex=curEx(); return speak(ex.q.ja, mult*1.1*(ex.fast&&mult===1?1.12:1), ex.q.tts); }
 function sayLine(i){ if(!lesson||view!=="lesson"||!curEx()?.lines) return; const l=curEx().lines[i]; speak(l.ja, AUDIO[l.ja] ? 1 : l.fast?1.35:l.slow?0.65:1, l.tts); }   // recordings already have the right tempo
 function choose(i, play){
   lesson.sel=i; const ex=curEx();
@@ -3469,9 +4114,12 @@ async function toggleMic(){
     if(view!=="lesson"||!lesson) return;
     if(!heard.length){ lesson.state="ask"; lesson.heard=`(niets gehoord – praat iets luider of houd je telefoon dichterbij${lastListenError?` · ${lastListenError}`:""})`; renderEx(); return; }
     if(curEx().type==="branch"){
-      const n=UNITS[lesson.L.ui].branch.nodes[curEx().node], pass=strict().pass;
+      const ex=curEx(), n=brU(ex).branch.nodes[ex.node], pass=strict().pass - (ex.free?.05:0);
       const scores=n.options.map(o=>score(heard, PHRASES[o.ref])), best=Math.max(...scores), bi=scores.indexOf(best);
       if(best>=pass){ chime(true); lesson.state="ask"; branchGo(bi, true); return; }
+      if(ex.free){ const rs=REPAIR.map(k=>PHRASES[k]?score(heard, PHRASES[k]):0), rb=Math.max(...rs);
+        if(rb>=pass && rb>best){ chime(true); branchRepair(rs.indexOf(rb)); return; } }
+      ex.tries=(ex.tries||0)+1;
       curEx().miss=true; lesson.state="ask"; lesson.heard=`${heard[0]} · ${Math.round(best*100)}%: niet duidelijk genoeg, probeer het nog eens (of tik 💡)`;
       chime(false); renderEx(); return;
     }
@@ -3530,6 +4178,8 @@ function finish(){
   const xp = lesson.L.review ? 5 + 2*lesson.correct : 10 + (perfect?5:0) + (lesson.L.dialog?5:0);
   if(lesson.L.phrases) lesson.L.phrases.forEach(introduce);
   if(lesson.L.daily) S.dailyDone=today();
+  if(lesson.survival) S.survivalDay=today();
+  lesson.queue.forEach(e=>{ if(e.type==="branch" && e.free && !brU(e).branch.nodes[e.node].options.length){ S.rp=S.rp||{}; const id=brU(e).id; S.rp[id]=(S.rp[id]||0)+1; } });
   const wasGoal = S.daily.xp>=S.goal;
   ensureGarden(); const g0 = treeGrowth();
   addXP(xp);
