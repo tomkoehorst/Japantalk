@@ -214,6 +214,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .mic.listening{background:var(--peach);animation:pulse 1.2s infinite}
 .mic.listening.ready{background:var(--sage);animation:none;box-shadow:0 0 0 calc(4px + var(--lvl,0)*16px) rgba(124,190,150,.35),0 5px 0 rgba(61,58,68,.15);transition:box-shadow .09s linear}
 .mic small{font-weight:600;opacity:.7;font-size:.8rem}
+.wline{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 4px}
+.wd{display:flex;flex-direction:column;align-items:center;padding:4px 7px;border-radius:10px;background:rgba(255,255,255,.6);border:2px solid transparent;line-height:1.15}
+.wd b{font-size:1.05rem}.wd small{font-size:.72rem;font-weight:700;opacity:.75}
+.wd.ok{border-color:#9ECFB4;background:#E4F3EA}.wd.miss{border-color:#F3B49F;background:#FDE9E1}
 @keyframes pulse{50%{box-shadow:0 5px 0 rgba(61,58,68,.15),0 0 0 10px color-mix(in srgb,var(--peach) 35%,transparent)}}
 .linkbtn{color:var(--muted);font-weight:700;font-size:.9rem;padding:6px}
 .heard{color:var(--muted);font-size:.95rem;text-align:center;min-height:1.3em}
@@ -1072,6 +1076,25 @@ const nat = (plugin, method, opts={}) =>
 // Recorded natural voices (Google Cloud TTS, made during the build) with the phone voice as fallback
 let AUDIO = {}, player = null;
 fetch("audio/manifest.json").then(r=>r.ok?r.json():{}).then(m=>{ AUDIO=m||{}; }).catch(()=>{});
+// every phrase split into words [written, spoken (hiragana), romaji] – made at build time (tools/make-words.js)
+let WORDS={}; fetch("words.json").then(r=>r.ok?r.json():{}).then(m=>{ WORDS=m||{}; }).catch(()=>{});
+// which words of the phrase the recogniser heard (in order); null if we can't tell
+function wordMarks(heard, p){
+  const W=WORDS[p.ja]; if(!W || !heard || !heard.length) return null;
+  let best=null;
+  for(const h of heard.slice(0,3)){ const hn=norm(h); let pos=0; const marks=[];
+    for(const [w,k] of W){ let at=-1, len=0;
+      for(const c of [norm(w), norm(k), norm(toHira(w))]){ if(!c) continue; const i=hn.indexOf(c,pos); if(i>=0 && i-pos<=8 && (at<0||i<at)){ at=i; len=c.length; } }
+      marks.push(at>=0); if(at>=0) pos=at+len; }
+    const n=marks.filter(Boolean).length; if(!best||n>best.n) best={marks,n}; }
+  return best.marks;
+}
+function speakWord(i){ const ex=curEx&&curEx(), W=ex&&ex.p&&WORDS[ex.p.ja]; if(!W||!W[i]) return; stopAudio(); ttsSpeak(W[i][1], .8, W[i][1]); }
+// the sentence as tappable words: green = heard, orange = missed (marks null: all neutral)
+function wordLine(p, marks){
+  const W=WORDS[p.ja]; if(!W) return "";
+  return `<div class="wline">${W.map(([w,k,r],i)=>`<button class="wd ${marks?(marks[i]?"ok":"miss"):""}" onclick="speakWord(${i})"><b class="jp">${esc(w)}</b><small>${esc(r)}</small></button>`).join("")}</div>`;
+}
 const hasRecordings = () => Object.keys(AUDIO).length>0;
 function speak(text, mult=1, ttsText){
   const rec = S.settings.voice!=="phone" && AUDIO[text];
@@ -2811,32 +2834,54 @@ function renderStory(){
 let phraseFilter="all";
 function strength(k){ const c=(S.srs||{})[k]; if(!c) return 0; return c.iv>=16?3 : c.iv>=3?2 : 1; }
 function toggleFav(k){ S.fav=S.fav||{}; if(S.fav[k]) delete S.fav[k]; else S.fav[k]=1; save(); renderPhrases(); }
-function renderPhrases(){
+let phraseQuery="", phraseAll=false;
+function phraseListHtml(){
   ensureSrs(); S.fav=S.fav||{};
   const known=k=>S.srs[k]||S.ph[k];
   const tricky=k=>{ const c=S.srs[k]; return c && (c.lapses>0 || (S.ph[k]&&S.ph[k].s<=1)); };
-  const keep=p=>known(p.ja) && (phraseFilter==="all" || (phraseFilter==="fav"&&S.fav[p.ja]) || (phraseFilter==="hard"&&tricky(p.ja)));
+  const q=phraseQuery.trim().toLowerCase(), qn=q?norm(q):"";
+  const match=p=>!q || p.nl.toLowerCase().includes(q) || p.romaji.toLowerCase().replace(/[-\s]/g,"").includes(q.replace(/[-\s]/g,"")) || (qn && (norm(p.ja).includes(qn) || norm(p.kana||"").includes(qn)));
+  const keep=p=>(phraseAll || q || known(p.ja)) && match(p) && (phraseFilter==="all" || (phraseFilter==="fav"&&S.fav[p.ja]) || (phraseFilter==="hard"&&tricky(p.ja)));
   const seen=new Set(); let total=0, solid=0, body="";
   UNITS.forEach((u,ui)=>{
     const items=[...u.phrases, ...u.patternPhrases, ...u.hear].filter(p=>{ if(seen.has(p.ja)) return false; seen.add(p.ja); if(known(p.ja)){ total++; if(strength(p.ja)===3) solid++; } return keep(p); });
     if(!items.length) return;
     body+=`<h3 class="sect">${esc(u.title)}</h3><div class="ucard" style="margin-top:8px">${items.map(p=>{
-      const st=strength(p.ja), js=JSON.stringify(p.ja).replace(/"/g,"&quot;");
+      const st=known(p.ja)?strength(p.ja):0, js=JSON.stringify(p.ja).replace(/"/g,"&quot;");
       return `<div class="prow" onclick="speak(${js})">
         <div class="pm"><div class="jp" style="font-weight:700;font-size:1.1rem">${p.kind==="hear"?"👂 ":""}${esc(p.ja)}</div>
-          ${S.settings.romaji?`<div class="romaji" style="font-size:.9rem">${esc(p.romaji)}</div>`:""}${p.kind!=="hear"&&showPhon(p)?phonLine(p):""}<div style="font-size:.9rem;font-weight:600">${esc(p.nl)}</div></div>
-        <div class="pa"><span class="dot s${st}" title="${["","nieuw","bezig","zit erin"][st]}"></span>
+          ${S.settings.romaji?`<div class="romaji" style="font-size:.9rem">${esc(p.romaji)}</div>`:""}${p.kind!=="hear"&&showPhon(p)?phonLine(p):""}<div style="font-size:.9rem;font-weight:600">${esc(p.nl)}${p.kind==="hear"?` <small style="color:var(--muted)">(zeggen zij)</small>`:""}</div></div>
+        <div class="pa"><span class="dot s${st}" title="${["nog niet geleerd","nieuw","bezig","zit erin"][st]}"></span>
+          <button onclick="event.stopPropagation();showCard(${js})" aria-label="Laat zien">📣</button>
           <button onclick="event.stopPropagation();speak(${js},.6)" aria-label="Langzaam">🐢</button>
-          ${p.kind!=="hear" && AUDIO[p.ja] ? `<button onclick="event.stopPropagation();openMelody(${js})" aria-label="Vergelijk melodie">🎵</button>`:""}
           <button onclick="event.stopPropagation();toggleFav(${js})" aria-label="Favoriet">${S.fav[p.ja]?"⭐":"☆"}</button></div>
       </div>`;}).join("")}</div>`;
   });
+  return {body, total, solid};
+}
+function renderPhrases(){
+  const {body,total,solid}=phraseListHtml();
   const chip=(v,l)=>`<button class="${phraseFilter===v?"on":""}" onclick="phraseFilter='${v}';renderPhrases()">${l}</button>`;
   $app.innerHTML=`<div class="tabpage">${topbar("Mijn zinnen")}
-    <p style="margin:0 22px;color:var(--muted);font-weight:600">${total} zinnen geleerd · ${solid} zitten er goed in. Tik op een zin om hem te horen.</p>
+    <p style="margin:0 22px;color:var(--muted);font-weight:600">Je spiekboekje voor Japan · ${total} zinnen geleerd, ${solid} zitten er goed in. Tik op een zin om hem te horen, 📣 om hem aan iemand te laten zien.</p>
+    <div style="margin:10px 18px 0"><input id="pq" type="search" placeholder="🔍 Zoek: 'trein', 'water', 'sumimasen'…" value="${esc(phraseQuery)}" oninput="phraseQuery=this.value;document.getElementById('plist').innerHTML=phraseListHtml().body||'<p style=&quot;margin:16px 22px;color:var(--muted);font-weight:600&quot;>Niets gevonden.</p>'"
+      style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:14px;border:2px solid var(--line,#E8E0D6);font:inherit;font-weight:600;background:var(--card,#fff);color:inherit"></div>
     <div class="seg" style="margin:10px 18px 0">${chip("all","Alles")}${chip("fav","⭐ Favorieten")}${chip("hard","Lastig")}</div>
-    ${body || `<div style="text-align:center;padding:30px 20px">${buddy("sleepy",100)}<p style="color:var(--muted);font-weight:600">${total?"Niets in deze lijst.":"Nog geen zinnen. Na je eerste les staan ze hier, als spiekboekje voor op reis."}</p></div>`}
+    <label style="display:flex;align-items:center;gap:8px;margin:10px 22px 0;font-weight:700;font-size:.9rem"><input type="checkbox" ${phraseAll?"checked":""} onchange="phraseAll=this.checked;renderPhrases()"> Toon ook zinnen die ik nog niet geleerd heb</label>
+    <div id="plist">${body || `<div style="text-align:center;padding:30px 20px">${buddy("sleepy",100)}<p style="color:var(--muted);font-weight:600">${total||phraseAll?"Niets in deze lijst.":"Nog geen zinnen. Na je eerste les staan ze hier, als spiekboekje voor je reis."}</p></div>`}</div>
   </div>${tabbar()}`;
+}
+// show a phrase big on the screen, to let a Japanese person read it
+function showCard(ja){
+  const p=PHRASES[ja]; if(!p) return; const js=JSON.stringify(ja).replace(/"/g,"&quot;");
+  const d=document.createElement("div"); d.id="pcard";
+  d.style.cssText="position:fixed;inset:0;z-index:999;background:var(--bg,#FBF6EF);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:28px;text-align:center;gap:14px";
+  d.innerHTML=`<div class="jp" style="font-size:2.6rem;font-weight:800;line-height:1.35">${esc(p.ja)}</div>
+    ${p.kana && norm(p.kana)!==norm(p.ja) ? `<div class="jp" style="font-size:1.3rem;font-weight:700;color:var(--muted)">${esc(p.kana)}</div>`:""}
+    <div style="font-size:1.05rem;font-weight:700">${esc(p.romaji)}</div><div style="font-weight:600;color:var(--muted)">${esc(p.nl)}</div>
+    <div class="btnrow" style="width:100%;max-width:420px;margin-top:12px"><button class="btn secondary" onclick="speak(${js},.75)">🐢 Langzaam</button><button class="btn" onclick="speak(${js})">🔊 Laat horen</button></div>
+    <button class="linkbtn" onclick="document.getElementById('pcard').remove()">Sluiten</button>`;
+  document.body.appendChild(d); speak(ja);
 }
 let gardenEdit=false, dragging=null;
 function attachGardenDrag(){
@@ -3192,8 +3237,8 @@ function actionBar(t){
       ${!lesson.melody && ["intro","echo","shadow","speak","swap"].includes(t) && melodyReady(ex.p) ? `<button class="linkbtn" style="margin:-4px 0 8px;color:var(--text)" onclick="lessonMelody()">🎵 Vergelijk je melodie (extra, telt niet mee)</button>`:""}
       ${lesson.melody&&lesson.melody.busy?`<p style="margin:0 0 8px;font-weight:700">🎙️ Zeg de zin nog een keer…</p>`:""}
       <div class="fb">${buddy(good?"happy":"worried",56)}<div><h4>${title}</h4>
-        ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") :
-          `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>
+        ${good? (lesson.fbNote?`<p>${lesson.fbNote}</p>`:"") + (lesson.marks && lesson.marks.includes(false) ? wordLine(ex.p, lesson.marks)+`<p style="font-size:.85rem">Oranje woorden hoorde ik niet goed. Tik erop om ze te horen.</p>` : "") :
+          `${lesson.failNote&&!good?`<p style="margin-bottom:4px">${esc(lesson.failNote)}</p>`:""}${WORDS[ex.p.ja] && ex.p.ja ? wordLine(ex.p, lesson.marks)+`<p style="font-size:.85rem;margin-bottom:4px">${lesson.marks&&lesson.marks.includes(false)?"Oranje woorden hoorde ik niet goed. ":""}Tik op een woord om het los te horen.</p><p>${esc(ex.p.nl)}</p>` : `<p>Juist antwoord: <b class="jp">${esc(ex.p.ja)}</b>${S.settings.romaji?` · ${esc(ex.p.romaji)}`:""}<br>${esc(ex.p.nl)}</p>`}
            ${phonMode()!=="uit"&&ex.p.romaji?`<p style="margin-top:4px">Zo spreek je het uit: <b>${esc(phonetic(ex.p.romaji))}</b></p>`:""}`}
         <button class="play" style="margin-top:6px" onclick="say()">🔊 Luister</button></div></div>
       <div class="btnrow">
@@ -3256,6 +3301,7 @@ async function toggleMic(){
       chime(false); renderEx(); return;
     }
     const sc = curEx().p.tail ? scoreTail(heard, curEx().p) : score(heard, curEx().p), pass=strict().pass; lesson.lastScore = sc;
+    lesson.marks = curEx().p.tail ? null : wordMarks(heard, curEx().p);
     lesson.heard = `${heard[0]}  ·  ${Math.round(sc*100)}%`;
     lesson.fbNote = sc>=.98 ? `Uitspraak ${Math.round(sc*100)}%: perfect.` : `Uitspraak ${Math.round(sc*100)}%: goed verstaanbaar.`;
     lesson.failNote = sc<pass ? `Ik hoorde “${heard[0]}” (${Math.round(sc*100)}%, nodig: ${Math.round(pass*100)}%).` : "";
@@ -3272,7 +3318,7 @@ function selfJudgeReveal(){ lesson.state="self"; lesson.selfJudged=true; renderE
 function judge(ok){ resolve(ok); }
 function noMic(){ lesson.noMic=true; stopListening(); lesson.state="ask"; lesson.autoplayed=false; renderEx(); toast("Oké! De rest van deze les zonder praten 🤫"); }
 function skip(){ stopListening(); resolve(false, true); }
-function retry(){ lesson.state="ask"; lesson.heard=""; lesson.failNote=""; lesson.melody=null; lesson.fbTitle=null; renderEx(); }
+function retry(){ lesson.state="ask"; lesson.heard=""; lesson.failNote=""; lesson.melody=null; lesson.fbTitle=null; lesson.marks=null; renderEx(); }
 
 function resolve(ok, skipped=false){
   const ex=curEx();
@@ -3297,7 +3343,7 @@ function resolve(ok, skipped=false){
 function next(){
   stopAudio();
   lesson.i++;
-  Object.assign(lesson,{lastScore:null,failNote:"",melody:null,state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false});
+  Object.assign(lesson,{lastScore:null,failNote:"",melody:null,state:"ask",sel:null,heard:"",hint:false,autoplayed:false,fbTitle:null,fbNote:"",selfJudged:false,marks:null});
   if(lesson.i>=lesson.queue.length) return finish();
   renderEx();
 }

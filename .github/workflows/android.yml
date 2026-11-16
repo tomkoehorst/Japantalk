@@ -55,6 +55,8 @@ jobs:
       - name: Create Android project
         run: |
           npm run www
+          # every phrase split into words, for the per-word feedback
+          node tools/make-words.js www
           # app knows its own build number (used by the in-app updater)
           sed -i 's/__BUILD__/${{ github.run_number }}/' www/index.html
           npx cap add android
