@@ -1061,6 +1061,161 @@ function softLapse(p){   // mistake outside a review: make sure it comes back so
 }
 function dueKeys(day=today()){ ensureSrs(); return Object.keys(S.srs).filter(k=>S.srs[k].due<=day && phraseByKey(k)); }
 function dueTomorrow(){ return dueKeys(dayAdd(1)).length - dueKeys().length; }
+/* =========================================================
+   THE APP LEARNS ALONG
+   Memory per phrase and per skill (FSRS-like): say (zeggen), hear (verstaan), rec (herkennen).
+   Each skill has a stability (days until you'd have a 90% chance to still know it) and a difficulty.
+   ========================================================= */
+const DEPART="2027-10-01", TRAVEL_MODE="2027-09-01", TARGET_UNITS=20;
+const SKILL_NL={say:"zeggen", hear:"verstaan", rec:"herkennen"};
+const TYPE_SKILL={speak:"say", swap:"say", dialog:"say", branch:"say", respond:"say", echo:"say", shadow:"say", intro:"say", build:"say", word:"say", listen:"hear", choose:"rec"};
+const dAdd=(d,n)=>{ const x=new Date(d+"T12:00:00"); x.setDate(x.getDate()+n); return ymd(x); };
+const dDiff=(a,b)=>Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/864e5);
+const skillsOf=p=>p.kind==="hear" ? ["hear"] : ["say","hear","rec"];
+function ensureMem(){
+  if(S.mem) return; S.mem={}; ensureSrs();
+  for(const k in S.srs){ const c=S.srs[k], p=PHRASES[k]; if(!p) continue; const s=Math.max(.5,c.iv||.5), last=dAdd(c.due, -Math.round(c.iv||0));
+    S.mem[k]={}; for(const sk of skillsOf(p)) S.mem[k][sk]={s, d:Math.min(9,5+(c.lapses||0)), last, reps:c.reps||0, lapses:c.lapses||0}; }
+}
+function memR(k, sk, day=today()){ const r=S.mem&&S.mem[k]&&S.mem[k][sk]; if(!r) return null; const t=Math.max(0,dDiff(r.last,day)); return Math.pow(1+t/(9*r.s),-1); }
+function syncSrs(k){   // keep the older per-phrase schedule (counts, strength dots) in step with the skills
+  const m=S.mem[k], p=PHRASES[k]; if(!m||!p) return; ensureSrs();
+  const main=skillsOf(p).filter(sk=>sk!=="rec" && m[sk]); if(!main.length) return;
+  const iv=Math.round(Math.min(...main.map(sk=>m[sk].s))), due=main.map(sk=>dAdd(m[sk].last, Math.max(1,Math.round(m[sk].s)))).sort()[0];
+  const c=S.srs[k]||(S.srs[k]={ease:SRS_EASE}); c.iv=iv; c.due=due; c.reps=Math.max(...main.map(sk=>m[sk].reps)); c.lapses=main.reduce((a,sk)=>a+m[sk].lapses,0);
+}
+function memRecord(p, sk, g){
+  if(!p||!p.key||!sk) return; ensureMem(); const m=S.mem[p.key]||(S.mem[p.key]={}), day=today(); let r=m[sk];
+  if(!r){ m[sk]={s:[.4,1,2,3.5][g-1], d:[7.5,6,5,4][g-1], last:day, reps:g>1?1:0, lapses:g===1?1:0}; syncSrs(p.key); return; }
+  const t=Math.max(0,dDiff(r.last,day)), R=Math.pow(1+t/(9*r.s),-1);
+  if(g===1){ r.s=Math.max(.3, Math.min(r.s, 1.9*Math.pow(r.d,-.11)*(Math.pow(r.s+1,.29)-1)*Math.exp(2.27*(1-R)))); r.lapses++; r.reps=0; }
+  else if(t>0){ r.s=Math.min(500, r.s*(1+Math.exp(1.46)*(11-r.d)*Math.pow(r.s,-.1)*(Math.exp(1-R)-1)*(g===2?.55:g===4?1.35:1))); r.reps++; }
+  r.d=Math.max(1,Math.min(10, .9*(r.d-.7*(g-3))+.5)); r.last=day;
+  syncSrs(p.key);
+}
+// grade 1 = wrong, 2 = with help / hesitant, 3 = good, 4 = perfect without help
+function gradeOf(ex, ok){
+  if(!ok) return 1; const t=ex.type, sc=lesson.lastScore, help=lesson.hint||ex.scaffold||lesson.selfJudged;
+  if(["intro","echo","shadow","build"].includes(t)) return 2;
+  if(help || (sc!=null && sc<.9)) return 2;
+  return sc!=null && sc>=.98 ? 4 : 3;
+}
+function learnFrom(ex, ok){
+  const sk=TYPE_SKILL[ex.type], g=gradeOf(ex, ok);
+  if(ex.type==="word"){ const e=(S.wm||{})[ex.p.ja]; if(e){ if(ok){ e.hit++; e.miss=Math.max(0,e.miss-1); } else e.miss++; } }
+  else if(sk){ memRecord(ex.p, ex.p.kind==="hear"?"hear":sk, g); if(ex.type==="respond" && ex.q) memRecord(ex.q, "hear", ok?3:1); }
+  const L=S.log||(S.log={}), d=L[today()]||(L[today()]={n:0,ok:0,min:0,newp:0}); d.n++; if(ok) d.ok++;
+  const ks=Object.keys(L).sort(); while(ks.length>140) delete L[ks.shift()];
+}
+// words you often say unclearly (from the green/orange feedback)
+function memWords(p, marks){
+  const W=WORDS[p.ja]; if(!W||!marks) return; S.wm=S.wm||{};
+  W.forEach(([w,k,r],i)=>{ const e=S.wm[w]||(S.wm[w]={k,r,hit:0,miss:0,from:p.ja}); if(marks[i]){ e.hit++; e.miss=Math.max(0,e.miss-.5); } else { e.miss++; e.from=p.ja; } e.last=today(); });
+}
+const weakWords=()=>Object.entries(S.wm||{}).filter(([w,e])=>w!==(ME&&ME.kata) && (e.r||"").replace(/[^a-z]/g,"").length>=3 && e.miss>=1.5 && e.miss>=e.hit*.4).sort((a,b)=>b[1].miss-a[1].miss);
+
+/* ---------- reisklaar-meter: how well you'd manage each situation today ---------- */
+function unitPhrases(ui){ const u=UNITS[ui], seen=new Set(); return [...u.phrases, ...u.patternPhrases, ...u.hear].filter(p=>!seen.has(p.ja)&&seen.add(p.ja)); }
+function unitReady(ui, day=today()){ ensureMem(); const ps=unitPhrases(ui); if(!ps.length) return 0;
+  return ps.reduce((a,p)=>{ const sk=p.kind==="hear"?"hear":"say", r=memR(p.key||p.ja, sk, day)||0, h=p.kind==="hear"?r:(.75*r+.25*(memR(p.key||p.ja,"hear",day)||r)); return a+h; },0)/ps.length; }
+const readyColor=r=>r>=.8?"#9ECFB4":r>=.5?"#F4D58D":"#F3B49F";
+
+/* ---------- sound profile: which sounds you miss most ---------- */
+const SOUNDS=[
+  {id:"ry", re:/ry[aiueoōū]/, nl:"ry (ryo, ryu)", tip:"Zeg de r en de j in één beweging: 'rjo'. Tong kort tegen het gehemelte, niet rollen."},
+  {id:"r", re:/(^|[^y])r[aiueo]/, nl:"de Japanse r", tip:"De Japanse r zit tussen r, l en d in: één snelle tik van je tong achter je boventanden."},
+  {id:"tsu", re:/tsu/, nl:"tsu", tip:"tsu = 'ts' + een heel korte 'oe', zoals in 'iets'. Niet 'soe'."},
+  {id:"long", re:/[āūōē]|ii|ou|ei|uu/, nl:"lange klinkers", tip:"Lange klinkers twee tellen aanhouden: 'arigatō' = a-ri-ga-to-o. Kort of lang verandert de betekenis."},
+  {id:"double", re:/kk|tt|pp|ss|tch/, nl:"dubbele medeklinkers (kleine tsu)", tip:"Bij een dubbele medeklinker even stil vallen: 'chotto' = cho · tto, alsof je struikelt."},
+  {id:"n", re:/n(?![aiueoyā-ū])/, nl:"de ん (n zonder klinker)", tip:"ん is een hele tel lang: 'kon-ni-chi-wa' heeft vier tellen, de n telt mee."},
+  {id:"fu", re:/fu/, nl:"fu", tip:"fu: blaas zacht tussen je lippen door, alsof je een kaarsje uitblaast. Lippen niet op elkaar."},
+  {id:"u", re:/(desu|masu|shita)\b/, nl:"de stille u (desu, masu)", tip:"De u in desu/masu is bijna stil: 'des', 'mas', 'masj-ta'."},
+];
+function soundProfile(){
+  const stat={}; for(const s of SOUNDS) stat[s.id]={...s, miss:0, seen:0};
+  for(const [w,e] of Object.entries(S.wm||{})){ const r=(e.r||"").toLowerCase(); for(const s of SOUNDS) if(s.re.test(r)){ stat[s.id].miss+=e.miss; stat[s.id].seen+=e.hit+e.miss; } }
+  return Object.values(stat).filter(s=>s.seen>=4 && s.miss>=2).map(s=>({...s, rate:s.miss/s.seen})).sort((a,b)=>b.rate-a.rate);
+}
+// fair checking: phrases Android keeps hearing "almost" right get a slightly milder pass mark
+function passFor(p){ return strict().pass - Math.min(.08, ((S.passAdj||{})[p.key||p.ja]||0)); }
+function nearMiss(p, sc, pass){
+  const k=p.key||p.ja; S.nm=S.nm||{}; S.passAdj=S.passAdj||{};
+  if(sc>=pass){ S.nm[k]=0; return ""; }
+  if(sc>=pass-.12){ S.nm[k]=(S.nm[k]||0)+1; if(S.nm[k]>=3 && (S.passAdj[k]||0)<.08){ S.passAdj[k]=(S.passAdj[k]||0)+.04; S.nm[k]=0; return "Android herkent deze zin vaak net niet. Ik ben hier voortaan iets milder."; } }
+  return "";
+}
+
+/* ---------- the coach: puts together today's session ---------- */
+function coachPlan(size=16){
+  ensureMem(); const day=today(), cand=[];
+  for(const k in S.mem){ const p=PHRASES[k]; if(!p) continue;
+    let worst=null; for(const sk of skillsOf(p)){ const r=memR(k,sk,day); if(r==null) continue; if(!worst||r<worst.r) worst={sk,r,rec:S.mem[k][sk]}; }
+    if(worst) cand.push({p, ...worst}); }
+  cand.sort((a,b)=>a.r-b.r);
+  const due=cand.filter(c=>c.r<.9), out=[];
+  for(const c of due.slice(0, Math.round(size*.75))){ out.push(...exercisesFor(c));
+    if(c.sk==="say" && c.p.kind!=="hear" && Math.random()<.35 && (memR(c.p.key,"hear",day)??0)<.97) out.push({type:"listen", p:c.p, review:true}); }   // and now and then: do you still understand it?
+  const ww=weakWords().slice(0,3); for(const [w,e] of ww) out.push(wordEx(w,e));
+  if(out.length<size*.5) for(const c of cand.filter(c=>c.r>=.9).slice(0, Math.round(size*.5)-out.length)) out.push(...exercisesFor(c));   // nothing due: strengthen the weakest
+  return {ex: shuffle(out).slice(0,size+4), due:due.length, words:ww.length};
+}
+function exercisesFor({p, sk, rec}){
+  if(p.kind==="hear" || sk==="hear") return [{type:"listen", p, review:true, fast: rec && rec.s>=7}];
+  if(sk==="rec") return [{type:"choose", p, review:true}];
+  // say: support depends on how well it sits
+  if(!rec || rec.s<1.5) return [{type:"shadow", p, review:true},{type:"speak", p, review:true, scaffold:true}];
+  if(rec.s<8 || rec.d>6.5) return [{type:"speak", p, review:true, scaffold:true}];
+  return [{type:"speak", p, review:true}];
+}
+function wordEx(w, e){ return {type:"word", p:{ja:w, kana:e.k, romaji:e.r, nl:`woord uit: ${PHRASES[e.from]?PHRASES[e.from].nl:""}`, word:true}, review:true}; }
+const nLearnedQuick=()=>Object.keys(S.mem||{}).length || Object.keys(S.srs||{}).length;
+function startCoach(size=16){
+  const plan=coachPlan(size);
+  if(!plan.ex.length){ toast("Leer eerst een paar zinnen, dan kan de coach aan de slag 🌱"); return; }
+  startSession(size<=10?"Coach · 5 minuten":"Coach", plan.ex);
+}
+function startSoundDrill(id){
+  const s=SOUNDS.find(x=>x.id===id); if(!s) return;
+  const ws=Object.entries(S.wm||{}).filter(([w,e])=>s.re.test((e.r||"").toLowerCase())).sort((a,b)=>b[1].miss-a[1].miss).slice(0,5).map(([w,e])=>wordEx(w,e));
+  const ps=learnedPhrases().filter(p=>p.kind!=="hear" && s.re.test((p.romaji||"").toLowerCase())).slice(0,5).map(p=>({type:"speak", p, review:true}));
+  startSession(`Klank oefenen: ${s.nl}`, [...ws, ...shuffle(ps)]);
+}
+
+/* ---------- planning towards October 2027, report and prediction ---------- */
+function lessonsLeft(){ let left=0, total=0; UNITS.forEach((u,ui)=>{ if(u.block==="oud") return; lessonsOf(ui).forEach((L,li)=>{ total++; if(!S.done[lessonId(ui,li)]) left++; }); });
+  const built=UNITS.filter(u=>u.block!=="oud").length, future=Math.max(0,TARGET_UNITS-built)*5; return {left:left+future, built:left, future, total:total+future}; }
+function lessonsDoneSince(days){ const from=dAdd(today(),-days); return Object.entries(S.doneAt||{}).filter(([id,d])=>d>=from).length; }
+function plan(){
+  const {left}=lessonsLeft(), weeks=Math.max(1, dDiff(today(), TRAVEL_MODE)/7), perWeek=Math.ceil(left/weeks*10)/10;
+  const pace=lessonsDoneSince(21)/3;   // lessons per week, last 3 weeks
+  const eta = pace>0 ? dAdd(today(), Math.round(left/pace*7)) : null;
+  return {left, weeks:Math.round(weeks), perWeek, pace:Math.round(pace*10)/10, eta, onTrack: eta && eta<=TRAVEL_MODE, travel: today()>=TRAVEL_MODE, daysToGo:dDiff(today(),DEPART)};
+}
+function weekStats(){ const from=dAdd(today(),-6); let n=0, ok=0, days=0; for(const [d,v] of Object.entries(S.log||{})) if(d>=from){ n+=v.n; ok+=v.ok; days++; } return {n, ok, days, acc: n?Math.round(ok/n*100):0}; }
+const fmtNL=d=>new Date(d+"T12:00").toLocaleDateString("nl-NL",{day:"numeric",month:"long",year:"numeric"});
+
+function renderProgress(){
+  ensureMem(); const pl=plan(), ws=weekStats(), sp=soundProfile(), ww=weakWords().slice(0,6);
+  const units=UNITS.map((u,ui)=>({u,ui,r:unitReady(ui)})).filter(x=>x.u.block!=="oud");
+  const weakest=units.filter(x=>x.r>0).sort((a,b)=>a.r-b.r)[0];
+  const bar=(r)=>`<div class="bar" style="margin-top:4px"><i style="width:${Math.round(r*100)}%;background:${readyColor(r)}"></i></div>`;
+  $app.innerHTML=`<div class="tabpage">${topbar("Jouw voortgang")}
+    <div class="ucard" style="padding:14px 16px"><h3 style="margin:0">✈️ Nog ${pl.daysToGo} dagen tot Japan</h3>
+      <p style="margin:6px 0 0;font-weight:600">${pl.travel?"Reismodus: oefen per situatie wat je straks nodig hebt.":`Nog ${pl.left} lessen tot je alles hebt (Blok A t/m F). Met ±${pl.perWeek} lessen per week ben je klaar op ${fmtNL(TRAVEL_MODE)}, een maand voor vertrek.`}</p>
+      ${!pl.travel?`<p style="margin:6px 0 0;font-weight:600;color:var(--muted)">${pl.pace?`Je tempo: ${pl.pace} lessen per week. ${pl.onTrack?`Zo ben je klaar rond ${fmtNL(pl.eta)}. Op schema! 🌸`:`Zo ben je klaar rond ${fmtNL(pl.eta)}: iets te laat, probeer er wat lessen per week bij te doen.`}`:"Rond een paar lessen af, dan reken ik je tempo uit."}</p>`:""}</div>
+    <h3 class="sect">📅 Afgelopen week</h3>
+    <div class="ucard" style="padding:14px 16px"><p style="margin:0;font-weight:700">${ws.n?`${ws.n} oefeningen op ${ws.days} ${ws.days===1?"dag":"dagen"} · ${ws.acc}% goed`:"Nog geen oefeningen deze week."}</p>
+      ${weakest?`<p style="margin:6px 0 0;font-weight:600">Focus voor deze week: <b>${esc(weakest.u.title)}</b> (${Math.round(weakest.r*100)}% reisklaar).</p><button class="linkbtn" style="color:var(--text);margin-top:4px" onclick="startUnitReview(${weakest.ui})">🔁 Oefen ${esc(weakest.u.title)}</button>`:""}</div>
+    <h3 class="sect">🧭 Reisklaar per situatie</h3>
+    <div class="ucard" style="padding:10px 16px">${units.map(x=>`<div style="margin:8px 0" onclick="${x.r>0?`startUnitReview(${x.ui})`:""}"><div style="display:flex;justify-content:space-between;font-weight:700"><span>${esc(x.u.title)}</span><span>${Math.round(x.r*100)}%</span></div>${bar(x.r)}</div>`).join("")}
+      <p style="margin:8px 0 2px;font-size:.85rem;color:var(--muted);font-weight:600">Hoeveel van de zinnen je vandaag waarschijnlijk nog kunt zeggen en verstaan. Tik op een situatie om die te oefenen.</p></div>
+    ${sp.length?`<h3 class="sect">🗣️ Klanken om op te letten</h3><div class="ucard" style="padding:12px 16px">${sp.slice(0,3).map(s=>`<div style="margin:6px 0 12px"><b>${esc(s.nl)}</b> <small style="color:var(--muted)">· ${Math.round(s.rate*100)}% niet goed gehoord</small><p style="margin:4px 0;font-weight:600">${esc(s.tip)}</p><button class="linkbtn" style="color:var(--text)" onclick="startSoundDrill('${s.id}')">🎯 Oefen deze klank</button></div>`).join("")}</div>`:""}
+    ${ww.length?`<h3 class="sect">🔤 Lastige woorden</h3><div class="ucard" style="padding:12px 16px"><div class="wline">${ww.map(([w,e])=>`<button class="wd miss" onclick="ttsSpeak(${JSON.stringify(e.k).replace(/"/g,"&quot;")},.8)"><b class="jp">${esc(w)}</b><small>${esc(e.r)}</small></button>`).join("")}</div><p style="margin:6px 0 0;font-size:.85rem;color:var(--muted);font-weight:600">De coach neemt ze mee in je sessies. Tik om te horen.</p></div>`:""}
+    <h3 class="sect">🧠 Hoe de coach werkt</h3>
+    <div class="ucard" style="padding:12px 16px;font-weight:600;line-height:1.5">Per zin houd ik apart bij hoe goed je hem <b>zegt</b>, <b>verstaat</b> en <b>herkent</b>, en hoe snel je hem vergeet. Wat bijna weg is, komt terug; wat goed zit, komt pas veel later. Gaat het goed, dan krijg je minder hulp. Gaat het moeizaam, dan meer.</div>
+  </div>${tabbar()}`;
+}
+
 
 function applyTheme(){
   const t=S.settings.theme, el=document.documentElement;
@@ -2496,6 +2651,7 @@ function render(){
   else if(view==="lesson") renderEx();
   else if(view==="result") renderResult();
   else if(view==="settings") renderSettings();
+  else if(view==="progress") renderProgress();
   mount3D();
   window.scrollTo?.(0, view==="learn" ? (window._learnScroll||0) : 0);
 }
@@ -2526,7 +2682,7 @@ function renderHome(){
   const water=Math.min(1,S.daily.xp/S.goal), goalMet=S.daily.xp>=S.goal;
   const cur=currentLesson(), nLearned=learnedPhrases().length;
   const curL = cur ? lessonsOf(cur[0])[cur[1]] : null;
-  const due = dueKeys().length, tomorrow = dueTomorrow();
+  const due = dueKeys().length, tomorrow = dueTomorrow(), coach = nLearnedQuick() ? coachPlan() : {due:0, words:0}, pl = plan();
   const mood = g>=1 ? "Volle bloei! 🌸" : goalMet ? "Water gekregen vandaag 💧" : S.daily.xp>0 ? "Nog even water geven…" : "Je boom heeft dorst";
   $app.innerHTML = `<div class="tabpage">
   ${topbar(`${buddy(goalMet?"happy":"sleepy",34)} Japantalk`)}
@@ -2547,17 +2703,25 @@ function renderHome(){
   </div>
   ${g>=1?`<button class="cta" style="background:#F4B6C2" onclick="plantTree()"><span class="big">⛩️</span><span>Breng je boom naar de zen-tuin<small>en plant een nieuw zaadje</small></span></button>`:""}
   ${dailyUnits().length && S.dailyDone!==today() ? `<button class="cta" style="background:var(--butter)" onclick="startDaily()"><span class="big">💬</span>
-     <span>Dagelijks gesprek<small>Vandaag: ${Math.min(3,dailyUnits().length)} plekken door elkaar, met zinnen die je al kent</small></span></button>`:""}
-  ${due>0?`<button class="cta" style="background:var(--lav)" onclick="startPractice()"><span class="big">🔁</span>
-     <span>Herhalen · ${due} ${due===1?"zin":"zinnen"}<small>${due>REVIEW_MAX?`in rondes van ${REVIEW_MAX} · `:""}eerst herhalen, dan pas iets nieuws</small></span></button>`:""}
-  ${curL?`<button class="cta" ${due>0?'style="background:var(--card);box-shadow:var(--shadow)"':""} onclick="startLesson(${cur[0]},${cur[1]})"><span class="big">🌱</span>
-     <span>${due>0?"Nieuwe les":"Verder leren"}<small>Unit ${cur[0]+1} · ${esc(UNITS[cur[0]].title)} · ${esc(curL.name)}</small></span></button>`
-    :due>0?"":`<button class="cta" onclick="startPractice()"><span class="big">🔁</span><span>Alles gedaan!<small>Extra herhalen laat je boom groeien</small></span></button>`}
+     <span>Dagelijks gesprek<small>Vandaag: ${Math.min(3,dailyUnits().length)===1?"1 plek":Math.min(3,dailyUnits().length)+" plekken door elkaar"}, met zinnen die je al kent</small></span></button>`:""}
+  ${(()=>{ const wk=weekStats(), mon=dAdd(today(), -((new Date().getDay()+6)%7)); if(!wk.n || (S.weekSeen||"")>=mon) return "";
+      const units=UNITS.map((u,ui)=>({u,ui,r:unitReady(ui)})).filter(x=>x.r>0).sort((a,b)=>a.r-b.r), sp=soundProfile()[0];
+      return `<div class="ucard" style="padding:14px 16px;background:color-mix(in srgb,var(--butter) 40%,var(--card))"><h3 style="margin:0">📅 Je week</h3>
+        <p style="margin:6px 0 0;font-weight:600">${wk.n} oefeningen op ${wk.days} ${wk.days===1?"dag":"dagen"}, ${wk.acc}% goed.${units[0]?` Deze week pakt de coach <b>${esc(units[0].u.title)}</b> aan.`:""}${sp?` Let op: ${esc(sp.nl)}.`:""}</p>
+        <div class="btnrow" style="margin-top:8px"><button class="btn secondary" style="padding:8px" onclick="S.weekSeen=today();save();render()">Oké</button><button class="btn" style="padding:8px" onclick="S.weekSeen=today();save();go('progress')">Bekijk alles</button></div></div>`; })()}
+  ${pl.travel?`<button class="cta" style="background:var(--butter)" onclick="go('progress')"><span class="big">✈️</span><span>Reismodus<small>Nog ${pl.daysToGo} dagen: oefen per situatie wat je straks nodig hebt</small></span></button>`:""}
+  ${coach.due>0||coach.words>0?`<button class="cta" style="background:var(--lav)" onclick="startCoach()"><span class="big">🧭</span>
+     <span>Coach · ${coach.due} ${coach.due===1?"zin":"zinnen"}${coach.words?` + ${coach.words} ${coach.words===1?"woord":"woorden"}`:""}<small>Ik kies wat jij nu het meest nodig hebt · eerst dit, dan iets nieuws</small></span></button>`:""}
+  ${curL?`<button class="cta" ${coach.due>0?'style="background:var(--card);box-shadow:var(--shadow)"':""} onclick="startLesson(${cur[0]},${cur[1]})"><span class="big">🌱</span>
+     <span>${coach.due>0?"Nieuwe les":"Verder leren"}<small>Unit ${cur[0]+1} · ${esc(UNITS[cur[0]].title)} · ${esc(curL.name)}</small></span></button>`
+    :coach.due>0?"":`<button class="cta" onclick="startCoach()"><span class="big">🧭</span><span>Alles gedaan!<small>Een coach-sessie houdt alles vers en laat je boom groeien</small></span></button>`}
   <div class="row2">
     <div class="mini">💧 ${S.daily.xp}/${S.goal} XP<small>${mood}</small><div class="bar"><i style="width:${water*100}%;background:var(--blue)"></i></div></div>
     ${mistakeKeys().length?`<button class="mini" style="grid-column:1 / -1;order:2;background:color-mix(in srgb,var(--peach) 45%,var(--card))" onclick="startMistakes()">❗ Fouten oefenen<small>${mistakeKeys().length} ${mistakeKeys().length===1?"zin":"zinnen"} die je laatst fout had</small></button>`:""}
     ${nLearned>=4?`<button class="mini" style="grid-column:1 / -1;order:3;background:color-mix(in srgb,var(--blue) 40%,var(--card))" onclick="startListenMode()">🎧 Luistermodus<small>Handsfree herhalen: luisteren en antwoorden, zonder naar je scherm te kijken</small></button>`:""}
-    <button class="mini" ${nLearned<4?"disabled":""} onclick="startPractice()">🔁 ${due>0?"Herhalen":"Extra herhalen"}<small>${nLearned<4?"Leer eerst een paar zinnen":due>0?`${due} nu · ${tomorrow} morgen`:`niets te doen · morgen ${tomorrow}`}</small></button>
+    <button class="mini" ${nLearned<4?"disabled":""} onclick="startCoach(8)">⏱️ 5 minuten<small>${nLearned<4?"Leer eerst een paar zinnen":"Korte coach-sessie voor drukke dagen"}</small></button>
+    <button class="mini" style="grid-column:1 / -1;order:4" onclick="go('progress')">🧭 Voortgang · ✈️ nog ${pl.daysToGo} dagen<small>Reisklaar per situatie, je week, lastige klanken en je planning tot oktober 2027</small></button>
+    <button class="mini" style="display:none" ${nLearned<4?"disabled":""} onclick="startPractice()">🔁 ${due>0?"Herhalen":"Extra herhalen"}<small>${nLearned<4?"Leer eerst een paar zinnen":due>0?`${due} nu · ${tomorrow} morgen`:`niets te doen · morgen ${tomorrow}`}</small></button>
   </div>
   </div>${tabbar()}`;
 }
@@ -2568,7 +2732,8 @@ function renderLearn(){
   UNITS.forEach((u,ui)=>{
     if(u.block!==lastBlock){ lastBlock=u.block; html+=`<h3 class="blockhead">${esc(BLOCKS[u.block]||"Blok "+u.block)}</h3>`; }
     const Ls=lessonsOf(ui), nDone=Ls.filter((L,li)=>S.done[lessonId(ui,li)]).length;
-    html+=`<div class="ucard"><div class="uh" style="background:${u.color}"><h2>Unit ${ui+1} · ${esc(u.title)}</h2><p>${esc(u.desc)} · ${nDone}/${Ls.length}</p></div>
+    const rd=nDone?unitReady(ui):0;
+    html+=`<div class="ucard"><div class="uh" style="background:${u.color}"><h2>Unit ${ui+1} · ${esc(u.title)}</h2><p>${esc(u.desc)} · ${nDone}/${Ls.length}${rd?` · 🧭 ${Math.round(rd*100)}% reisklaar`:""}</p></div>
       ${u.cando?`<ul class="cando">${u.cando.map(c=>`<li class="${nDone===Ls.length?"ok":""}">${esc(c)}</li>`).join("")}</ul>`:""}
       <div class="pills">`;
     Ls.forEach((L,li)=>{
@@ -2748,7 +2913,7 @@ async function runListenMode(){
       const ok2=score(heard,p)>=strict().pass;
       if(ok2){ chime(true); lmShow("Goed zo ✓", p.nl, p.ja, "happy"); } else lmShow("Die komt snel terug", p.nl, p.ja, "sleepy");
     }
-    mark(p, ok); reviewResult(p, ok, sc); save();
+    mark(p, ok); memRecord(p, "say", ok?(sc>=.98?4:3):1); save();
     await wait(700);
   }
   if(!alive()) return;
@@ -3001,11 +3166,12 @@ function quitLesson(){
   if(lesson && lesson.i>0 && !confirm("Les stoppen? Je voortgang in deze les gaat verloren.")) return;
   stopListening(); stopAudio(); lesson=null; view="home"; render();
 }
-function curEx(){ return lesson.queue[lesson.i]; }
+function curEx(){ if(lesson && !lesson.t0) lesson.t0=Date.now(); return lesson.queue[lesson.i]; }
 function effType(ex){
   if(lesson.noMic && (ex.type==="speak"||ex.type==="swap"||ex.type==="respond")) return "choose";
   if(lesson.noMic && (ex.type==="echo"||ex.type==="shadow")) return "listen";
   if(lesson.noMic && ex.type==="build") return "intro";
+  if(lesson.noMic && ex.type==="word") return "intro";
   return ex.type;
 }
 
@@ -3048,6 +3214,13 @@ function renderEx(){
       <div class="card" style="margin-top:12px;text-align:center"><div class="nl" style="margin:0">“${esc(p.nl)}”</div>
         ${lesson.hint?`<div class="hint-text">${jpBlock(p,false)}${showPhon(p,true)?phonLine(p):""}</div>`:`<button class="hint" onclick="lesson.hint=true;renderEx()">👀 Toon tekst</button>`}</div>
       ${lesson.noMic?"":micArea("Zeg het na")}`;
+  }
+  else if(t==="word"){
+    body = `<div class="ex-title">Oefen dit woord 🎯</div>
+      <div class="card" style="text-align:center"><div class="jp" style="font-size:2.1rem;font-weight:800">${esc(p.ja)}</div><div class="romaji" style="font-size:1.05rem">${esc(p.romaji)}</div>
+        ${phonMode()!=="uit"?`<div class="phon">🗣️ ${esc(phonetic(p.romaji))}</div>`:""}<div style="font-weight:600;color:var(--muted);font-size:.9rem;margin-top:4px">${esc(p.nl)}</div>
+        <div class="play-row" style="justify-content:center"><button class="play" onclick="say()">🔊 Luister</button><button class="play slow" onclick="say(.6)">🐢</button></div></div>
+      ${lesson.noMic?"":micArea("Zeg het woord")}`;
   }
   else if(t==="speak"){
     body = `<div class="ex-title">Zeg dit in het Japans</div>
@@ -3153,7 +3326,7 @@ function renderEx(){
   if(lesson.state==="ask" && !lesson.autoplayed){
     lesson.autoplayed=true;
     const still = () => view==="lesson" && lesson && curEx()===ex;   // user may already have moved on
-    if(t==="intro"||t==="listen"||t==="hearIntro"||t==="echo"||t==="shadow"||t==="build") setTimeout(()=>still()&&say(),250);
+    if(t==="intro"||t==="listen"||t==="hearIntro"||t==="echo"||t==="shadow"||t==="build"||t==="word") setTimeout(()=>still()&&say(),250);
     if(t==="respond") setTimeout(()=>still()&&sayQ(),250);
     if(t==="branch") setTimeout(()=>still()&&branchSay(),250);
     if(t==="dialog"){ const prev=ex.lines[ex.idx-1]; if(prev&&prev.who==="cat") setTimeout(()=>still()&&sayLine(ex.idx-1),250); }
@@ -3230,7 +3403,7 @@ function actionBar(t){
     const good=st==="good";
     const titles = good? ["Heel goed!","Perfect!","すごい！","Top!","Lekker bezig!"] : ["Nog niet helemaal","Bijna!","Oeps!"];
     const title = lesson.fbTitle || (lesson.fbTitle = titles[Math.random()*titles.length|0]);
-    const speakish = ["intro","echo","shadow","speak","dialog","swap","respond","build"].includes(t) && canRecognize() && !lesson.selfJudged;
+    const speakish = ["intro","echo","shadow","speak","dialog","swap","respond","build","word"].includes(t) && canRecognize() && !lesson.selfJudged;
     return `<div class="actionbar ${st} pop">
       ${lesson.melody&&lesson.melody.total!==undefined?melodyHtml(lesson.melody):""}
       ${lesson.melody&&lesson.melody.msg?`<p style="margin:0 0 8px;font-weight:700">${esc(lesson.melody.msg)}</p>`:""}
@@ -3264,7 +3437,9 @@ function actionBar(t){
   return `<div class="actionbar"><div class="btnrow"><button class="btn secondary" onclick="skip()">Overslaan</button></div></div>`;
 }
 
-function say(mult=1){ if(!lesson||view!=="lesson"||!curEx()) return; const ex=curEx(); return speak(ex.p.ja, mult*(ex.p.kind==="hear"?1.1:1)); }
+function say(mult=1){ if(!lesson||view!=="lesson"||!curEx()) return; const ex=curEx();
+  if(ex.type==="word") return ttsSpeak(ex.p.kana, mult*.85, ex.p.kana);
+  return speak(ex.p.ja, mult*(ex.p.kind==="hear"?1.1:1)*(ex.fast&&mult===1?1.15:1)); }
 function branchSay(){ const ex=curEx(); if(!ex||ex.type!=="branch") return; const n=UNITS[lesson.L.ui].branch.nodes[ex.node]; speak(n.cat.ja, 1, n.cat.tts); }
 function branchGo(i, heardOk=true){
   const ex=curEx(), N=UNITS[lesson.L.ui].branch.nodes, n=N[ex.node], o=n.options[i], p=PHRASES[o.ref];
@@ -3300,8 +3475,10 @@ async function toggleMic(){
       curEx().miss=true; lesson.state="ask"; lesson.heard=`${heard[0]} · ${Math.round(best*100)}%: niet duidelijk genoeg, probeer het nog eens (of tik 💡)`;
       chime(false); renderEx(); return;
     }
-    const sc = curEx().p.tail ? scoreTail(heard, curEx().p) : score(heard, curEx().p), pass=strict().pass; lesson.lastScore = sc;
-    lesson.marks = curEx().p.tail ? null : wordMarks(heard, curEx().p);
+    const P=curEx().p, sc = P.tail ? scoreTail(heard, P) : score(heard, P), pass=passFor(P); lesson.lastScore = sc;
+    lesson.marks = P.tail ? null : wordMarks(heard, P);
+    if(!P.word && !lesson.retriedMarks){ memWords(P, lesson.marks); }
+    const fair = P.word ? "" : nearMiss(P, sc, pass); if(fair) setTimeout(()=>toast(fair), 400);
     lesson.heard = `${heard[0]}  ·  ${Math.round(sc*100)}%`;
     lesson.fbNote = sc>=.98 ? `Uitspraak ${Math.round(sc*100)}%: perfect.` : `Uitspraak ${Math.round(sc*100)}%: goed verstaanbaar.`;
     lesson.failNote = sc<pass ? `Ik hoorde “${heard[0]}” (${Math.round(sc*100)}%, nodig: ${Math.round(pass*100)}%).` : "";
@@ -3329,7 +3506,7 @@ function resolve(ok, skipped=false){
     ex.counted=true;
     if(ok) lesson.correct++; else lesson.mistakes++;
     if(ex.p.key) mark(ex.p, ok, lesson.L.name==="Fouten oefenen");
-    if(ex.p.key){ if(ex.review) reviewResult(ex.p, ok, lesson.lastScore ?? 1); else if(!ok) softLapse(ex.p); }
+    learnFrom(ex, ok);
   }
   // wrong answers come back a few exercises later, until you get them right (max 3 times), like Duolingo
   if(!ok && !["dialog","branch","tip","hearIntro","build"].includes(ex.type) && !ex.requeued && (ex.reps||0)<3){
@@ -3349,6 +3526,7 @@ function next(){
 }
 function finish(){
   const perfect = lesson.mistakes===0;
+  if(lesson.t0){ const L=S.log||(S.log={}), d=L[today()]||(L[today()]={n:0,ok:0,min:0,newp:0}); d.min=Math.round((d.min+Math.min(30,(Date.now()-lesson.t0)/6e4))*10)/10; if(!lesson.L.review && lesson.L.phrases) d.newp+=lesson.L.phrases.length; }
   const xp = lesson.L.review ? 5 + 2*lesson.correct : 10 + (perfect?5:0) + (lesson.L.dialog?5:0);
   if(lesson.L.phrases) lesson.L.phrases.forEach(introduce);
   if(lesson.L.daily) S.dailyDone=today();
@@ -3359,6 +3537,7 @@ function finish(){
   const decoBefore = unitsDone();
   if(lesson.id){
     const stars = perfect?3: lesson.mistakes<=2?2:1;
+    if(!S.done[lesson.id]){ S.doneAt=S.doneAt||{}; S.doneAt[lesson.id]=today(); }
     S.done[lesson.id] = Math.max(S.done[lesson.id]||0, stars);
     S.lvl=S.lvl||{}; S.lvl[lesson.id]=Math.max(S.lvl[lesson.id]||0, lesson.level||1);
   }
