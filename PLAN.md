@@ -24,6 +24,15 @@
 3. ✅ **Patroonoefeningen:** één woord wisselen in een zin die je kent (水をください → お茶をください), zodat je zelf nieuwe zinnen leert maken.
 4. *(Later)* **Controle door een moedertaalspreker:** per blok units een overzicht voor een Japanse docent.
 
+## 🧠 De app leert zelf mee: de kracht van de app (voorstel, nov 2026)
+**A. Meten:** per zin apart bijhouden hoe goed je hem **verstaat, herkent en zegt**; per woord welke woorden vaak oranje zijn (dat kan nu dankzij de feedback per woord); hoe lang je nadenkt en of je hints gebruikt.
+**B. Geheugenmodel:** een slimmer herhaalschema (FSRS-achtig) per zin én per vaardigheid, in plaats van het vaste schema 1 → 3 → 7 → 16 dagen. Zwakke woorden krijgen een eigen geheugen en mini-oefening. Een klankprofiel (bijv. "ryo", "tsu", lange ō) levert gerichte uitspraaktips op.
+**C. De coach:** stelt elke sessie zelf samen (herhalen wat bijna vergeten is, zwakke plekken, en nieuw in een tempo dat past). Geeft minder steun als het goed gaat en meer als het moeizaam gaat. Kiest het oefentype dat bij je zwakste vaardigheid past. Werkt ook met "ik heb 5 minuten".
+**D. Inzicht:** een "reisklaar-meter" per situatie (restaurant, trein, hotel…), een weekrapport en een voorspelling ("bij dit tempo ben je in juli klaar voor restaurants").
+**E. Vertrekplanning:** je vult je vertrekdatum in, en de app plant het tempo van nieuwe units en de reismodus daaromheen.
+**F. Eerlijk meten:** zinnen die Android slecht herkent terwijl je ze goed zegt, krijgen per zin een iets mildere drempel.
+
+### Eerdere notities
 ## 🧠 Later: de app leert zelf mee (niet vergeten!)
 De app past zich aan jou aan op basis van je eigen resultaten:
 - Zinnen die vaak fout gaan (veel lapses) krijgen extra oefeningen en een kortere tussenpoos.
@@ -46,12 +55,12 @@ De app past zich aan jou aan op basis van je eigen resultaten:
 1. **Onboarding:** je naam (私は〇〇です met je eigen naam), je dagdoel, uitleg over de microfoon en een test of je de stem hoort.
 2. ✅ **Tabs onderin:** Boom · Lessen · Tuin.
 3. **Gevoel tijdens een les:** trillen, vloeiendere animaties, een combo bij meerdere goede antwoorden op rij, en een statusbalk in de kleuren van de app.
-4. **Betere feedback op je uitspraak:** laten zien wélk deel van de zin niet goed was.
+4. ✅ **Betere feedback op je uitspraak:** woorden groen/oranje, tik op een woord om het te horen.
 5. **Technisch:** de lesinhoud uit `index.html` halen en in een eigen bestand zetten.
 
 ## Fase 2: effectiever leren
 6. ✅ **Herhaling op het juiste moment** (spaced repetition), met een dagelijkse herhaalsessie.
-7. **Mijn zinnen:** een lijst met alles wat je geleerd hebt, af te spelen en met favorieten. Handig als spiekboekje op reis.
+7. ✅ **Mijn zinnen:** spiekboekje met zoeken, favorieten, lastige zinnen en 📣 Laat zien.
 8. **Shadowing:** direct met Neko meepraten, voor je ritme en uitspraak.
 9. **Korte uitleg** bij nieuwe patronen (は, を, ください, ～ますか …).
 10. **Luisteren naar het antwoord:** oefeningen waarin een local iets terugzegt en jij moet snappen wat het betekent.
