@@ -8,7 +8,7 @@ const strip=s=>s.replace(/[\s、。，,．.！!？?・「」…〜～]/g,'');
 const hira=s=>wk.toHiragana(strip(s),{passRomaji:true});
 // romaji normalisation: long vowels and spacing are written in different ways
 const rnorm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,m=>m==='̄'?':':'')
-  .replace(/([aiueo]):/g,'$1$1').replace(/[^a-z]/g,'').replace(/wo/g,'o').replace(/fye/g,'fe').replace(/nippon/g,'nihon').replace(/ou/g,'oo').replace(/(.)\1+/g,'$1$1').replace(/n(?=[aiueoy])/g,'n');
+  .replace(/([aiueo]):/g,'$1$1').replace(/[^a-z]/g,'').replace(/wo/g,'o').replace(/fye/g,'fe').replace(/fu(?=[aieo])/g,'f').replace(/nippon/g,'nihon').replace(/ou/g,'oo').replace(/(.)\1+/g,'$1$1').replace(/n(?=[aiueoy])/g,'n');
 kuromoji.builder({dicPath:require.resolve('kuromoji').replace(/src.*$/,'dict')}).build((err,tk)=>{
   if(err) throw err;
   const issues=[]; const seen={};
